@@ -99,7 +99,7 @@ Audit the repository and update `.ai/architecture.md` locally:
 npm run audit
 ```
 
-The audit infers repository understanding from local README, `.ai/` documents, `package.json` scripts, source structure, and dependencies. It writes product thesis, core systems, primary flows, current focus, key commands, known gaps, and a lower repository-structure section while preserving the timestamp, confidence score, and anything already written under `## Manual Notes`.
+The audit infers repository understanding from the selected target repository's own local signals: `README.md`, `docs/**/*.md`, `.ai/goals.md`, prominent project files, top-level folders, Swift/TypeScript source file names and symbols, package scripts, and dependencies. It writes product thesis, evidence-backed core systems, primary flows, current focus, key commands, known gaps, and a lower repository-structure section while preserving the timestamp, confidence score, and anything already written under `## Manual Notes`. For arbitrary target repositories, architecture generation stays deterministic, does not call an LLM, and avoids hardcoding Agent IDE systems unless the target repository is Agent IDE itself.
 
 Generate or refresh `.ai/backlog.md` locally:
 
