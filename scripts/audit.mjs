@@ -139,13 +139,23 @@ function firstSentences(markdown, count = 2) {
 }
 
 const productThesisForbiddenSentencePattern =
-  /\b(SELECT policy|table|rows|SQL|RLS|Supabase|diagnosis|bug|issue|root cause|regression|fix|error|failure|implementation|architecture only|no code|no UI|status:|no code implementation|no ui changes|no behavior changes|implementation note|validation only|audit only)\b/i;
+  /\b(SELECT policy|table|rows|SQL|RLS|Supabase|audit|ambiguity|optimize|quality|best opportunity|policy|diagnosis|bug|issue|root cause|regression|fix|error|failure|implementation|architecture only|no code|no UI|status:|no code implementation|no ui changes|no behavior changes|implementation note|validation only|audit only)\b/i;
 
 const productThesisExcludedFilePattern = /(^|[/_-])(DIAGNOSIS|AUDIT|VALIDATION|BUG|FIX|REPORT)([/_.-]|$)/i;
 const productThesisPreferredFilePattern = /^(README\.md|\.ai\/goals\.md|docs\/.*(ROADMAP|VISION|PRODUCT|STRATEGY).*\.md)$/i;
+const productThesisLocalFeaturePattern = /\b(feature|engine|pipeline|surface|diagnostic|diagnosis|audit|policy|bug)\b/i;
+const productThesisRepositoryScopePattern = /\b(repository|application|app|product|platform|users|people|relationships|connections)\b/i;
 
 function isProductThesisNoise(value) {
   return productThesisForbiddenSentencePattern.test(value);
+}
+
+function isProductThesisBroadEnough(value) {
+  if (isProductThesisNoise(value)) {
+    return false;
+  }
+
+  return !productThesisLocalFeaturePattern.test(value) || productThesisRepositoryScopePattern.test(value);
 }
 
 function isProductThesisExcludedSource(source) {
@@ -163,8 +173,30 @@ function productThesisCandidates(markdown, source, count = 2) {
 
   return firstSentences(markdown, count)
     .map((candidate) => candidate.replace(/^[-*]\s+/, ''))
-    .filter((candidate) => !isProductThesisNoise(candidate))
+    .filter((candidate) => isProductThesisBroadEnough(candidate))
     .map((candidate) => ({ text: candidate, source, preferred: isProductThesisPreferredSource(source) }));
+}
+
+function relationshipApplicationThesis(coreSystems) {
+  const systemNames = new Set(coreSystems.map((system) => system.name));
+  const hasRelationshipWorkflow =
+    systemNames.has('Follow-Up Engine') &&
+    systemNames.has('Event Presence') &&
+    systemNames.has('Notification Pipeline');
+  const hasApplicationSurface =
+    systemNames.has('Decision Surface') ||
+    systemNames.has('Domain Models') ||
+    systemNames.has('People/Profile Surfaces');
+
+  if (!hasRelationshipWorkflow || !hasApplicationSurface) {
+    return null;
+  }
+
+  return {
+    thesis:
+      'This repository appears to support a relationship-oriented iOS application that uses event presence, relationship context, follow-up workflows, decision surfaces, and notifications to help users act on real-world connections.',
+    evidence: formatEvidence(coreSystems.flatMap((system) => system.sources)),
+  };
 }
 
 function bulletsUnderHeading(markdown, heading, limit = 5) {
@@ -317,6 +349,7 @@ function inferProductThesis(readme, aiDocuments, packageJson, docs, files, coreS
   });
 
   const productOrientedCandidates = uniqueCandidates.filter((candidate) => candidate.preferred);
+  const inferredRelationshipThesis = relationshipApplicationThesis(coreSystems);
   if (productOrientedCandidates.length > 0) {
     const selected = productOrientedCandidates[0];
     const thesis = selected.text.replace(/:$/, '.');
@@ -330,19 +363,8 @@ function inferProductThesis(readme, aiDocuments, packageJson, docs, files, coreS
     return { thesis, evidence: formatEvidence([selected.source]) };
   }
 
-  const systemNames = new Set(coreSystems.map((system) => system.name));
-  if (
-    systemNames.has('Follow-Up Engine') &&
-    systemNames.has('Event Presence') &&
-    systemNames.has('Notification Pipeline') &&
-    systemNames.has('Decision Surface') &&
-    systemNames.has('Domain Models')
-  ) {
-    return {
-      thesis:
-        'This repository appears to support a relationship-oriented iOS application that uses event presence, relationship context, follow-up workflows, and notifications to help users act on real-world connections.',
-      evidence: formatEvidence(coreSystems.flatMap((system) => system.sources)),
-    };
+  if (inferredRelationshipThesis) {
+    return inferredRelationshipThesis;
   }
 
   if (coreSystems.length > 0) {
@@ -651,6 +673,7 @@ export {
   inferProductThesis,
   productThesisCandidates,
   isProductThesisNoise,
+  isProductThesisBroadEnough,
   isProductThesisExcludedSource,
   isProductThesisPreferredSource,
 };
