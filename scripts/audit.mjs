@@ -40,6 +40,16 @@ const importantFileNames = new Set([
   'index.html',
 ]);
 
+const sectionDocuments = [
+  'goals.md',
+  'architecture.md',
+  'backlog.md',
+  'decisions.md',
+  'validation.md',
+  'agents.md',
+  'code.md',
+];
+
 async function pathExists(path) {
   try {
     await stat(path);
@@ -50,6 +60,14 @@ async function pathExists(path) {
     }
     throw error;
   }
+}
+
+async function readTextIfExists(path) {
+  if (!(await pathExists(path))) {
+    return '';
+  }
+
+  return readFile(path, 'utf8');
 }
 
 async function walk(directory, files = []) {
@@ -100,6 +118,65 @@ function formatList(items) {
   return items.map((item) => `- ${item}`).join('\n');
 }
 
+function compact(value) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function unique(items) {
+  return [...new Set(items.map(compact).filter(Boolean))];
+}
+
+function firstSentences(markdown, count = 2) {
+  const withoutCode = markdown.replace(/```[\s\S]*?```/g, '');
+  const paragraphs = withoutCode
+    .split(/\n{2,}/)
+    .filter((paragraph) => !paragraph.includes('\n- '))
+    .map((paragraph) => compact(paragraph.replace(/^#+\s+/gm, '')))
+    .filter((paragraph) => paragraph.length > 40);
+
+  return paragraphs.slice(0, count);
+}
+
+function bulletsUnderHeading(markdown, heading, limit = 5) {
+  const lines = markdown.split('\n');
+  const start = lines.findIndex((line) => line.trim().toLowerCase() === `## ${heading.toLowerCase()}`);
+  if (start === -1) {
+    return [];
+  }
+
+  const bullets = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith('## ')) {
+      break;
+    }
+    if (line.startsWith('- ')) {
+      bullets.push(line.slice(2));
+    }
+  }
+
+  return bullets.slice(0, limit);
+}
+
+function bulletsAfterLabel(markdown, label, limit = 8) {
+  const lines = markdown.split('\n');
+  const start = lines.findIndex((line) => line.trim().toLowerCase() === label.toLowerCase());
+  if (start === -1) {
+    return [];
+  }
+
+  const bullets = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith('## ') || (!line.startsWith('- ') && line.trim() !== '')) {
+      break;
+    }
+    if (line.startsWith('- ')) {
+      bullets.push(line.slice(2));
+    }
+  }
+
+  return bullets.slice(0, limit);
+}
+
 function detectLanguages(files) {
   const detected = new Set();
   for (const file of files) {
@@ -130,72 +207,205 @@ function detectMajorFiles(files) {
     .sort((a, b) => a.localeCompare(b));
 }
 
-async function detectDependencies() {
+async function detectPackageJson() {
   const packageJsonPath = join(root, 'package.json');
   if (!(await pathExists(packageJsonPath))) {
-    return [];
+    return { dependencies: [], scripts: {}, packageJson: null };
   }
 
   const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8'));
+  return {
+    dependencies: [
+      ...Object.keys(packageJson.dependencies ?? {}),
+      ...Object.keys(packageJson.devDependencies ?? {}),
+    ].sort((a, b) => a.localeCompare(b)),
+    scripts: packageJson.scripts ?? {},
+    packageJson,
+  };
+}
+
+async function readAiDocuments() {
+  const entries = await Promise.all(
+    sectionDocuments.map(async (fileName) => [fileName, await readTextIfExists(join(aiDir, fileName))]),
+  );
+
+  return Object.fromEntries(entries);
+}
+
+function inferProductThesis(readme, aiDocuments, packageJson) {
+  const candidates = [
+    ...firstSentences(readme, 2),
+    ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Active', 2),
+  ];
+
+  if (candidates.length > 0) {
+    return unique(candidates).slice(0, 3);
+  }
+
   return [
-    ...Object.keys(packageJson.dependencies ?? {}),
-    ...Object.keys(packageJson.devDependencies ?? {}),
-  ].sort((a, b) => a.localeCompare(b));
+    `Low confidence: this appears to be ${packageJson?.name ? `the ${packageJson.name} repository` : 'a software repository'}, but no README or goals text was available to explain the product purpose.`,
+  ];
 }
 
-function buildSummary({ languages, folders, files, dependencies }) {
-  const appType = dependencies.includes('vite') && dependencies.includes('react')
-    ? 'a local Vite and React application'
-    : 'a local software repository';
-  const primaryLanguage = languages.includes('TypeScript') ? 'TypeScript' : languages[0] ?? 'the detected source files';
-  const folderText = folders.length > 0 ? ` Key areas include ${folders.slice(0, 5).join(', ')}.` : '';
-  const fileText = files.length > 0 ? ` Important root files include ${files.slice(0, 5).join(', ')}.` : '';
+function inferCoreSystems({ folders, files, dependencies, scripts, aiDocuments }) {
+  const systems = [];
 
-  return `This repository appears to be ${appType} built primarily with ${primaryLanguage}.${folderText}${fileText} Dependencies are declared in package.json and the audit is generated locally without LLM calls.`;
+  if (files.some((file) => file.startsWith('src/')) || folders.includes('src/')) {
+    systems.push('Application shell: source files under `src/` provide the runnable user interface or main application code.');
+  }
+
+  if (dependencies.includes('react')) {
+    systems.push('React UI: React and React DOM render the local interface.');
+  }
+
+  if (dependencies.includes('vite')) {
+    systems.push('Vite toolchain: Vite provides local development, preview, and production bundling workflows.');
+  }
+
+  if (folders.includes('scripts/')) {
+    systems.push('Repository automation: scripts under `scripts/` initialize and audit local repository-understanding files.');
+  }
+
+  const aiFiles = Object.entries(aiDocuments).filter(([, content]) => content.trim().length > 0);
+  if (aiFiles.length > 0) {
+    systems.push('`.ai/` knowledge contract: markdown documents hold local goals, architecture, backlog, decisions, validation, agent planning, and code notes.');
+  }
+
+  if (Object.keys(scripts).length > 0) {
+    systems.push('Package workflows: npm scripts expose the main local commands for development, validation, initialization, and audit.');
+  }
+
+  return systems;
 }
 
-function calculateConfidence({ languages, folders, files, dependencies }) {
-  let score = 45;
-  if (languages.length > 0) score += 15;
-  if (folders.length > 0) score += 10;
-  if (files.includes('package.json')) score += 10;
-  if (dependencies.length > 0) score += 15;
-  if (files.length > 3) score += 5;
-  return `${Math.min(score, 95)}%`;
+function inferPrimaryFlows({ dependencies, scripts, aiDocuments }) {
+  const flows = [];
+
+  if ((aiDocuments['code.md'] ?? '').includes('src/App.tsx')) {
+    flows.push('Section metadata selects a `.ai/*.md` file, and the React application renders that markdown as the active repository-understanding tab.');
+  } else if (dependencies.includes('react')) {
+    flows.push('Local source files feed the React application, which renders the repository-facing interface.');
+  }
+
+  if (scripts.audit) {
+    flows.push('`npm run audit` scans local repository signals and rewrites `.ai/architecture.md` while preserving the manual notes section.');
+  }
+
+  if (scripts['init:ai']) {
+    flows.push('`npm run init:ai` creates missing starter `.ai/` markdown files without overwriting existing notes.');
+  }
+
+  if (scripts.build) {
+    flows.push('`npm run build` runs the configured production validation/build pipeline.');
+  }
+
+  return flows;
 }
 
-const [files, folders, dependencies, manualNotes] = await Promise.all([
+function inferCurrentFocus(readme, aiDocuments) {
+  return unique([
+    ...bulletsUnderHeading(readme, 'Current scope', 4),
+    ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Active', 3),
+    ...bulletsUnderHeading(aiDocuments['backlog.md'] ?? '', 'Next', 3),
+  ]).slice(0, 7);
+}
+
+function inferKeyCommands(scripts) {
+  return Object.entries(scripts).map(([name, command]) => `\`npm run ${name}\` — ${command}`);
+}
+
+function inferKnownGaps(readme, aiDocuments) {
+  return unique([
+    ...bulletsUnderHeading(aiDocuments['validation.md'] ?? '', 'Gaps', 6),
+    ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Deferred', 6),
+    ...bulletsAfterLabel(readme, 'Intentionally not included:', 10),
+  ]).slice(0, 10);
+}
+
+function calculateConfidence({ readme, aiDocuments, packageJson, languages, folders, dependencies, flows }) {
+  let score = 20;
+  if (readme.trim()) score += 25;
+  if ((aiDocuments['goals.md'] ?? '').trim()) score += 15;
+  if ((aiDocuments['backlog.md'] ?? '').trim()) score += 10;
+  if ((aiDocuments['validation.md'] ?? '').trim()) score += 5;
+  if (packageJson) score += 10;
+  if (languages.length > 0) score += 5;
+  if (folders.length > 0) score += 5;
+  if (dependencies.length > 0) score += 5;
+  if (flows.length > 0) score += 5;
+
+  return Math.min(score, 95);
+}
+
+const [files, folders, { dependencies, scripts, packageJson }, manualNotes, readme, aiDocuments] = await Promise.all([
   walk(root),
   detectMajorFolders(),
-  detectDependencies(),
+  detectPackageJson(),
   readExistingManualNotes(),
+  readTextIfExists(join(root, 'README.md')),
+  readAiDocuments(),
 ]);
 
 const majorFiles = detectMajorFiles(files);
 const languages = detectLanguages(files);
-const confidence = calculateConfidence({ languages, folders, files: majorFiles, dependencies });
-const summary = buildSummary({ languages, folders, files: majorFiles, dependencies });
+const productThesis = inferProductThesis(readme, aiDocuments, packageJson);
+const coreSystems = inferCoreSystems({ folders, files, dependencies, scripts, aiDocuments });
+const primaryFlows = inferPrimaryFlows({ dependencies, scripts, aiDocuments });
+const currentFocus = inferCurrentFocus(readme, aiDocuments);
+const keyCommands = inferKeyCommands(scripts);
+const knownGaps = inferKnownGaps(readme, aiDocuments);
+const confidenceScore = calculateConfidence({
+  readme,
+  aiDocuments,
+  packageJson,
+  languages,
+  folders,
+  dependencies,
+  flows: primaryFlows,
+});
+const confidence = `${confidenceScore}%`;
+const confidenceNote =
+  confidenceScore < 70
+    ? '\nLow confidence: the repository did not provide enough README, `.ai/`, package, or structure signals to infer repository understanding reliably.\n'
+    : '';
 const auditedAt = new Date().toISOString();
 
 const generated = `# Architecture
 
 Last Audit: ${auditedAt}
 Confidence: ${confidence}
+${confidenceNote}
+## Product Thesis
+${formatList(productThesis)}
 
-Languages:
+## Core Systems
+${formatList(coreSystems)}
+
+## Primary Flows
+${formatList(primaryFlows)}
+
+## Current Focus
+${formatList(currentFocus)}
+
+## Key Commands
+${formatList(keyCommands)}
+
+## Known Gaps
+${formatList(knownGaps)}
+
+## Repository Structure
+
+### Languages
 ${formatList(languages)}
 
-Major Areas:
+### Folders
 ${formatList(folders)}
 
-Major Files:
+### Files
 ${formatList(majorFiles)}
 
-Dependencies:
+### Dependencies
 ${formatList(dependencies)}
-
-Repository Summary:
-${summary}
 
 ${manualNotes}`;
 
