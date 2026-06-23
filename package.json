@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "init:ai": "node scripts/init-ai.mjs",
     "audit": "node scripts/audit.mjs",
-    "backlog": "node scripts/backlog.mjs"
+    "backlog": "node scripts/backlog.mjs",
+    "validate:intel": "node scripts/validate-intel.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
