@@ -109,3 +109,10 @@ Intentionally not included:
 - Chat
 - Database
 - Authentication
+
+## Future work
+
+- Add backlog quality filtering.
+- Improve markdown rendering.
+- Add cross-links between `.ai` documents.
+- Add agent prompt export.
