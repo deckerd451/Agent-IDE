@@ -137,6 +137,19 @@ function firstSentences(markdown, count = 2) {
   return paragraphs.slice(0, count);
 }
 
+const productThesisNoisePattern =
+  /\b(status:|no code implementation|no ui changes|no behavior changes|implementation note|validation only|audit only)\b/i;
+
+function isProductThesisNoise(value) {
+  return productThesisNoisePattern.test(value);
+}
+
+function productThesisCandidates(markdown, source, count = 2) {
+  return firstSentences(markdown, count)
+    .filter((candidate) => !isProductThesisNoise(candidate))
+    .map((candidate) => ({ text: candidate.replace(/^[-*]\s+/, ''), source }));
+}
+
 function bulletsUnderHeading(markdown, heading, limit = 5) {
   const lines = markdown.split('\n');
   const start = lines.findIndex((line) => line.trim().toLowerCase() === `## ${heading.toLowerCase()}`);
@@ -256,24 +269,77 @@ async function readAiDocuments() {
   return Object.fromEntries(entries);
 }
 
-function inferProductThesis(readme, aiDocuments, packageJson, docs, files) {
-  const projectFiles = files.filter((file) => /\.(xcodeproj|xcworkspace)$/.test(file));
-  const candidates = unique([
-    ...firstSentences(readme, 2),
-    ...firstSentences(aiDocuments['goals.md'] ?? '', 2),
-    ...Object.values(docs).flatMap((doc) => firstSentences(doc, 1)),
-  ]);
+function formatEvidence(sources) {
+  const filtered = unique(sources).slice(0, 8);
+  return filtered.length > 0 ? filtered.join(', ') : 'No explicit evidence detected';
+}
 
-  if (candidates.length > 0) {
-    const thesis = candidates[0].replace(/:$/, '.');
+function inferProductThesis(readme, aiDocuments, packageJson, docs, files, coreSystems) {
+  if (isAgentIdeRepository({ packageJson, readme, files })) {
+    return {
+      thesis:
+        'Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.',
+      evidence: formatEvidence(['README.md', '.ai/goals.md', 'scripts/audit.mjs']),
+    };
+  }
+
+  const projectFiles = files.filter((file) => /\.(xcodeproj|xcworkspace)$/.test(file));
+  const candidates = [
+    ...productThesisCandidates(aiDocuments['goals.md'] ?? '', '.ai/goals.md', 3),
+    ...productThesisCandidates(readme, 'README.md', 3),
+    ...Object.entries(docs).flatMap(([docPath, doc]) => productThesisCandidates(doc, docPath, 1)),
+  ];
+  const seen = new Set();
+  const uniqueCandidates = candidates.filter((candidate) => {
+    const key = compact(candidate.text).toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  if (uniqueCandidates.length > 0) {
+    const selected = uniqueCandidates[0];
+    const thesis = selected.text.replace(/:$/, '.');
     if (thesis.includes('Agent IDE is a prototype developer environment')) {
-      return 'Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.';
+      return {
+        thesis:
+          'Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.',
+        evidence: formatEvidence([selected.source]),
+      };
     }
-    return thesis;
+    return { thesis, evidence: formatEvidence([selected.source]) };
+  }
+
+  const systemNames = new Set(coreSystems.map((system) => system.name));
+  if (
+    systemNames.has('Relationship Memory') &&
+    systemNames.has('Event Presence') &&
+    systemNames.has('Follow-Up Engine') &&
+    systemNames.has('People/Profile Surfaces')
+  ) {
+    return {
+      thesis:
+        'This repository appears to support a relationship-memory application that uses event presence, relationship context, follow-up opportunities, people/profile surfaces, and notification workflows to help users act on real-world connections.',
+      evidence: formatEvidence(coreSystems.flatMap((system) => system.sources)),
+    };
+  }
+
+  if (coreSystems.length > 0) {
+    const systemList = coreSystems
+      .slice(0, 4)
+      .map((system) => system.name.toLowerCase())
+      .join(', ');
+    return {
+      thesis: `This repository appears to support a product centered on ${systemList}, inferred from dominant domain systems in the local code and documentation.`,
+      evidence: formatEvidence(coreSystems.flatMap((system) => system.sources)),
+    };
   }
 
   const projectName = packageJson?.name ?? projectFiles.map((file) => basename(file, extname(file))).sort()[0];
-  return `This appears to be ${projectName ? `the ${projectName} repository` : 'a software repository'}, but no README, docs, or goals text was available to explain the product purpose.`;
+  return {
+    thesis: `This appears to be ${projectName ? `the ${projectName} repository` : 'a software repository'}, but no README, docs, goals, or dominant domain-system text was available to explain the product purpose.`,
+    evidence: formatEvidence(projectFiles),
+  };
 }
 
 function describeDashboardUi({ dependencies, files }) {
@@ -484,8 +550,8 @@ const sourcePaths = files.filter((file) => /\.(swift|ts|tsx|js|jsx)$/.test(file)
 const sourceDocuments = await readDocuments(sourcePaths);
 const majorFiles = detectMajorFiles(files);
 const languages = detectLanguages(files);
-const productThesis = inferProductThesis(readme, aiDocuments, packageJson, docs, files);
 const coreSystems = inferCoreSystems({ folders, files, dependencies, scripts, aiDocuments, docs, sourceDocuments, packageJson, readme });
+const productThesis = inferProductThesis(readme, aiDocuments, packageJson, docs, files, coreSystems);
 const primaryFlows = inferPrimaryFlows({ scripts, coreSystems, packageJson, readme, files });
 const currentFocus = inferCurrentFocus(readme, aiDocuments, packageJson, files);
 const keyCommands = inferKeyCommands(scripts);
@@ -512,7 +578,10 @@ Last Audit: ${auditedAt}
 Confidence: ${confidence}
 ${confidenceNote}
 ## Product Thesis
-${productThesis}
+${productThesis.thesis}
+
+Product Thesis Evidence:
+${productThesis.evidence}
 
 ## Core Systems
 ${formatCoreSystems(coreSystems)}
