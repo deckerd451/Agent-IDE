@@ -5,7 +5,7 @@ const root = process.cwd();
 const aiDir = join(root, '.ai');
 const architecturePath = join(aiDir, 'architecture.md');
 const manualHeader = '## Manual Notes';
-const ignoredDirectories = new Set(['.git', '.ai', 'node_modules', 'dist', 'build', 'coverage', '.vite']);
+const ignoredDirectories = new Set(['.git', '.ai', 'node_modules', 'dist', 'build', 'coverage', '.vite', 'DerivedData', '.build']);
 const maxFiles = 1000;
 
 const languageByExtension = new Map([
@@ -123,15 +123,15 @@ function compact(value) {
 }
 
 function unique(items) {
-  return [...new Set(items.map(compact).filter(Boolean))];
+  return [...new Set(items.filter(Boolean).map(compact).filter(Boolean))];
 }
 
 function firstSentences(markdown, count = 2) {
-  const withoutCode = markdown.replace(/```[\s\S]*?```/g, '');
+  const withoutCode = markdown.replace(/```[\s\S]*?```/g, '').replace(/^#+\s+.*$/gm, '');
   const paragraphs = withoutCode
     .split(/\n{2,}/)
     .filter((paragraph) => !paragraph.includes('\n- '))
-    .map((paragraph) => compact(paragraph.replace(/^#+\s+/gm, '')))
+    .map((paragraph) => compact(paragraph))
     .filter((paragraph) => paragraph.length > 40);
 
   return paragraphs.slice(0, count);
@@ -155,6 +155,25 @@ function bulletsUnderHeading(markdown, heading, limit = 5) {
   }
 
   return bullets.slice(0, limit);
+}
+
+function headings(markdown, limit = 12) {
+  return markdown
+    .split('\n')
+    .map((line) => line.match(/^#{1,3}\s+(.+)/)?.[1])
+    .filter(Boolean)
+    .map(compact)
+    .slice(0, limit);
+}
+
+function titleCase(value) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_.-]+/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+    .join(' ');
 }
 
 function bulletsAfterLabel(markdown, label, limit = 8) {
@@ -224,6 +243,11 @@ async function detectPackageJson() {
   };
 }
 
+async function readDocuments(paths) {
+  const entries = await Promise.all(paths.map(async (fileName) => [fileName, await readTextIfExists(join(root, fileName))]));
+  return Object.fromEntries(entries.filter(([, content]) => content.trim()));
+}
+
 async function readAiDocuments() {
   const entries = await Promise.all(
     sectionDocuments.map(async (fileName) => [fileName, await readTextIfExists(join(aiDir, fileName))]),
@@ -232,10 +256,12 @@ async function readAiDocuments() {
   return Object.fromEntries(entries);
 }
 
-function inferProductThesis(readme, aiDocuments, packageJson) {
+function inferProductThesis(readme, aiDocuments, packageJson, docs, files) {
+  const projectFiles = files.filter((file) => /\.(xcodeproj|xcworkspace)$/.test(file));
   const candidates = unique([
     ...firstSentences(readme, 2),
-    ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Active', 2),
+    ...firstSentences(aiDocuments['goals.md'] ?? '', 2),
+    ...Object.values(docs).flatMap((doc) => firstSentences(doc, 1)),
   ]);
 
   if (candidates.length > 0) {
@@ -246,7 +272,8 @@ function inferProductThesis(readme, aiDocuments, packageJson) {
     return thesis;
   }
 
-  return `This appears to be ${packageJson?.name ? `the ${packageJson.name} repository` : 'a software repository'}, but no README or goals text was available to explain the product purpose.`;
+  const projectName = packageJson?.name ?? projectFiles.map((file) => basename(file, extname(file))).sort()[0];
+  return `This appears to be ${projectName ? `the ${projectName} repository` : 'a software repository'}, but no README, docs, or goals text was available to explain the product purpose.`;
 }
 
 function describeDashboardUi({ dependencies, files }) {
@@ -274,44 +301,133 @@ function describeLocalAuditEngine({ scripts, files }) {
   return 'Local deterministic audit workflow for generating architecture understanding from repository files.';
 }
 
-function inferCoreSystems({ files, dependencies, scripts, aiDocuments }) {
-  return [
-    `Dashboard UI: ${describeDashboardUi({ dependencies, files })}`,
-    `Repository Intelligence Contract: ${describeRepositoryIntelligenceContract(aiDocuments)}`,
-    `Local Audit Engine: ${describeLocalAuditEngine({ scripts, files })}`,
-  ];
+function isAgentIdeRepository({ packageJson, readme, files }) {
+  return packageJson?.name === 'agent-ide' || (readme.includes('Agent IDE') && files.includes('scripts/audit.mjs'));
 }
 
-function inferPrimaryFlows({ scripts }) {
-  return [
-    'Repository -> .ai files -> Dashboard',
-    scripts['init:ai']
-      ? 'npm run init:ai -> starter intelligence files'
-      : 'Initializer command -> starter intelligence files',
-    scripts.audit
-      ? 'npm run audit -> generated architecture.md'
-      : 'Audit command -> generated architecture.md',
-    scripts.backlog
-      ? 'npm run backlog -> generated backlog.md'
-      : 'Backlog command -> generated backlog.md',
-  ];
+const architectureSignals = [
+  { pattern: /relationship|memory/i, name: 'Relationship Memory' },
+  { pattern: /follow.?up/i, name: 'Follow-Up Engine' },
+  { pattern: /event|presence/i, name: 'Event Presence' },
+  { pattern: /decision|dashboard|surface/i, name: 'Decision Surface' },
+  { pattern: /notification|push/i, name: 'Notification Pipeline' },
+  { pattern: /people|person|profile|contact/i, name: 'People/Profile Surfaces' },
+  { pattern: /auth|login|session/i, name: 'Authentication' },
+  { pattern: /navigation|router|coordinator/i, name: 'Navigation' },
+  { pattern: /persist|storage|database|cache|store/i, name: 'Persistence' },
+  { pattern: /service|client|api/i, name: 'Service Layer' },
+  { pattern: /view|screen|page/i, name: 'User Interface Views' },
+  { pattern: /model|entity|schema/i, name: 'Domain Models' },
+  { pattern: /manager|controller/i, name: 'Managers/Controllers' },
+];
+
+function evidenceLabel(source) {
+  return source.replace(/^docs\//, 'docs/');
 }
 
-function inferCurrentFocus(readme, aiDocuments) {
+function sourceSymbolNames(sourceText) {
+  const matches = [...sourceText.matchAll(/\b(?:class|struct|enum|protocol|interface|type|function|const)\s+([A-Z][A-Za-z0-9_]+)/g)];
+  return matches.map((match) => match[1]).slice(0, 20);
+}
+
+function collectSystemEvidence({ files, docs, sourceDocuments }) {
+  const evidence = new Map();
+  const add = (name, source) => {
+    if (!evidence.has(name)) evidence.set(name, new Set());
+    evidence.get(name).add(evidenceLabel(source));
+  };
+
+  for (const folder of unique(files.filter((file) => file.includes('/')).map((file) => `${file.split('/')[0]}/`))) {
+    for (const signal of architectureSignals) if (signal.pattern.test(folder)) add(signal.name, folder);
+  }
+
+  for (const file of files) {
+    if (!/\.(swift|ts|tsx|js|jsx|md)$/.test(file)) continue;
+    const readable = titleCase(basename(file, extname(file)));
+    for (const signal of architectureSignals) if (signal.pattern.test(readable) || signal.pattern.test(file)) add(signal.name, file);
+  }
+
+  for (const [file, content] of Object.entries(sourceDocuments)) {
+    for (const symbol of sourceSymbolNames(content)) {
+      const readable = titleCase(symbol);
+      for (const signal of architectureSignals) if (signal.pattern.test(readable)) add(signal.name, `${file}:${symbol}`);
+    }
+  }
+
+  for (const [docPath, content] of Object.entries(docs)) {
+    for (const heading of headings(content, 20)) {
+      for (const signal of architectureSignals) if (signal.pattern.test(heading)) add(signal.name, `${docPath}#${heading}`);
+    }
+  }
+
+  return [...evidence.entries()]
+    .map(([name, sources]) => ({ name, sources: [...sources].sort((a, b) => a.localeCompare(b)).slice(0, 5) }))
+    .sort((a, b) => b.sources.length - a.sources.length || a.name.localeCompare(b.name))
+    .slice(0, 8);
+}
+
+function formatCoreSystems(systems) {
+  if (systems.length === 0) return '- None detected';
+  return systems.map((system) => `- ${system.name}: Inferred from target repository structure and naming.\n  Evidence: ${system.sources.join(', ')}`).join('\n');
+}
+
+function inferCoreSystems({ folders, files, dependencies, scripts, aiDocuments, docs, sourceDocuments, packageJson, readme }) {
+  if (isAgentIdeRepository({ packageJson, readme, files })) {
+    return [
+      { name: 'Dashboard UI', sources: ['src/App.tsx', 'src/sections.ts', 'package.json'] },
+      { name: 'Repository Intelligence Contract', sources: ['.ai/*.md', 'scripts/init-ai.mjs', 'README.md'] },
+      { name: 'Local Audit Engine', sources: ['scripts/audit.mjs', 'package.json'] },
+    ];
+  }
+
+  const inferred = collectSystemEvidence({ files, docs: { ...docs, 'README.md': readme, '.ai/goals.md': aiDocuments['goals.md'] ?? '' }, sourceDocuments });
+  if (inferred.length > 0) return inferred;
+
+  return folders.slice(0, 6).map((folder) => ({
+    name: titleCase(folder.replace(/\/$/, '')),
+    sources: [folder],
+  }));
+}
+
+function inferPrimaryFlows({ scripts, coreSystems, packageJson, readme, files }) {
+  if (isAgentIdeRepository({ packageJson, readme, files })) {
+    return [
+      'Repository -> .ai files -> Dashboard',
+      scripts['init:ai'] ? 'npm run init:ai -> starter intelligence files' : 'Initializer command -> starter intelligence files',
+      scripts.audit ? 'npm run audit -> generated architecture.md' : 'Audit command -> generated architecture.md',
+      scripts.backlog ? 'npm run backlog -> generated backlog.md' : 'Backlog command -> generated backlog.md',
+    ];
+  }
+
+  const names = coreSystems.map((system) => system.name);
+  return unique([
+    names.includes('Authentication') && 'Authentication -> Session -> Protected Surfaces',
+    names.includes('Persistence') && 'Domain Models -> Persistence -> User Interface Views',
+    names.includes('Notification Pipeline') && 'Domain Events -> Notification Pipeline -> User Attention',
+    names.includes('Event Presence') && 'Events -> Presence State -> People/Profile Surfaces',
+    names.includes('Follow-Up Engine') && 'Relationship Memory -> Follow-Up Engine -> Notification Pipeline',
+    names.length >= 2 && `${names[0]} -> ${names[1]}`,
+  ]).slice(0, 5);
+}
+
+function inferCurrentFocus(readme, aiDocuments, packageJson, files) {
   const candidates = unique([
     ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Active', 1),
     ...bulletsUnderHeading(aiDocuments['backlog.md'] ?? '', 'Next', 2),
   ]);
 
   if (candidates.length === 0) {
-    return 'The repository is currently evolving toward clearer local repository understanding and deterministic project intelligence.';
+    const projectName = packageJson?.name ?? files.find((file) => /\.(xcodeproj|xcworkspace)$/.test(file))?.replace(/\.(xcodeproj|xcworkspace)$/, '');
+    return projectName ? `The repository is currently evolving the ${projectName} product described by its local code and project structure.` : 'No explicit current focus was detected from local goals or backlog notes.';
   }
 
   const [activeGoal, ...nextWork] = candidates.map((candidate) => candidate.replace(/\.$/, ''));
   const normalizedGoal = activeGoal.startsWith('Make ')
     ? `making ${activeGoal.slice('Make '.length)}`
-    : activeGoal.replace(/^./, (letter) => letter.toLowerCase());
-  const focus = `The repository is currently evolving toward ${normalizedGoal}`;
+    : activeGoal.match(/^(Improve|Build|Add|Create|Support|Enable|Detect)\b/)
+      ? `${activeGoal.charAt(0).toLowerCase()}${activeGoal.slice(1)}`
+      : activeGoal.replace(/^./, (letter) => letter.toLowerCase());
+  const focus = `The repository is currently focused on ${normalizedGoal}`;
   if (nextWork.length === 0) {
     return `${focus}.`;
   }
@@ -326,13 +442,16 @@ function inferKeyCommands(scripts) {
     .map((name) => `npm run ${name}`);
 }
 
-function inferKnownGaps() {
-  return [
-    'No LLM integration',
-    'No agent execution',
-    'No validation generation',
-    'No packaged CLI',
-  ];
+function inferKnownGaps(readme, aiDocuments, packageJson, files) {
+  if (isAgentIdeRepository({ packageJson, readme, files })) {
+    return ['No LLM integration', 'No agent execution', 'No validation generation', 'No packaged CLI'];
+  }
+
+  return unique([
+    ...bulletsUnderHeading(aiDocuments['backlog.md'] ?? '', 'Known Gaps', 6),
+    ...bulletsAfterLabel(readme, 'Known gaps', 6),
+    ...bulletsAfterLabel(readme, 'Limitations', 6),
+  ]).slice(0, 6);
 }
 
 function calculateConfidence({ readme, aiDocuments, packageJson, languages, folders, dependencies, flows }) {
@@ -359,14 +478,18 @@ const [files, folders, { dependencies, scripts, packageJson }, manualNotes, read
   readAiDocuments(),
 ]);
 
+const docPaths = files.filter((file) => file.startsWith('docs/') && file.endsWith('.md'));
+const docs = await readDocuments(docPaths);
+const sourcePaths = files.filter((file) => /\.(swift|ts|tsx|js|jsx)$/.test(file)).slice(0, 200);
+const sourceDocuments = await readDocuments(sourcePaths);
 const majorFiles = detectMajorFiles(files);
 const languages = detectLanguages(files);
-const productThesis = inferProductThesis(readme, aiDocuments, packageJson);
-const coreSystems = inferCoreSystems({ folders, files, dependencies, scripts, aiDocuments });
-const primaryFlows = inferPrimaryFlows({ scripts });
-const currentFocus = inferCurrentFocus(readme, aiDocuments);
+const productThesis = inferProductThesis(readme, aiDocuments, packageJson, docs, files);
+const coreSystems = inferCoreSystems({ folders, files, dependencies, scripts, aiDocuments, docs, sourceDocuments, packageJson, readme });
+const primaryFlows = inferPrimaryFlows({ scripts, coreSystems, packageJson, readme, files });
+const currentFocus = inferCurrentFocus(readme, aiDocuments, packageJson, files);
 const keyCommands = inferKeyCommands(scripts);
-const knownGaps = inferKnownGaps();
+const knownGaps = inferKnownGaps(readme, aiDocuments, packageJson, files);
 const confidenceScore = calculateConfidence({
   readme,
   aiDocuments,
@@ -392,7 +515,7 @@ ${confidenceNote}
 ${productThesis}
 
 ## Core Systems
-${formatList(coreSystems)}
+${formatCoreSystems(coreSystems)}
 
 ## Primary Flows
 ${formatList(primaryFlows)}

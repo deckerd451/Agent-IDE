@@ -1,15 +1,18 @@
 # Architecture
 
-Last Audit: 2026-06-23T20:49:08.787Z
+Last Audit: 2026-06-23T23:09:11.880Z
 Confidence: 95%
 
 ## Product Thesis
 Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
 
 ## Core Systems
-- Dashboard UI: React/Vite interface that makes repository-understanding markdown the primary navigation surface instead of a file tree.
-- Repository Intelligence Contract: Version-controlled `.ai/*.md` files that define goals, architecture, backlog, decisions, validation, agent constraints, and code notes.
-- Local Audit Engine: `scripts/audit.mjs` deterministically scans local repository signals and regenerates `.ai/architecture.md` without LLM calls.
+- Dashboard UI: Inferred from target repository structure and naming.
+  Evidence: src/App.tsx, src/sections.ts, package.json
+- Repository Intelligence Contract: Inferred from target repository structure and naming.
+  Evidence: .ai/*.md, scripts/init-ai.mjs, README.md
+- Local Audit Engine: Inferred from target repository structure and naming.
+  Evidence: scripts/audit.mjs, package.json
 
 ## Primary Flows
 - Repository -> .ai files -> Dashboard
@@ -18,7 +21,7 @@ Agent IDE exists to make repository understanding the primary developer interfac
 - npm run backlog -> generated backlog.md
 
 ## Current Focus
-The repository is currently evolving toward making repository understanding the primary surface of Agent IDE.
+The repository is currently focused on making repository understanding the primary surface of Agent IDE.
 
 ## Key Commands
 - npm run dev
