@@ -26,7 +26,7 @@ Agent IDE treats repository understanding as the primary surface:
 - **Agents** describes planned agent roles and constraints before automation is added.
 - **Code** remains available, but it is framed by the surrounding product and engineering context.
 
-This prototype does not include authentication, a database, a code editor, real agents, CLI packaging, or LLM integration. Repository scanning is limited to the local `npm run audit` command that maintains `.ai/architecture.md` without calling an LLM.
+This prototype does not include authentication, a database, a code editor, real agents, CLI packaging, or LLM integration. Repository scanning is limited to local deterministic commands such as `npm run audit` for `.ai/architecture.md` and `npm run backlog` for `.ai/backlog.md`, both without calling an LLM.
 
 ## `.ai/` folder contract
 
@@ -69,6 +69,14 @@ npm run audit
 
 The audit infers repository understanding from local README, `.ai/` documents, `package.json` scripts, source structure, and dependencies. It writes product thesis, core systems, primary flows, current focus, key commands, known gaps, and a lower repository-structure section while preserving the timestamp, confidence score, and anything already written under `## Manual Notes`.
 
+Generate or refresh `.ai/backlog.md` locally:
+
+```bash
+npm run backlog
+```
+
+The backlog generator scans local code comments for TODO, FIXME, HACK, XXX, and NOTE markers, then scans README and `.ai/` markdown for known gaps, future work, limitations, and missing capabilities. It writes prioritized backlog items with source, reason, and suggested next step while preserving anything already written under `## Manual Backlog`.
+
 Start the development server:
 
 ```bash
@@ -90,12 +98,14 @@ Implemented now:
 - Helpful empty states for missing markdown files.
 - `npm run init:ai` for creating starter files without overwriting existing content.
 - `npm run audit` for generating and maintaining `.ai/architecture.md` as local repository understanding from README, `.ai/` files, package scripts, repository structure, and dependencies.
+- `npm run backlog` for generating and maintaining `.ai/backlog.md` from local code comments plus README and `.ai/` gaps without LLM calls.
 
 Intentionally not included:
 
 - CLI packaging
 - Agents
 - LLM calls
+- Code editing
+- Chat
 - Database
 - Authentication
-- Code editing
