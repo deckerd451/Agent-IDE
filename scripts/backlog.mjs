@@ -28,14 +28,37 @@ const scannableCodeExtensions = new Set([
   '.php',
 ]);
 const priorityOrder = ['High Priority', 'Medium Priority', 'Low Priority'];
-const gapPatterns = [
+const actionableHeadingPatterns = [
   /\bknown gaps?\b/i,
+  /\bgaps?\b/i,
   /\bfuture work\b/i,
+  /\bnext work\b/i,
   /\blimitations?\b/i,
   /\bmissing capabilities?\b/i,
-  /\bnot included\b/i,
+  /\bmanual backlog\b/i,
+];
+const nonGoalHeadingPatterns = [
   /\bintentionally not included\b/i,
+  /\bnot included\b/i,
+  /\bnon-goals?\b/i,
+  /\bout of scope\b/i,
+];
+const ignoredAlwaysPatterns = [
+  /\bllm (calls?|integration)\b/i,
+  /\bagent execution\b/i,
+  /\breal agents?\b/i,
+];
+const ignoredNonGoalPatterns = [
+  /\bauth(entication)?\b/i,
+  /\bdatabase(s)?\b/i,
+  /\bcode editor\b/i,
+  /\bcode editing\b/i,
+  /\bllm (calls?|integration)\b/i,
+  /\breal agents?\b/i,
+  /\bagent execution\b/i,
+  /\bthis prototype does not include\b/i,
   /\bdoes not include\b/i,
+  /\bnot included\b/i,
 ];
 
 async function pathExists(path) {
@@ -78,6 +101,7 @@ function compact(value) {
 
 function titleCase(value) {
   return value
+    .replace(/\s+(so|for|as|without|that|to make)\b.*$/i, '')
     .replace(/[`*_#[\]()]/g, '')
     .replace(/^[\s:-]+/, '')
     .split(/\s+/)
@@ -85,6 +109,39 @@ function titleCase(value) {
     .map((word) => (word.length <= 3 ? word : word[0].toUpperCase() + word.slice(1)))
     .join(' ')
     .replace(/[.,:;]+$/, '');
+}
+
+
+function stripTrailingNoise(value) {
+  return value
+    .replace(/\b(yet|currently|today|now)\b[.!?]*$/i, '')
+    .replace(/[.!?]+$/g, '')
+    .trim();
+}
+
+function actionableText(value) {
+  const cleaned = stripTrailingNoise(
+    compact(value)
+      .replace(/^[-*]\s+/, '')
+      .replace(/^this prototype does not include\s+/i, '')
+      .replace(/^no\s+/i, '')
+      .replace(/^missing\s+/i, '')
+      .replace(/^lacks?\s+/i, '')
+      .replace(/^without\s+/i, ''),
+  );
+
+  if (!cleaned) return '';
+  if (/^(add|improve|create|extract|support|generate|export|package|link|document|validate|filter)\b/i.test(cleaned)) {
+    return cleaned;
+  }
+
+  return `Add ${cleaned}`;
+}
+
+function isIgnoredNonGoal(text, context) {
+  if (ignoredAlwaysPatterns.some((pattern) => pattern.test(text))) return true;
+  if (context === 'known-gap' || context === 'manual-backlog') return false;
+  return ignoredNonGoalPatterns.some((pattern) => pattern.test(text));
 }
 
 function normalizeKey(value) {
@@ -105,24 +162,26 @@ function classifyPriority(text) {
   return 'Low Priority';
 }
 
-function buildItem({ text, source: itemSource, type }) {
+function buildItem({ text, source: itemSource, type, context = 'document' }) {
   const normalizedText = compact(text.replace(/^(TODO|FIXME|HACK|XXX|NOTE)\b\s*:?\s*/i, ''));
+  const sourceText = stripTrailingNoise(normalizedText);
+  const taskText = type === 'document' ? actionableText(sourceText) : sourceText;
   const fallbackTitle = type === 'comment' ? 'Review Repository Comment' : 'Review Documented Gap';
-  const title = titleCase(normalizedText) || fallbackTitle;
+  const title = titleCase(taskText) || fallbackTitle;
 
   return {
     title,
     source: itemSource,
     reason:
       type === 'comment'
-        ? `Repository comment marked this as ${normalizedText || 'work requiring attention'}.`
-        : `Repository documentation identifies this gap or future work: ${normalizedText || 'review the source for details'}.`,
+        ? `Repository comment marked this as ${sourceText || 'work requiring attention'}.`
+        : `Repository documentation identifies actionable follow-up work from: ${sourceText || 'review the source for details'}.`,
     suggestedNextStep:
       type === 'comment'
         ? 'Inspect the referenced code path, decide whether the comment still applies, and convert it into an implementation task or remove it.'
-        : 'Validate the documented gap against current behavior, then define the smallest local change that closes it.',
-    priority: classifyPriority(`${type} ${normalizedText}`),
-    key: normalizeKey(normalizedText),
+        : `Define the smallest local, deterministic change needed to ${taskText.toLowerCase() || 'close this gap'}.`,
+    priority: classifyPriority(`${context} ${sourceText} ${taskText}`),
+    key: normalizeKey(taskText || sourceText),
   };
 }
 
@@ -143,29 +202,57 @@ function scanComments(path, content) {
 function scanMarkdownGaps(path, content) {
   const lines = content.split('\n');
   const items = [];
-  let activeGapHeading = false;
+  let activeContext = null;
+  let activeTopLevelHeading = '';
 
   lines.forEach((line, index) => {
     const trimmed = line.trim();
     if (trimmed.startsWith('```')) return;
 
     if (/^#{1,6}\s+/.test(trimmed)) {
-      activeGapHeading = gapPatterns.some((pattern) => pattern.test(trimmed));
+      const headingText = trimmed.replace(/^#{1,6}\s+/, '');
+      if (/^#{1,2}\s+/.test(trimmed)) activeTopLevelHeading = headingText;
+
+      if (nonGoalHeadingPatterns.some((pattern) => pattern.test(headingText))) {
+        activeContext = 'non-goal';
+        return;
+      }
+
+      if (/\bknown gaps?\b/i.test(headingText) || /\bgaps?\b/i.test(headingText)) {
+        activeContext = 'known-gap';
+        return;
+      }
+
+      if (/\bmanual backlog\b/i.test(headingText)) {
+        activeContext = 'manual-backlog';
+        return;
+      }
+
+      if (actionableHeadingPatterns.some((pattern) => pattern.test(headingText))) {
+        activeContext = 'actionable';
+        return;
+      }
+
+      activeContext = null;
       return;
     }
 
     const bullet = trimmed.match(/^[-*]\s+(.+)/);
-    const mentionsGap = gapPatterns.some((pattern) => pattern.test(trimmed));
-    const isNegativeCapability = /\b(no|not included|does not include|limitation|gap)\b/i.test(trimmed);
-    if ((activeGapHeading && bullet) || (bullet && mentionsGap && isNegativeCapability) || (!bullet && mentionsGap && isNegativeCapability && trimmed.length > 30)) {
-      items.push(
-        buildItem({
-          text: bullet ? bullet[1] : trimmed,
-          source: source(path, index + 1),
-          type: 'document',
-        }),
-      );
-    }
+    if (!bullet || !activeContext || activeContext === 'non-goal') return;
+
+    const text = bullet[1];
+    const context = activeContext;
+    if (isIgnoredNonGoal(text, context)) return;
+    if (/^implemented now:?$/i.test(activeTopLevelHeading) || /^implemented now:?$/i.test(text)) return;
+
+    items.push(
+      buildItem({
+        text,
+        source: source(path, index + 1),
+        type: 'document',
+        context,
+      }),
+    );
   });
 
   return items;
