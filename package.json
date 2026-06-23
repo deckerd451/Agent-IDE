@@ -12,7 +12,9 @@
     "backlog": "node scripts/backlog.mjs",
     "validate:intel": "node scripts/validate-intel.mjs",
     "prompt": "node scripts/prompt.mjs",
-    "decisions": "node scripts/decisions.mjs"
+    "decisions": "node scripts/decisions.mjs",
+    "server": "node scripts/server.mjs",
+    "dev:all": "(npm run server & npm run dev)"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
