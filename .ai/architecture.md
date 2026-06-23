@@ -1,6 +1,6 @@
 # Architecture
 
-Last Audit: 2026-06-23T20:43:15.696Z
+Last Audit: 2026-06-23T20:49:08.787Z
 Confidence: 95%
 
 ## Product Thesis
@@ -15,21 +15,22 @@ Agent IDE exists to make repository understanding the primary developer interfac
 - Repository -> .ai files -> Dashboard
 - npm run init:ai -> starter intelligence files
 - npm run audit -> generated architecture.md
+- npm run backlog -> generated backlog.md
 
 ## Current Focus
-The repository is currently evolving toward making repository understanding the primary surface of Agent IDE, with near-term work to improve markdown rendering while keeping the contract plain text and add lightweight cross-links between `.ai/` documents.
+The repository is currently evolving toward making repository understanding the primary surface of Agent IDE.
 
 ## Key Commands
 - npm run dev
 - npm run build
 - npm run init:ai
 - npm run audit
+- npm run backlog
 
 ## Known Gaps
 - No LLM integration
 - No agent execution
 - No validation generation
-- No backlog generation
 - No packaged CLI
 
 ## Repository Structure

@@ -291,6 +291,9 @@ function inferPrimaryFlows({ scripts }) {
     scripts.audit
       ? 'npm run audit -> generated architecture.md'
       : 'Audit command -> generated architecture.md',
+    scripts.backlog
+      ? 'npm run backlog -> generated backlog.md'
+      : 'Backlog command -> generated backlog.md',
   ];
 }
 
@@ -318,7 +321,7 @@ function inferCurrentFocus(readme, aiDocuments) {
 }
 
 function inferKeyCommands(scripts) {
-  return ['dev', 'build', 'init:ai', 'audit']
+  return ['dev', 'build', 'init:ai', 'audit', 'backlog']
     .filter((name) => scripts[name])
     .map((name) => `npm run ${name}`);
 }
@@ -328,7 +331,6 @@ function inferKnownGaps() {
     'No LLM integration',
     'No agent execution',
     'No validation generation',
-    'No backlog generation',
     'No packaged CLI',
   ];
 }
