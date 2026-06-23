@@ -26,7 +26,7 @@ Agent IDE treats repository understanding as the primary surface:
 - **Agents** describes planned agent roles and constraints before automation is added.
 - **Code** remains available, but it is framed by the surrounding product and engineering context.
 
-This prototype does not include authentication, a database, a code editor, real agents, repository scanning, CLI packaging, or LLM integration.
+This prototype does not include authentication, a database, a code editor, real agents, CLI packaging, or LLM integration. Repository scanning is limited to the local `npm run audit` command that maintains `.ai/architecture.md` without calling an LLM.
 
 ## `.ai/` folder contract
 
@@ -61,6 +61,14 @@ Initialize the `.ai/` starter files if they are not already present:
 npm run init:ai
 ```
 
+Audit the repository and update `.ai/architecture.md` locally:
+
+```bash
+npm run audit
+```
+
+The audit detects languages, major folders and files, and dependencies from `package.json`; adds a timestamp and confidence score; and preserves anything already written under `## Manual Notes`.
+
 Start the development server:
 
 ```bash
@@ -81,6 +89,7 @@ Implemented now:
 - Sidebar tabs that load and render the matching `.ai/*.md` file.
 - Helpful empty states for missing markdown files.
 - `npm run init:ai` for creating starter files without overwriting existing content.
+- `npm run audit` for generating and maintaining `.ai/architecture.md` from local repository structure and `package.json` dependencies.
 
 Intentionally not included:
 

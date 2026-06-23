@@ -1,10 +1,39 @@
 # Architecture
 
-- Local Vite, React, and TypeScript app.
-- Sidebar tabs map directly to plain markdown files in `.ai/`.
-- The app renders local markdown content without a database, authentication, LLM calls, agents, or code editing.
+Last Audit: 2026-06-23T20:14:44.127Z
+Confidence: 95%
 
-## Boundaries
+Languages:
+- CSS
+- HTML
+- JavaScript
+- JSON
+- Markdown
+- React
+- TypeScript
 
-- Repository understanding lives in `.ai/*.md`.
-- UI code lives in `src/`.
+Major Areas:
+- scripts/
+- src/
+
+Major Files:
+- index.html
+- package.json
+- README.md
+- tsconfig.app.json
+- tsconfig.json
+- vite.config.ts
+
+Dependencies:
+- @types/react
+- @types/react-dom
+- @vitejs/plugin-react
+- react
+- react-dom
+- typescript
+- vite
+
+Repository Summary:
+This repository appears to be a local Vite and React application built primarily with TypeScript. Key areas include scripts/, src/. Important root files include index.html, package.json, README.md, tsconfig.app.json, tsconfig.json. Dependencies are declared in package.json and the audit is generated locally without LLM calls.
+
+## Manual Notes
