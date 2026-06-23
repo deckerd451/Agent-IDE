@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react';
 import { sections, type Section } from './sections';
 
+const markdownFiles = import.meta.glob('../.ai/*.md', {
+  eager: true,
+  import: 'default',
+  query: '?raw',
+}) as Record<string, string>;
+
 function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section: Section) => void }) {
   return (
     <aside className="sidebar" aria-label="Repository understanding sections">
@@ -29,24 +35,48 @@ function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section
   );
 }
 
-function MarkdownLikeContent({ lines }: { lines: string[] }) {
+function MarkdownLikeContent({ markdown }: { markdown: string }) {
+  const lines = markdown.split('\n');
+
   return (
     <div className="markdownPanel">
-      {lines.map((line) => {
+      {lines.map((line, index) => {
+        const key = `${index}-${line}`;
+
+        if (line.trim() === '') {
+          return <div aria-hidden="true" className="lineBreak" key={key} />;
+        }
+
         if (line.startsWith('# ')) {
-          return <h2 key={line}>{line.replace('# ', '')}</h2>;
+          return <h2 key={key}>{line.replace('# ', '')}</h2>;
         }
 
         if (line.startsWith('## ')) {
-          return <h3 key={line}>{line.replace('## ', '')}</h3>;
+          return <h3 key={key}>{line.replace('## ', '')}</h3>;
         }
 
         if (line.startsWith('- ')) {
-          return <p className="bullet" key={line}>{line}</p>;
+          return (
+            <p className="bullet" key={key}>
+              {line}
+            </p>
+          );
         }
 
-        return <p key={line}>{line}</p>;
+        return <p key={key}>{line}</p>;
       })}
+    </div>
+  );
+}
+
+function EmptyState({ fileName }: { fileName: string }) {
+  return (
+    <div className="markdownPanel emptyState">
+      <h2>No local markdown yet</h2>
+      <p>
+        Create <code>.ai/{fileName}</code> to populate this tab, or run <code>npm run init:ai</code> to
+        create the full starter folder.
+      </p>
     </div>
   );
 }
@@ -57,6 +87,7 @@ export function App() {
     () => sections.find((section) => section.id === selectedId) ?? sections[0],
     [selectedId],
   );
+  const markdown = markdownFiles[`../.ai/${selected.markdownFile}`];
 
   return (
     <div className="shell">
@@ -65,17 +96,18 @@ export function App() {
       <main className="mainPanel">
         <header className="topBar">
           <div>
-            <p className="kicker">V1 prototype</p>
+            <p className="kicker">Local .ai contract</p>
             <h1>{selected.id}</h1>
           </div>
-          <span className="statusPill">Local only · No auth · No agents</span>
+          <span className="statusPill">Local markdown · No auth · No agents</span>
         </header>
 
         <section className="sectionIntro">
           <p>{selected.summary}</p>
+          <small>.ai/{selected.markdownFile}</small>
         </section>
 
-        <MarkdownLikeContent lines={selected.content} />
+        {markdown ? <MarkdownLikeContent markdown={markdown} /> : <EmptyState fileName={selected.markdownFile} />}
       </main>
     </div>
   );

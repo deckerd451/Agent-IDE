@@ -10,7 +10,7 @@ Agent IDE is a prototype developer environment where the primary interface is re
 - Agents
 - Code
 
-V1 is intentionally small: a local Vite + React + TypeScript app with a sidebar for these repository-understanding sections and markdown-like placeholder content in the main panel.
+V1 is intentionally small: a local Vite + React + TypeScript app with a sidebar for these repository-understanding sections. Each tab renders the matching markdown file from the repository-local `.ai/` folder.
 
 ## How Agent IDE differs from a traditional IDE
 
@@ -26,7 +26,26 @@ Agent IDE treats repository understanding as the primary surface:
 - **Agents** describes planned agent roles and constraints before automation is added.
 - **Code** remains available, but it is framed by the surrounding product and engineering context.
 
-This prototype does not include authentication, a database, a code editor, real agents, repository scanning, a CLI, or LLM integration.
+This prototype does not include authentication, a database, a code editor, real agents, repository scanning, CLI packaging, or LLM integration.
+
+## `.ai/` folder contract
+
+Agent IDE reads repository understanding from plain markdown files in `.ai/`:
+
+```text
+.ai/
+  goals.md
+  architecture.md
+  backlog.md
+  decisions.md
+  validation.md
+  agents.md
+  code.md
+```
+
+Each sidebar tab maps directly to one file. If a file is missing, the app shows an empty state that names the missing file and suggests running the initializer.
+
+The contract is intentionally plain-text, reviewable, and version-controlled. It should help humans and future automation share the same repository context before any code changes happen.
 
 ## Run locally
 
@@ -34,6 +53,12 @@ Install dependencies:
 
 ```bash
 npm install
+```
+
+Initialize the `.ai/` starter files if they are not already present:
+
+```bash
+npm run init:ai
 ```
 
 Start the development server:
@@ -48,19 +73,20 @@ Create a production build:
 npm run build
 ```
 
-## Future `.ai/` folder contract
+## Current scope
 
-Future versions can use a repository-local `.ai/` folder as the durable contract between humans, agents, and the IDE. The folder is not implemented in V1, but the intended shape is:
+Implemented now:
 
-```text
-.ai/
-  goals.md
-  architecture.md
-  backlog.md
-  validation.md
-  agents.md
-  decisions/
-    0001-example-decision.md
-```
+- Local `.ai/` starter folder and markdown files.
+- Sidebar tabs that load and render the matching `.ai/*.md` file.
+- Helpful empty states for missing markdown files.
+- `npm run init:ai` for creating starter files without overwriting existing content.
 
-The contract should stay plain-text, reviewable, and version-controlled. Agent IDE should read from it before taking action, update it when repository understanding changes, and connect every agent task back to goals, architecture, decisions, and validation evidence.
+Intentionally not included:
+
+- CLI packaging
+- Agents
+- LLM calls
+- Database
+- Authentication
+- Code editing
