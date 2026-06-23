@@ -77,6 +77,14 @@ npm run backlog
 
 The backlog generator scans local code comments for TODO, FIXME, HACK, XXX, and NOTE markers, then scans README and `.ai/` markdown for known gaps, future work, limitations, and missing capabilities. It writes prioritized backlog items with source, reason, and suggested next step while preserving anything already written under `## Manual Backlog`.
 
+Generate or refresh `.ai/validation.md` locally from deterministic repository checks:
+
+```bash
+npm run validate:intel
+```
+
+The validation generator runs safe local validation scripts such as `npm run build` plus detected test, lint, check, or typecheck scripts. It records last validation time, confidence, overall status, commands run, results, and known validation gaps while preserving anything already written under `## Manual Validation Notes`. This is repository intelligence validation, not app runtime validation, and it does not call an LLM.
+
 Start the development server:
 
 ```bash
@@ -99,6 +107,7 @@ Implemented now:
 - `npm run init:ai` for creating starter files without overwriting existing content.
 - `npm run audit` for generating and maintaining `.ai/architecture.md` as local repository understanding from README, `.ai/` files, package scripts, repository structure, and dependencies.
 - `npm run backlog` for generating and maintaining `.ai/backlog.md` from local code comments plus README and `.ai/` gaps without LLM calls.
+- `npm run validate:intel` for generating and maintaining `.ai/validation.md` from safe local deterministic validation commands without LLM calls.
 
 Intentionally not included:
 
@@ -113,6 +122,7 @@ Intentionally not included:
 ## Future work
 
 - Add backlog quality filtering.
+- Add richer validation detection for additional ecosystems.
 - Improve markdown rendering.
 - Add cross-links between `.ai` documents.
 - Add agent prompt export.
