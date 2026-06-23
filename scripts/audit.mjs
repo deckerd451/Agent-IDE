@@ -139,15 +139,37 @@ function firstSentences(markdown, count = 2) {
 }
 
 const productThesisForbiddenSentencePattern =
-  /\b(SELECT policy|table|rows|SQL|RLS|Supabase|audit|ambiguity|optimize|quality|best opportunity|policy|diagnosis|bug|issue|root cause|regression|fix|error|failure|implementation|architecture only|no code|no UI|status:|no code implementation|no ui changes|no behavior changes|implementation note|validation only|audit only)\b/i;
+  /\b(SELECT policy|table|rows|SQL|RLS|Supabase|audit|ambiguity|optimize|quality|best opportunity|policy|diagnosis|bug|issue|root cause|regression|fix|error|failure|implementation|architecture only|no code|no UI|status:|no code implementation|no ui changes|no behavior changes|implementation note|validation only|audit only|Recommendation|ROI|Engineering effort|Complexity reduction|Quick Win|Medium Project|Short Project)\b/i;
 
 const productThesisExcludedFilePattern = /(^|[/_-])(DIAGNOSIS|AUDIT|VALIDATION|BUG|FIX|REPORT)([/_.-]|$)/i;
 const productThesisPreferredFilePattern = /^(README\.md|\.ai\/goals\.md|docs\/.*(ROADMAP|VISION|PRODUCT|STRATEGY).*\.md)$/i;
 const productThesisLocalFeaturePattern = /\b(feature|engine|pipeline|surface|diagnostic|diagnosis|audit|policy|bug)\b/i;
 const productThesisRepositoryScopePattern = /\b(repository|application|app|product|platform|users|people|relationships|connections)\b/i;
+const productThesisMarkdownTablePattern = /(^|\n)\s*\|.*\||\|(?:\s|$)|---|\b(?:Recommendation|ROI|Engineering effort|Complexity reduction|Quick Win|Medium Project|Short Project)\b/i;
+const productThesisListOrRankingPattern = /^\s*(?:[-*+]\s+|\d+[.)]\s+|#{1,6}\s+)/;
+
+function productThesisWordCount(value) {
+  return compact(value).split(/\s+/).filter(Boolean).length;
+}
+
+function isProductThesisMarkdownTable(value) {
+  return productThesisMarkdownTablePattern.test(value);
+}
+
+function isProductThesisListOrRanking(value) {
+  return productThesisListOrRankingPattern.test(value);
+}
+
+function isProductThesisConcise(value) {
+  return productThesisWordCount(value) <= 40;
+}
+
+function firstProductThesisSentence(value) {
+  return compact(value).match(/^[^.!?]+[.!?]/)?.[0] ?? compact(value);
+}
 
 function isProductThesisNoise(value) {
-  return productThesisForbiddenSentencePattern.test(value);
+  return productThesisForbiddenSentencePattern.test(value) || isProductThesisMarkdownTable(value) || isProductThesisListOrRanking(value);
 }
 
 function isProductThesisBroadEnough(value) {
@@ -155,7 +177,7 @@ function isProductThesisBroadEnough(value) {
     return false;
   }
 
-  return !productThesisLocalFeaturePattern.test(value) || productThesisRepositoryScopePattern.test(value);
+  return isProductThesisConcise(value) && (!productThesisLocalFeaturePattern.test(value) || productThesisRepositoryScopePattern.test(value));
 }
 
 function isProductThesisExcludedSource(source) {
@@ -171,9 +193,11 @@ function productThesisCandidates(markdown, source, count = 2) {
     return [];
   }
 
-  return firstSentences(markdown, count)
-    .map((candidate) => candidate.replace(/^[-*]\s+/, ''))
+  return firstSentences(markdown, Math.max(count * 4, 8))
+    .filter((candidate) => !isProductThesisNoise(candidate))
+    .map((candidate) => firstProductThesisSentence(candidate).replace(/^[-*]\s+/, ''))
     .filter((candidate) => isProductThesisBroadEnough(candidate))
+    .slice(0, count)
     .map((candidate) => ({ text: candidate, source, preferred: isProductThesisPreferredSource(source) }));
 }
 
@@ -353,6 +377,9 @@ function inferProductThesis(readme, aiDocuments, packageJson, docs, files, coreS
   if (productOrientedCandidates.length > 0) {
     const selected = productOrientedCandidates[0];
     const thesis = selected.text.replace(/:$/, '.');
+    if (!isProductThesisConcise(thesis) || isProductThesisNoise(thesis)) {
+      return inferredRelationshipThesis ?? { thesis, evidence: formatEvidence([selected.source]) };
+    }
     if (thesis.includes('Agent IDE is a prototype developer environment')) {
       return {
         thesis:
@@ -676,4 +703,7 @@ export {
   isProductThesisBroadEnough,
   isProductThesisExcludedSource,
   isProductThesisPreferredSource,
+  isProductThesisMarkdownTable,
+  productThesisWordCount,
+  firstProductThesisSentence,
 };

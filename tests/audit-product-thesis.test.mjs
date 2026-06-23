@@ -99,3 +99,44 @@ assert.equal(narrowReadmeResult.thesis, expectedRelationshipThesis);
 assert.equal(narrowReadmeResult.evidence.includes('README.md'), false);
 assert.equal(narrowReadmeResult.evidence.includes('FollowUpEngine.swift'), true);
 assert.equal(narrowReadmeResult.evidence.includes('EventPresenceStore.swift'), true);
+
+const roadmapTable = `# Nearify Implementation Roadmap
+
+| Recommendation | ROI | Engineering effort | Complexity reduction |
+| --- | --- | --- | --- |
+| Quick Win | High | Low | Medium |
+| Medium Project | Medium | Medium | High |
+| Short Project | High | Low | Low |
+`;
+
+assert.deepEqual(productThesisCandidates(roadmapTable, 'docs/NEARIFY_IMPLEMENTATION_ROADMAP.md', 2), []);
+
+const roadmapResult = inferProductThesis(
+  '',
+  {},
+  null,
+  { 'docs/NEARIFY_IMPLEMENTATION_ROADMAP.md': roadmapTable },
+  ['Nearify.xcodeproj'],
+  coreSystems,
+);
+
+assert.equal(roadmapResult.thesis, expectedRelationshipThesis);
+assert.equal(roadmapResult.thesis.split(/\s+/).length <= 40, true);
+assert.equal(roadmapResult.thesis.includes('|'), false);
+assert.equal(roadmapResult.thesis.includes('Recommendation'), false);
+assert.equal(roadmapResult.evidence.includes('NEARIFY_IMPLEMENTATION_ROADMAP'), false);
+assert.equal(roadmapResult.evidence.includes('FollowUpEngine.swift'), true);
+assert.equal(roadmapResult.evidence.includes('NotificationPipeline.swift'), true);
+
+const roadmapTableThenProse = `${roadmapTable}
+
+Nearify helps people maintain real-world relationships through event context and timely follow-up workflows.
+`;
+
+assert.deepEqual(productThesisCandidates(roadmapTableThenProse, 'docs/NEARIFY_IMPLEMENTATION_ROADMAP.md', 2), [
+  {
+    text: 'Nearify helps people maintain real-world relationships through event context and timely follow-up workflows.',
+    source: 'docs/NEARIFY_IMPLEMENTATION_ROADMAP.md',
+    preferred: true,
+  },
+]);
