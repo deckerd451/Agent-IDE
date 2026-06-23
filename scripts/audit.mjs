@@ -1,5 +1,6 @@
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { basename, extname, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = process.cwd();
 const aiDir = join(root, '.ai');
@@ -137,17 +138,33 @@ function firstSentences(markdown, count = 2) {
   return paragraphs.slice(0, count);
 }
 
-const productThesisNoisePattern =
-  /\b(status:|no code implementation|no ui changes|no behavior changes|implementation note|validation only|audit only)\b/i;
+const productThesisForbiddenSentencePattern =
+  /\b(SELECT policy|table|rows|SQL|RLS|Supabase|diagnosis|bug|issue|root cause|regression|fix|error|failure|implementation|architecture only|no code|no UI|status:|no code implementation|no ui changes|no behavior changes|implementation note|validation only|audit only)\b/i;
+
+const productThesisExcludedFilePattern = /(^|[/_-])(DIAGNOSIS|AUDIT|VALIDATION|BUG|FIX|REPORT)([/_.-]|$)/i;
+const productThesisPreferredFilePattern = /^(README\.md|\.ai\/goals\.md|docs\/.*(ROADMAP|VISION|PRODUCT|STRATEGY).*\.md)$/i;
 
 function isProductThesisNoise(value) {
-  return productThesisNoisePattern.test(value);
+  return productThesisForbiddenSentencePattern.test(value);
+}
+
+function isProductThesisExcludedSource(source) {
+  return productThesisExcludedFilePattern.test(source);
+}
+
+function isProductThesisPreferredSource(source) {
+  return productThesisPreferredFilePattern.test(source);
 }
 
 function productThesisCandidates(markdown, source, count = 2) {
+  if (isProductThesisExcludedSource(source)) {
+    return [];
+  }
+
   return firstSentences(markdown, count)
+    .map((candidate) => candidate.replace(/^[-*]\s+/, ''))
     .filter((candidate) => !isProductThesisNoise(candidate))
-    .map((candidate) => ({ text: candidate.replace(/^[-*]\s+/, ''), source }));
+    .map((candidate) => ({ text: candidate, source, preferred: isProductThesisPreferredSource(source) }));
 }
 
 function bulletsUnderHeading(markdown, heading, limit = 5) {
@@ -287,7 +304,9 @@ function inferProductThesis(readme, aiDocuments, packageJson, docs, files, coreS
   const candidates = [
     ...productThesisCandidates(aiDocuments['goals.md'] ?? '', '.ai/goals.md', 3),
     ...productThesisCandidates(readme, 'README.md', 3),
-    ...Object.entries(docs).flatMap(([docPath, doc]) => productThesisCandidates(doc, docPath, 1)),
+    ...Object.entries(docs)
+      .filter(([docPath]) => isProductThesisPreferredSource(docPath))
+      .flatMap(([docPath, doc]) => productThesisCandidates(doc, docPath, 2)),
   ];
   const seen = new Set();
   const uniqueCandidates = candidates.filter((candidate) => {
@@ -297,8 +316,9 @@ function inferProductThesis(readme, aiDocuments, packageJson, docs, files, coreS
     return true;
   });
 
-  if (uniqueCandidates.length > 0) {
-    const selected = uniqueCandidates[0];
+  const productOrientedCandidates = uniqueCandidates.filter((candidate) => candidate.preferred);
+  if (productOrientedCandidates.length > 0) {
+    const selected = productOrientedCandidates[0];
     const thesis = selected.text.replace(/:$/, '.');
     if (thesis.includes('Agent IDE is a prototype developer environment')) {
       return {
@@ -312,14 +332,15 @@ function inferProductThesis(readme, aiDocuments, packageJson, docs, files, coreS
 
   const systemNames = new Set(coreSystems.map((system) => system.name));
   if (
-    systemNames.has('Relationship Memory') &&
-    systemNames.has('Event Presence') &&
     systemNames.has('Follow-Up Engine') &&
-    systemNames.has('People/Profile Surfaces')
+    systemNames.has('Event Presence') &&
+    systemNames.has('Notification Pipeline') &&
+    systemNames.has('Decision Surface') &&
+    systemNames.has('Domain Models')
   ) {
     return {
       thesis:
-        'This repository appears to support a relationship-memory application that uses event presence, relationship context, follow-up opportunities, people/profile surfaces, and notification workflows to help users act on real-world connections.',
+        'This repository appears to support a relationship-oriented iOS application that uses event presence, relationship context, follow-up workflows, and notifications to help users act on real-world connections.',
       evidence: formatEvidence(coreSystems.flatMap((system) => system.sources)),
     };
   }
@@ -535,6 +556,7 @@ function calculateConfidence({ readme, aiDocuments, packageJson, languages, fold
   return Math.min(score, 95);
 }
 
+async function main() {
 const [files, folders, { dependencies, scripts, packageJson }, manualNotes, readme, aiDocuments] = await Promise.all([
   walk(root),
   detectMajorFolders(),
@@ -619,3 +641,16 @@ await writeFile(architecturePath, generated);
 
 console.log(`Updated ${relative(root, architecturePath)}.`);
 console.log(`Confidence: ${confidence}`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await main();
+}
+
+export {
+  inferProductThesis,
+  productThesisCandidates,
+  isProductThesisNoise,
+  isProductThesisExcludedSource,
+  isProductThesisPreferredSource,
+};

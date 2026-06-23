@@ -1,6 +1,6 @@
 # Architecture
 
-Last Audit: 2026-06-23T23:28:34.819Z
+Last Audit: 2026-06-23T23:35:19.931Z
 Confidence: 95%
 
 ## Product Thesis
@@ -53,6 +53,7 @@ The repository is currently focused on making repository understanding the prima
 ### Major Areas
 - scripts/
 - src/
+- tests/
 
 ### Major Files
 - index.html
