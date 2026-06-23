@@ -85,6 +85,17 @@ npm run validate:intel
 
 The validation generator runs safe local validation scripts such as `npm run build` plus detected test, lint, check, or typecheck scripts. It records last validation time, confidence, overall status, commands run, results, and known validation gaps while preserving anything already written under `## Manual Validation Notes`. This is repository intelligence validation, not app runtime validation, and it does not call an LLM.
 
+Export copy/paste-ready agent prompts from the local `.ai/` repository intelligence layer:
+
+```bash
+npm run prompt -- architect
+npm run prompt -- builder
+npm run prompt -- reviewer
+npm run prompt -- debugger
+```
+
+The prompt exporter reads all seven `.ai/*.md` intelligence files and writes role-specific prompts to `.ai/prompts/<role>.md`. Supported roles are `architect`, `builder`, `reviewer`, and `debugger`. Prompt export is local-first and deterministic: it does not call an LLM, does not execute agents, and preserves the existing dashboard behavior. Use the generated markdown as model-ready context for Claude, GPT, Codex, Gemini, Cursor, Windsurf, or another coding assistant. Unknown roles fail with a usage message listing supported roles.
+
 Start the development server:
 
 ```bash
@@ -108,6 +119,7 @@ Implemented now:
 - `npm run audit` for generating and maintaining `.ai/architecture.md` as local repository understanding from README, `.ai/` files, package scripts, repository structure, and dependencies.
 - `npm run backlog` for generating and maintaining `.ai/backlog.md` from local code comments plus README and `.ai/` gaps without LLM calls.
 - `npm run validate:intel` for generating and maintaining `.ai/validation.md` from safe local deterministic validation commands without LLM calls.
+- `npm run prompt -- <role>` for exporting copy/paste-ready prompts to `.ai/prompts/<role>.md` for architect, builder, reviewer, and debugger roles without LLM calls or agent execution.
 
 Intentionally not included:
 
@@ -125,4 +137,3 @@ Intentionally not included:
 - Add richer validation detection for additional ecosystems.
 - Improve markdown rendering.
 - Add cross-links between `.ai` documents.
-- Add agent prompt export.
