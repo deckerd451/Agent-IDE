@@ -145,7 +145,11 @@ function confidenceFor(results, commands) {
 }
 
 async function main() {
-  const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8'));
+  const packageText = await readFile(packageJsonPath, 'utf8').catch((error) => {
+    if (error?.code === 'ENOENT') return '{}';
+    throw error;
+  });
+  const packageJson = JSON.parse(packageText || '{}');
   const scripts = packageJson.scripts ?? {};
   const commands = detectCommands(scripts);
   const manualNotes = await readExistingManualNotes();

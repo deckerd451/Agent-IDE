@@ -26,7 +26,7 @@ Agent IDE treats repository understanding as the primary surface:
 - **Agents** describes planned agent roles and constraints before automation is added.
 - **Code** remains available, but it is framed by the surrounding product and engineering context.
 
-This prototype does not include authentication, a database, a code editor, real agents, CLI packaging, or LLM integration. Repository scanning is limited to local deterministic commands such as `npm run audit` for `.ai/architecture.md`, `npm run backlog` for `.ai/backlog.md`, and `npm run decisions` for `.ai/decisions.md`, all without calling an LLM.
+This prototype does not include authentication, a database, a code editor, real agents, CLI packaging, cloud services, or LLM integration. Repository scanning is limited to local deterministic commands such as `npm run audit` for `.ai/architecture.md`, `npm run backlog` for `.ai/backlog.md`, and `npm run decisions` for `.ai/decisions.md`, all without calling an LLM. The local Node server can also run those generators against any local repository path and write the generated intelligence into that repository, even when the target repository has never heard of Agent IDE.
 
 ## `.ai/` folder contract
 
@@ -46,6 +46,38 @@ Agent IDE reads repository understanding from plain markdown files in `.ai/`:
 Each sidebar tab maps directly to one file. If a file is missing, the app shows an empty state that names the missing file and suggests running the initializer.
 
 The contract is intentionally plain-text, reviewable, and version-controlled. It should help humans and future automation share the same repository context before any code changes happen.
+
+
+## Analyze any local repository
+
+Agent IDE includes a small local Node server so the Vite UI can connect to any repository on your machine. The target repository does not need Agent IDE installed. Enter an absolute repository path in the UI and click **Refresh Intelligence**. Agent IDE validates that the path exists, runs its own deterministic generators against that path, and writes outputs into:
+
+```text
+<repo>/.ai/
+  architecture.md
+  backlog.md
+  validation.md
+  decisions.md
+  prompts/
+    architect.md
+    builder.md
+    reviewer.md
+    debugger.md
+```
+
+The refresh stays local-first: no LLM calls, cloud services, authentication, or databases are used. Progress and success/failure summaries are shown in the UI while the generators run.
+
+Run the API server only:
+
+```bash
+npm run server
+```
+
+Run the local server and Vite UI together:
+
+```bash
+npm run dev:all
+```
 
 ## Run locally
 
@@ -105,10 +137,16 @@ npm run prompt -- debugger
 
 The prompt exporter reads all seven `.ai/*.md` files and writes deterministic markdown prompts to `.ai/prompts/architect.md`, `.ai/prompts/builder.md`, `.ai/prompts/reviewer.md`, and `.ai/prompts/debugger.md`. Each prompt includes role instructions, product thesis, architecture summary, backlog priorities, validation status, known constraints, task guidance, and the complete local `.ai/` context. It does not call an LLM and does not execute agents.
 
-Start the development server:
+Start the Vite development server only:
 
 ```bash
 npm run dev
+```
+
+For repository-path refresh from the UI, run both the Vite app and local Node server:
+
+```bash
+npm run dev:all
 ```
 
 Create a production build:
@@ -123,6 +161,8 @@ Implemented now:
 
 - Local `.ai/` starter folder and markdown files.
 - Sidebar tabs that load and render the matching `.ai/*.md` file.
+- Repository path input and Refresh Intelligence button for analyzing any local repository through the local Node server.
+- `npm run server` and `npm run dev:all` for local repository refresh workflows.
 - Helpful empty states for missing markdown files.
 - `npm run init:ai` for creating starter files without overwriting existing content.
 - `npm run audit` for generating and maintaining `.ai/architecture.md` as local repository understanding from README, `.ai/` files, package scripts, repository structure, and dependencies.

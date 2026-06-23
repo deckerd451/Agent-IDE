@@ -80,7 +80,10 @@ async function readAiFiles() {
   const entries = await Promise.all(
     aiFiles.map(async (fileName) => {
       const path = join(aiDir, fileName);
-      const content = await readFile(path, 'utf8');
+      const content = await readFile(path, 'utf8').catch((error) => {
+        if (error?.code === 'ENOENT') return `# ${fileName.replace(/\.md$/, '')}\n\n- No local intelligence file found yet.`;
+        throw error;
+      });
       return [fileName, content.trim()];
     }),
   );
