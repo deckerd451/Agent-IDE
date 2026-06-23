@@ -67,7 +67,7 @@ Audit the repository and update `.ai/architecture.md` locally:
 npm run audit
 ```
 
-The audit detects languages, major folders and files, and dependencies from `package.json`; adds a timestamp and confidence score; and preserves anything already written under `## Manual Notes`.
+The audit infers repository understanding from local README, `.ai/` documents, `package.json` scripts, source structure, and dependencies. It writes product thesis, core systems, primary flows, current focus, key commands, known gaps, and a lower repository-structure section while preserving the timestamp, confidence score, and anything already written under `## Manual Notes`.
 
 Start the development server:
 
@@ -89,7 +89,7 @@ Implemented now:
 - Sidebar tabs that load and render the matching `.ai/*.md` file.
 - Helpful empty states for missing markdown files.
 - `npm run init:ai` for creating starter files without overwriting existing content.
-- `npm run audit` for generating and maintaining `.ai/architecture.md` from local repository structure and `package.json` dependencies.
+- `npm run audit` for generating and maintaining `.ai/architecture.md` as local repository understanding from README, `.ai/` files, package scripts, repository structure, and dependencies.
 
 Intentionally not included:
 
