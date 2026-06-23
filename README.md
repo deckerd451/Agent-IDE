@@ -85,6 +85,17 @@ npm run validate:intel
 
 The validation generator runs safe local validation scripts such as `npm run build` plus detected test, lint, check, or typecheck scripts. It records last validation time, confidence, overall status, commands run, results, and known validation gaps while preserving anything already written under `## Manual Validation Notes`. This is repository intelligence validation, not app runtime validation, and it does not call an LLM.
 
+Export a role-specific prompt from the local `.ai/` repository context:
+
+```bash
+npm run prompt -- architect
+npm run prompt -- builder
+npm run prompt -- reviewer
+npm run prompt -- debugger
+```
+
+The prompt exporter reads all seven `.ai/*.md` files and writes deterministic markdown prompts to `.ai/prompts/architect.md`, `.ai/prompts/builder.md`, `.ai/prompts/reviewer.md`, and `.ai/prompts/debugger.md`. Each prompt includes role instructions, product thesis, architecture summary, backlog priorities, validation status, known constraints, task guidance, and the complete local `.ai/` context. It does not call an LLM and does not execute agents.
+
 Start the development server:
 
 ```bash
@@ -108,6 +119,7 @@ Implemented now:
 - `npm run audit` for generating and maintaining `.ai/architecture.md` as local repository understanding from README, `.ai/` files, package scripts, repository structure, and dependencies.
 - `npm run backlog` for generating and maintaining `.ai/backlog.md` from local code comments plus README and `.ai/` gaps without LLM calls.
 - `npm run validate:intel` for generating and maintaining `.ai/validation.md` from safe local deterministic validation commands without LLM calls.
+- `npm run prompt -- <role>` for exporting local, role-specific prompts for architect, builder, reviewer, and debugger workflows without LLM calls or agent execution.
 
 Intentionally not included:
 
@@ -125,4 +137,3 @@ Intentionally not included:
 - Add richer validation detection for additional ecosystems.
 - Improve markdown rendering.
 - Add cross-links between `.ai` documents.
-- Add agent prompt export.
