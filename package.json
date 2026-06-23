@@ -11,7 +11,8 @@
     "audit": "node scripts/audit.mjs",
     "backlog": "node scripts/backlog.mjs",
     "validate:intel": "node scripts/validate-intel.mjs",
-    "prompt": "node scripts/prompt.mjs"
+    "prompt": "node scripts/prompt.mjs",
+    "decisions": "node scripts/decisions.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
