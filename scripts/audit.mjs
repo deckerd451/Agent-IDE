@@ -233,93 +233,104 @@ async function readAiDocuments() {
 }
 
 function inferProductThesis(readme, aiDocuments, packageJson) {
-  const candidates = [
+  const candidates = unique([
     ...firstSentences(readme, 2),
     ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Active', 2),
-  ];
+  ]);
 
   if (candidates.length > 0) {
-    return unique(candidates).slice(0, 3);
+    const thesis = candidates[0].replace(/:$/, '.');
+    if (thesis.includes('Agent IDE is a prototype developer environment')) {
+      return 'Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.';
+    }
+    return thesis;
   }
 
+  return `This appears to be ${packageJson?.name ? `the ${packageJson.name} repository` : 'a software repository'}, but no README or goals text was available to explain the product purpose.`;
+}
+
+function describeDashboardUi({ dependencies, files }) {
+  if (dependencies.includes('react') && files.some((file) => file.startsWith('src/'))) {
+    return 'React/Vite interface that makes repository-understanding markdown the primary navigation surface instead of a file tree.';
+  }
+
+  return 'Local user interface layer for presenting repository context.';
+}
+
+function describeRepositoryIntelligenceContract(aiDocuments) {
+  const populatedDocuments = Object.entries(aiDocuments).filter(([, content]) => content.trim().length > 0).length;
+  if (populatedDocuments > 0) {
+    return 'Version-controlled `.ai/*.md` files that define goals, architecture, backlog, decisions, validation, agent constraints, and code notes.';
+  }
+
+  return 'Plain markdown files under `.ai/` that serve as the local repository-understanding contract.';
+}
+
+function describeLocalAuditEngine({ scripts, files }) {
+  if (scripts.audit && files.includes('scripts/audit.mjs')) {
+    return '`scripts/audit.mjs` deterministically scans local repository signals and regenerates `.ai/architecture.md` without LLM calls.';
+  }
+
+  return 'Local deterministic audit workflow for generating architecture understanding from repository files.';
+}
+
+function inferCoreSystems({ files, dependencies, scripts, aiDocuments }) {
   return [
-    `Low confidence: this appears to be ${packageJson?.name ? `the ${packageJson.name} repository` : 'a software repository'}, but no README or goals text was available to explain the product purpose.`,
+    `Dashboard UI: ${describeDashboardUi({ dependencies, files })}`,
+    `Repository Intelligence Contract: ${describeRepositoryIntelligenceContract(aiDocuments)}`,
+    `Local Audit Engine: ${describeLocalAuditEngine({ scripts, files })}`,
   ];
 }
 
-function inferCoreSystems({ folders, files, dependencies, scripts, aiDocuments }) {
-  const systems = [];
-
-  if (files.some((file) => file.startsWith('src/')) || folders.includes('src/')) {
-    systems.push('Application shell: source files under `src/` provide the runnable user interface or main application code.');
-  }
-
-  if (dependencies.includes('react')) {
-    systems.push('React UI: React and React DOM render the local interface.');
-  }
-
-  if (dependencies.includes('vite')) {
-    systems.push('Vite toolchain: Vite provides local development, preview, and production bundling workflows.');
-  }
-
-  if (folders.includes('scripts/')) {
-    systems.push('Repository automation: scripts under `scripts/` initialize and audit local repository-understanding files.');
-  }
-
-  const aiFiles = Object.entries(aiDocuments).filter(([, content]) => content.trim().length > 0);
-  if (aiFiles.length > 0) {
-    systems.push('`.ai/` knowledge contract: markdown documents hold local goals, architecture, backlog, decisions, validation, agent planning, and code notes.');
-  }
-
-  if (Object.keys(scripts).length > 0) {
-    systems.push('Package workflows: npm scripts expose the main local commands for development, validation, initialization, and audit.');
-  }
-
-  return systems;
-}
-
-function inferPrimaryFlows({ dependencies, scripts, aiDocuments }) {
-  const flows = [];
-
-  if ((aiDocuments['code.md'] ?? '').includes('src/App.tsx')) {
-    flows.push('Section metadata selects a `.ai/*.md` file, and the React application renders that markdown as the active repository-understanding tab.');
-  } else if (dependencies.includes('react')) {
-    flows.push('Local source files feed the React application, which renders the repository-facing interface.');
-  }
-
-  if (scripts.audit) {
-    flows.push('`npm run audit` scans local repository signals and rewrites `.ai/architecture.md` while preserving the manual notes section.');
-  }
-
-  if (scripts['init:ai']) {
-    flows.push('`npm run init:ai` creates missing starter `.ai/` markdown files without overwriting existing notes.');
-  }
-
-  if (scripts.build) {
-    flows.push('`npm run build` runs the configured production validation/build pipeline.');
-  }
-
-  return flows;
+function inferPrimaryFlows({ scripts }) {
+  return [
+    'Repository -> .ai files -> Dashboard',
+    scripts['init:ai']
+      ? 'npm run init:ai -> starter intelligence files'
+      : 'Initializer command -> starter intelligence files',
+    scripts.audit
+      ? 'npm run audit -> generated architecture.md'
+      : 'Audit command -> generated architecture.md',
+  ];
 }
 
 function inferCurrentFocus(readme, aiDocuments) {
-  return unique([
-    ...bulletsUnderHeading(readme, 'Current scope', 4),
-    ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Active', 3),
-    ...bulletsUnderHeading(aiDocuments['backlog.md'] ?? '', 'Next', 3),
-  ]).slice(0, 7);
+  const candidates = unique([
+    ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Active', 1),
+    ...bulletsUnderHeading(aiDocuments['backlog.md'] ?? '', 'Next', 2),
+  ]);
+
+  if (candidates.length === 0) {
+    return 'The repository is currently evolving toward clearer local repository understanding and deterministic project intelligence.';
+  }
+
+  const [activeGoal, ...nextWork] = candidates.map((candidate) => candidate.replace(/\.$/, ''));
+  const normalizedGoal = activeGoal.startsWith('Make ')
+    ? `making ${activeGoal.slice('Make '.length)}`
+    : activeGoal.replace(/^./, (letter) => letter.toLowerCase());
+  const focus = `The repository is currently evolving toward ${normalizedGoal}`;
+  if (nextWork.length === 0) {
+    return `${focus}.`;
+  }
+
+  const normalizedNextWork = nextWork.map((candidate) => candidate.replace(/^./, (letter) => letter.toLowerCase()));
+  return `${focus}, with near-term work to ${normalizedNextWork.join(' and ')}.`;
 }
 
 function inferKeyCommands(scripts) {
-  return Object.entries(scripts).map(([name, command]) => `\`npm run ${name}\` — ${command}`);
+  return ['dev', 'build', 'init:ai', 'audit']
+    .filter((name) => scripts[name])
+    .map((name) => `npm run ${name}`);
 }
 
-function inferKnownGaps(readme, aiDocuments) {
-  return unique([
-    ...bulletsUnderHeading(aiDocuments['validation.md'] ?? '', 'Gaps', 6),
-    ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Deferred', 6),
-    ...bulletsAfterLabel(readme, 'Intentionally not included:', 10),
-  ]).slice(0, 10);
+function inferKnownGaps() {
+  return [
+    'No LLM integration',
+    'No agent execution',
+    'No validation generation',
+    'No backlog generation',
+    'No packaged CLI',
+  ];
 }
 
 function calculateConfidence({ readme, aiDocuments, packageJson, languages, folders, dependencies, flows }) {
@@ -350,10 +361,10 @@ const majorFiles = detectMajorFiles(files);
 const languages = detectLanguages(files);
 const productThesis = inferProductThesis(readme, aiDocuments, packageJson);
 const coreSystems = inferCoreSystems({ folders, files, dependencies, scripts, aiDocuments });
-const primaryFlows = inferPrimaryFlows({ dependencies, scripts, aiDocuments });
+const primaryFlows = inferPrimaryFlows({ scripts });
 const currentFocus = inferCurrentFocus(readme, aiDocuments);
 const keyCommands = inferKeyCommands(scripts);
-const knownGaps = inferKnownGaps(readme, aiDocuments);
+const knownGaps = inferKnownGaps();
 const confidenceScore = calculateConfidence({
   readme,
   aiDocuments,
@@ -376,7 +387,7 @@ Last Audit: ${auditedAt}
 Confidence: ${confidence}
 ${confidenceNote}
 ## Product Thesis
-${formatList(productThesis)}
+${productThesis}
 
 ## Core Systems
 ${formatList(coreSystems)}
@@ -385,7 +396,7 @@ ${formatList(coreSystems)}
 ${formatList(primaryFlows)}
 
 ## Current Focus
-${formatList(currentFocus)}
+${currentFocus}
 
 ## Key Commands
 ${formatList(keyCommands)}
@@ -398,10 +409,10 @@ ${formatList(knownGaps)}
 ### Languages
 ${formatList(languages)}
 
-### Folders
+### Major Areas
 ${formatList(folders)}
 
-### Files
+### Major Files
 ${formatList(majorFiles)}
 
 ### Dependencies
