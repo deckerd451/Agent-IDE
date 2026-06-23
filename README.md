@@ -26,7 +26,7 @@ Agent IDE treats repository understanding as the primary surface:
 - **Agents** describes planned agent roles and constraints before automation is added.
 - **Code** remains available, but it is framed by the surrounding product and engineering context.
 
-This prototype does not include authentication, a database, a code editor, real agents, CLI packaging, or LLM integration. Repository scanning is limited to local deterministic commands such as `npm run audit` for `.ai/architecture.md` and `npm run backlog` for `.ai/backlog.md`, both without calling an LLM.
+This prototype does not include authentication, a database, a code editor, real agents, CLI packaging, or LLM integration. Repository scanning is limited to local deterministic commands such as `npm run audit` for `.ai/architecture.md`, `npm run backlog` for `.ai/backlog.md`, and `npm run decisions` for `.ai/decisions.md`, all without calling an LLM.
 
 ## `.ai/` folder contract
 
@@ -77,6 +77,15 @@ npm run backlog
 
 The backlog generator scans local code comments for TODO, FIXME, HACK, XXX, and NOTE markers, then scans README and `.ai/` markdown for known gaps, future work, limitations, and missing capabilities. It writes prioritized backlog items with source, reason, and suggested next step while preserving anything already written under `## Manual Backlog`.
 
+
+Generate or refresh `.ai/decisions.md` locally:
+
+```bash
+npm run decisions
+```
+
+The decisions generator reads README, `.ai/architecture.md`, `.ai/backlog.md`, and `package.json` to infer durable repository decisions from documented constraints, principles, and recurring themes. It writes active decisions with context, reason, and consequences while preserving anything already written under `## Manual Decisions`. Decisions explain why the repository is built this way; they are not backlog items. The command stays local-first, deterministic, and does not call an LLM.
+
 Generate or refresh `.ai/validation.md` locally from deterministic repository checks:
 
 ```bash
@@ -118,6 +127,7 @@ Implemented now:
 - `npm run init:ai` for creating starter files without overwriting existing content.
 - `npm run audit` for generating and maintaining `.ai/architecture.md` as local repository understanding from README, `.ai/` files, package scripts, repository structure, and dependencies.
 - `npm run backlog` for generating and maintaining `.ai/backlog.md` from local code comments plus README and `.ai/` gaps without LLM calls.
+- `npm run decisions` for generating and maintaining `.ai/decisions.md` from README, architecture, backlog, and package metadata without LLM calls.
 - `npm run validate:intel` for generating and maintaining `.ai/validation.md` from safe local deterministic validation commands without LLM calls.
 - `npm run prompt -- <role>` for exporting local, role-specific prompts for architect, builder, reviewer, and debugger workflows without LLM calls or agent execution.
 
