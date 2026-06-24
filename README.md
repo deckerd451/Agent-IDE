@@ -138,7 +138,7 @@ Generate or refresh `.ai/strategy.md` locally:
 npm run strategy
 ```
 
-The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, and Success Definition while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. For Nearify-style relationship products, it surfaces Follow-Ups Completed, relationship memory anchored in encounter evidence and real-world overlap, the Between Events experience, a deterministic reconnect-with-today experiment, the warning not to treat the product as primarily an event app, and goals-based success criteria without duplicating the product thesis.
+The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, Success Definition, Strategy Confidence, Strategy Evidence Sources, and Strategy Warnings while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. Repository-specific strategy concepts are only emitted when supported by those evidence sources, Current Experiment is derived from Current Focus and Current Priorities, and unsupported relationship-product terms such as relationship memory, encounters, overlap, reconnect, or follow-ups produce a Strategy Leakage warning.
 
 Generate or refresh `.ai/backlog.md` locally:
 
@@ -171,7 +171,7 @@ Generate or refresh `.ai/repository-health.md` locally from deterministic intell
 npm run health
 ```
 
-The health generator reads goals, architecture, backlog, decisions, validation, agents, code, and the exported architect prompt to summarize intelligence completeness, quality signals, strategy quality score, detected risks, strategy quality warnings, and one recommended next step while preserving anything already written under `## Manual Health Notes`. It uses local file checks only and does not call an LLM, cloud service, or agent.
+The health generator reads goals, architecture, backlog, decisions, validation, agents, code, and the exported architect prompt to summarize intelligence completeness, quality signals, strategy quality score, strategy leakage status, strategy confidence, detected risks, strategy quality warnings, and one recommended next step while preserving anything already written under `## Manual Health Notes`. It uses local file checks only and does not call an LLM, cloud service, or agent.
 
 Export a role-specific prompt from the local `.ai/` repository context:
 
@@ -191,7 +191,7 @@ Generate or refresh `.ai/context-package.md` locally:
 npm run context:package
 ```
 
-The context package generator reads local `.ai/` intelligence and writes a compact assistant handoff with product thesis, current focus, strategy, core systems, key decisions, validation summary, backlog, and repository health summary. It is deterministic and does not call an LLM.
+The context package generator reads local `.ai/` intelligence and writes a compact assistant handoff with product thesis, current focus, strategy, strategy confidence, strategy evidence sources, core systems, key decisions, validation summary, backlog, and repository health summary. It is deterministic and does not call an LLM.
 
 Start the Vite development server only:
 

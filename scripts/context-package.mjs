@@ -58,6 +58,8 @@ const content = [
     firstMatchingSection(docs.strategy, ['Current Product Bet']),
     firstMatchingSection(docs.strategy, ['What Not To Build']),
     firstMatchingSection(docs.strategy, ['Success Definition']),
+    `Strategy Confidence: ${firstMatchingSection(docs.strategy, ['Strategy Confidence'])}`,
+    `Strategy Evidence Sources:\n${firstMatchingSection(docs.strategy, ['Strategy Evidence Sources'])}`,
   ].join('\n\n'),
   '',
   '## Core Systems',
