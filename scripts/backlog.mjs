@@ -277,7 +277,7 @@ function parseExplicitTaskComment(line) {
   const markerAlternation = explicitCommentTaskMarkers
     .map((marker) => marker.replace(/ /g, '\\s+'))
     .join('|');
-  const markerPattern = new RegExp(`(?:^|\\b)(${markerAlternation})(?:\\b|:)\\s*:?-?\\s*(.*)$`, 'i');
+  const markerPattern = new RegExp(`^(${markerAlternation}):\\s+(.+)$`, 'i');
   const match = commentText.match(markerPattern);
   if (!match) return null;
 
