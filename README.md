@@ -54,6 +54,9 @@ Agent IDE includes a small local Node server so the Vite UI can connect to any r
 
 ```text
 <repo>/.ai/
+  goals.md
+  agents.md
+  code.md
   architecture.md
   backlog.md
   validation.md
@@ -65,7 +68,7 @@ Agent IDE includes a small local Node server so the Vite UI can connect to any r
     debugger.md
 ```
 
-The refresh stays local-first: no LLM calls, cloud services, authentication, or databases are used. Progress and success/failure summaries are shown in the UI while the generators run.
+Refresh first creates any missing baseline files for `goals.md`, `agents.md`, and `code.md` without overwriting existing repository notes, then runs the deterministic architecture, backlog, validation, decisions, and prompt generators. The refresh stays local-first: no LLM calls, cloud services, authentication, or databases are used. Progress and success/failure summaries, including the Baseline Files step, are shown in the UI while the generators run.
 
 Run the API server only:
 
