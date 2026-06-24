@@ -223,24 +223,35 @@ function relationshipApplicationThesis(coreSystems) {
   };
 }
 
-function bulletsUnderHeading(markdown, heading, limit = 5) {
+function sectionUnderHeading(markdown, heading) {
   const lines = markdown.split('\n');
   const start = lines.findIndex((line) => line.trim().toLowerCase() === `## ${heading.toLowerCase()}`);
   if (start === -1) {
+    return '';
+  }
+
+  const sectionLines = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^##\s+/.test(line)) {
+      break;
+    }
+    sectionLines.push(line);
+  }
+
+  return sectionLines.join('\n').trim();
+}
+
+function bulletsUnderHeading(markdown, heading, limit = 5) {
+  const section = sectionUnderHeading(markdown, heading);
+  if (!section) {
     return [];
   }
 
-  const bullets = [];
-  for (const line of lines.slice(start + 1)) {
-    if (line.startsWith('## ')) {
-      break;
-    }
-    if (line.startsWith('- ')) {
-      bullets.push(line.slice(2));
-    }
-  }
-
-  return bullets.slice(0, limit);
+  return section
+    .split('\n')
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.slice(2))
+    .slice(0, limit);
 }
 
 function headings(markdown, limit = 12) {
@@ -546,15 +557,45 @@ function inferPrimaryFlows({ scripts, coreSystems, packageJson, readme, files })
   ]).slice(0, 5);
 }
 
-function inferCurrentFocus(readme, aiDocuments, packageJson, files) {
-  const candidates = unique([
-    ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Active', 1),
-    ...bulletsUnderHeading(aiDocuments['backlog.md'] ?? '', 'Next', 2),
-  ]);
+function inferCurrentFocus(readme, aiDocuments, packageJson, files, docs = {}) {
+  const explicitCurrentFocus = sectionUnderHeading(aiDocuments['goals.md'] ?? '', 'Current Focus');
+  if (explicitCurrentFocus) {
+    return { focus: explicitCurrentFocus, evidence: '.ai/goals.md' };
+  }
+
+  const roadmapCandidates = Object.entries(docs)
+    .filter(([docPath]) => /roadmap/i.test(docPath))
+    .flatMap(([docPath, doc]) =>
+      [
+        ...bulletsUnderHeading(doc, 'Current Focus', 1),
+        ...bulletsUnderHeading(doc, 'Active', 1),
+        ...bulletsUnderHeading(doc, 'Next', 2),
+      ].map((text) => ({ text, source: docPath })),
+    );
+  const candidateEntries = [
+    ...bulletsUnderHeading(aiDocuments['goals.md'] ?? '', 'Active', 1).map((text) => ({ text, source: '.ai/goals.md' })),
+    ...bulletsUnderHeading(aiDocuments['backlog.md'] ?? '', 'Next', 2).map((text) => ({ text, source: '.ai/backlog.md' })),
+    ...roadmapCandidates,
+  ];
+  const candidates = [];
+  const sources = [];
+  const seen = new Set();
+  for (const candidate of candidateEntries) {
+    const key = compact(candidate.text).toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    candidates.push(candidate.text);
+    sources.push(candidate.source);
+  }
 
   if (candidates.length === 0) {
     const projectName = packageJson?.name ?? files.find((file) => /\.(xcodeproj|xcworkspace)$/.test(file))?.replace(/\.(xcodeproj|xcworkspace)$/, '');
-    return projectName ? `The repository is currently evolving the ${projectName} product described by its local code and project structure.` : 'No explicit current focus was detected from local goals or backlog notes.';
+    return {
+      focus: projectName
+        ? `The repository is currently evolving the ${projectName} product described by its local code and project structure.`
+        : 'No explicit current focus was detected from local goals or backlog notes.',
+      evidence: projectName ? formatEvidence(files.filter((file) => /\.(xcodeproj|xcworkspace)$/.test(file))) : 'No explicit evidence detected',
+    };
   }
 
   const [activeGoal, ...nextWork] = candidates.map((candidate) => candidate.replace(/\.$/, ''));
@@ -565,11 +606,14 @@ function inferCurrentFocus(readme, aiDocuments, packageJson, files) {
       : activeGoal.replace(/^./, (letter) => letter.toLowerCase());
   const focus = `The repository is currently focused on ${normalizedGoal}`;
   if (nextWork.length === 0) {
-    return `${focus}.`;
+    return { focus: `${focus}.`, evidence: formatEvidence(sources) };
   }
 
   const normalizedNextWork = nextWork.map((candidate) => candidate.replace(/^./, (letter) => letter.toLowerCase()));
-  return `${focus}, with near-term work to ${normalizedNextWork.join(' and ')}.`;
+  return {
+    focus: `${focus}, with near-term work to ${normalizedNextWork.join(' and ')}.`,
+    evidence: formatEvidence(sources),
+  };
 }
 
 function inferKeyCommands(scripts) {
@@ -624,7 +668,7 @@ const languages = detectLanguages(files);
 const coreSystems = inferCoreSystems({ folders, files, dependencies, scripts, aiDocuments, docs, sourceDocuments, packageJson, readme });
 const productThesis = inferProductThesis(readme, aiDocuments, packageJson, docs, files, coreSystems);
 const primaryFlows = inferPrimaryFlows({ scripts, coreSystems, packageJson, readme, files });
-const currentFocus = inferCurrentFocus(readme, aiDocuments, packageJson, files);
+const currentFocus = inferCurrentFocus(readme, aiDocuments, packageJson, files, docs);
 const keyCommands = inferKeyCommands(scripts);
 const knownGaps = inferKnownGaps(readme, aiDocuments, packageJson, files);
 const confidenceScore = calculateConfidence({
@@ -661,7 +705,10 @@ ${formatCoreSystems(coreSystems)}
 ${formatList(primaryFlows)}
 
 ## Current Focus
-${currentFocus}
+${currentFocus.focus}
+
+Current Focus Evidence:
+${currentFocus.evidence}
 
 ## Key Commands
 ${formatList(keyCommands)}
@@ -697,6 +744,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 }
 
 export {
+  inferCurrentFocus,
+  sectionUnderHeading,
   inferProductThesis,
   productThesisCandidates,
   isProductThesisNoise,
