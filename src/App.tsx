@@ -1,11 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sections, type Section } from './sections';
-
-const markdownFiles = import.meta.glob('../.ai/*.md', {
-  eager: true,
-  import: 'default',
-  query: '?raw',
-}) as Record<string, string>;
 
 type RefreshEvent = {
   type: string;
@@ -25,8 +19,16 @@ type StepState = {
   output?: string;
 };
 
-const generatedFiles = new Set(['architecture.md', 'backlog.md', 'validation.md', 'decisions.md']);
+type DocumentState = {
+  content: string;
+  exists: boolean;
+  isLoading: boolean;
+  sourcePath: string;
+};
+
+const intelligenceFiles = new Set(sections.map((section) => section.markdownFile));
 const serverBaseUrl = import.meta.env.VITE_AGENT_IDE_SERVER_URL ?? 'http://localhost:5174';
+const selectedTabStorageKey = 'agent-ide:selected-intelligence-tab';
 
 function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section: Section) => void }) {
   return (
@@ -56,41 +58,82 @@ function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section
   );
 }
 
+function renderInlineMarkdown(text: string) {
+  const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean);
+
+  return parts.map((part, index) => {
+    if (part.startsWith('`') && part.endsWith('`')) return <code key={index}>{part.slice(1, -1)}</code>;
+    if (part.startsWith('**') && part.endsWith('**')) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith('*') && part.endsWith('*')) return <em key={index}>{part.slice(1, -1)}</em>;
+    return <span key={index}>{part}</span>;
+  });
+}
+
 function MarkdownLikeContent({ markdown }: { markdown: string }) {
+  const elements = [];
   const lines = markdown.split('\n');
+  let index = 0;
 
+  while (index < lines.length) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('```')) {
+      const language = trimmed.slice(3).trim();
+      const codeLines = [];
+      index += 1;
+      while (index < lines.length && !lines[index].trim().startsWith('```')) {
+        codeLines.push(lines[index]);
+        index += 1;
+      }
+      elements.push(
+        <pre key={`code-${index}`} className="codeBlock">
+          {language && <span className="codeLanguage">{language}</span>}
+          <code>{codeLines.join('\n')}</code>
+        </pre>,
+      );
+      index += 1;
+      continue;
+    }
+
+    if (trimmed === '') {
+      elements.push(<div aria-hidden="true" className="lineBreak" key={`break-${index}`} />);
+      index += 1;
+      continue;
+    }
+
+    if (trimmed.startsWith('# ')) elements.push(<h2 key={`h1-${index}`}>{renderInlineMarkdown(trimmed.slice(2))}</h2>);
+    else if (trimmed.startsWith('## ')) elements.push(<h3 key={`h2-${index}`}>{renderInlineMarkdown(trimmed.slice(3))}</h3>);
+    else if (trimmed.startsWith('### ')) elements.push(<h4 key={`h3-${index}`}>{renderInlineMarkdown(trimmed.slice(4))}</h4>);
+    else if (/^[-*] /.test(trimmed)) elements.push(<p className="bullet" key={`bullet-${index}`}>• {renderInlineMarkdown(trimmed.slice(2))}</p>);
+    else if (/^\d+\. /.test(trimmed)) elements.push(<p className="bullet" key={`ordered-${index}`}>{renderInlineMarkdown(trimmed)}</p>);
+    else elements.push(<p key={`p-${index}`}>{renderInlineMarkdown(line)}</p>);
+
+    index += 1;
+  }
+
+  return <div className="markdownPanel">{elements}</div>;
+}
+
+function MissingDocument() {
   return (
-    <div className="markdownPanel">
-      {lines.map((line, index) => {
-        const key = `${index}-${line}`;
-
-        if (line.trim() === '') return <div aria-hidden="true" className="lineBreak" key={key} />;
-        if (line.startsWith('# ')) return <h2 key={key}>{line.replace('# ', '')}</h2>;
-        if (line.startsWith('## ')) return <h3 key={key}>{line.replace('## ', '')}</h3>;
-        if (line.startsWith('- ')) return <p className="bullet" key={key}>{line}</p>;
-        return <p key={key}>{line}</p>;
-      })}
+    <div className="markdownPanel emptyState">
+      <h2>File not found in connected repository.</h2>
+      <p>Generate intelligence or create the requested file under the connected repository&apos;s <code>.ai/</code> folder.</p>
     </div>
   );
 }
 
-function EmptyState({ fileName }: { fileName: string }) {
-  return (
-    <div className="markdownPanel emptyState">
-      <h2>No local markdown yet</h2>
-      <p>
-        Create <code>.ai/{fileName}</code> to populate this tab, or run <code>npm run init:ai</code> to
-        create the full starter folder.
-      </p>
-    </div>
-  );
+function getInitialSelectedId(): Section['id'] {
+  const remembered = window.localStorage.getItem(selectedTabStorageKey);
+  return sections.some((section) => section.id === remembered) ? (remembered as Section['id']) : 'Goals';
 }
 
 export function App() {
-  const [selectedId, setSelectedId] = useState<Section['id']>('Architecture');
+  const [selectedId, setSelectedId] = useState<Section['id']>(getInitialSelectedId);
   const [repositoryPath, setRepositoryPath] = useState('');
   const [connectedPath, setConnectedPath] = useState('');
-  const [remoteMarkdown, setRemoteMarkdown] = useState<Record<string, string>>({});
+  const [documents, setDocuments] = useState<Record<string, DocumentState>>({});
   const [steps, setSteps] = useState<StepState[]>([]);
   const [summary, setSummary] = useState('');
   const [error, setError] = useState('');
@@ -100,27 +143,59 @@ export function App() {
     () => sections.find((section) => section.id === selectedId) ?? sections[0],
     [selectedId],
   );
-  const markdown = remoteMarkdown[selected.markdownFile] ?? markdownFiles[`../.ai/${selected.markdownFile}`];
+  const document = documents[selected.markdownFile];
 
-  async function loadGeneratedFiles(path: string) {
-    const entries = await Promise.all(
-      [...generatedFiles].map(async (file) => {
-        const url = new URL('/api/repository/file', serverBaseUrl);
-        url.searchParams.set('repositoryPath', path);
-        url.searchParams.set('file', file);
-        const response = await fetch(url);
-        if (!response.ok) return [file, ''];
-        const data = await response.json() as { content: string };
-        return [file, data.content];
-      }),
-    );
-    setRemoteMarkdown(Object.fromEntries(entries));
-  }
+  const loadIntelligenceFile = useCallback(async (path: string, file: string) => {
+    if (!path || !intelligenceFiles.has(file)) return;
+
+    setDocuments((current) => ({
+      ...current,
+      [file]: { content: '', exists: false, isLoading: true, sourcePath: `${path}/.ai/${file}` },
+    }));
+
+    const url = new URL('/api/repository/file', serverBaseUrl);
+    url.searchParams.set('repositoryPath', path);
+    url.searchParams.set('file', file);
+    const response = await fetch(url);
+    const data = await response.json() as { content?: string; exists?: boolean; sourcePath?: string; error?: string };
+    if (!response.ok) throw new Error(data.error ?? 'Unable to load intelligence file.');
+
+    setDocuments((current) => ({
+      ...current,
+      [file]: {
+        content: data.content ?? '',
+        exists: data.exists ?? Boolean(data.content),
+        isLoading: false,
+        sourcePath: data.sourcePath ?? `${path}/.ai/${file}`,
+      },
+    }));
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(selectedTabStorageKey, selectedId);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!connectedPath) return;
+    void loadIntelligenceFile(connectedPath, selected.markdownFile).catch((loadError) => {
+      setError(loadError instanceof Error ? loadError.message : String(loadError));
+      setDocuments((current) => ({
+        ...current,
+        [selected.markdownFile]: {
+          content: '',
+          exists: false,
+          isLoading: false,
+          sourcePath: `${connectedPath}/.ai/${selected.markdownFile}`,
+        },
+      }));
+    });
+  }, [connectedPath, loadIntelligenceFile, selected.markdownFile]);
 
   async function refreshIntelligence() {
     setError('');
     setSummary('');
     setSteps([]);
+    setDocuments({});
     setIsRefreshing(true);
 
     try {
@@ -138,6 +213,7 @@ export function App() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let refreshedRepositoryPath = '';
 
       while (true) {
         const { value, done } = await reader.read();
@@ -149,7 +225,10 @@ export function App() {
         for (const line of lines) {
           if (!line.trim()) continue;
           const event = JSON.parse(line) as RefreshEvent;
-          if (event.type === 'started' && event.repositoryPath) setConnectedPath(event.repositoryPath);
+          if (event.type === 'started' && event.repositoryPath) {
+            refreshedRepositoryPath = event.repositoryPath;
+            setConnectedPath(event.repositoryPath);
+          }
           if (event.type === 'step-started' && event.id && event.label) {
             setSteps((current) => [...current, { id: event.id!, label: event.label!, status: 'running' }]);
           }
@@ -163,10 +242,15 @@ export function App() {
             );
           }
           if ((event.type === 'success' || event.type === 'failure') && event.summary) {
+            refreshedRepositoryPath = event.repositoryPath ?? refreshedRepositoryPath;
             setSummary(`${event.summary} Outputs were written to ${event.aiPath}.`);
-            if (event.repositoryPath) await loadGeneratedFiles(event.repositoryPath);
           }
         }
+      }
+
+      if (refreshedRepositoryPath) {
+        setSelectedId('Goals');
+        await loadIntelligenceFile(refreshedRepositoryPath, 'goals.md');
       }
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
@@ -223,10 +307,13 @@ export function App() {
 
         <section className="sectionIntro">
           <p>{selected.summary}</p>
-          <small>{connectedPath ? `${connectedPath}/.ai/${selected.markdownFile}` : `.ai/${selected.markdownFile}`}</small>
+          <small>{document?.sourcePath ?? (connectedPath ? `${connectedPath}/.ai/${selected.markdownFile}` : `.ai/${selected.markdownFile}`)}</small>
         </section>
 
-        {markdown ? <MarkdownLikeContent markdown={markdown} /> : <EmptyState fileName={selected.markdownFile} />}
+        {!connectedPath && <MissingDocument />}
+        {connectedPath && document?.isLoading && <div className="markdownPanel emptyState"><h2>Loading…</h2></div>}
+        {connectedPath && document && !document.isLoading && document.exists && <MarkdownLikeContent markdown={document.content} />}
+        {connectedPath && document && !document.isLoading && !document.exists && <MissingDocument />}
       </main>
     </div>
   );
