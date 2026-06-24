@@ -9,6 +9,7 @@ Agent IDE is a prototype developer environment where the primary interface is re
 - Validation
 - Agents
 - Code
+- Repository Health
 
 V1 is intentionally small: a local Vite + React + TypeScript app with a sidebar for these repository-understanding sections. Each tab renders the matching markdown file from the repository-local `.ai/` folder.
 
@@ -25,6 +26,7 @@ Agent IDE treats repository understanding as the primary surface:
 - **Validation** describes how the team proves the repository still works.
 - **Agents** describes planned agent roles and constraints before automation is added.
 - **Code** remains available, but it is framed by the surrounding product and engineering context.
+- **Repository Health** summarizes whether the intelligence layer is complete, reliable, and actionable.
 
 This prototype does not include authentication, a database, a code editor, real agents, CLI packaging, cloud services, or LLM integration. Repository scanning is limited to local deterministic commands such as `npm run audit` for `.ai/architecture.md`, `npm run backlog` for `.ai/backlog.md`, and `npm run decisions` for `.ai/decisions.md`, all without calling an LLM. The local Node server can also run those generators against any local repository path and write the generated intelligence into that repository, even when the target repository has never heard of Agent IDE.
 
@@ -41,6 +43,7 @@ Agent IDE reads repository understanding from plain markdown files in `.ai/`:
   validation.md
   agents.md
   code.md
+  repository-health.md
 ```
 
 Each sidebar tab maps directly to one file. If a file is missing, the app shows an empty state that names the missing file and suggests running the initializer.
@@ -66,9 +69,10 @@ Agent IDE includes a small local Node server so the Vite UI can connect to any r
     builder.md
     reviewer.md
     debugger.md
+  repository-health.md
 ```
 
-Refresh first creates any missing baseline files for `goals.md`, `agents.md`, and `code.md` without overwriting existing repository notes, then runs the deterministic architecture, backlog, validation, decisions, and prompt generators. The refresh stays local-first: no LLM calls, cloud services, authentication, or databases are used. Progress and success/failure summaries, including the Baseline Files step, are shown in the UI while the generators run.
+Refresh first creates any missing baseline files for `goals.md`, `agents.md`, and `code.md` without overwriting existing repository notes, then runs the deterministic architecture, backlog, validation, decisions, prompt, and repository health generators. The refresh stays local-first: no LLM calls, cloud services, authentication, or databases are used. Progress and success/failure summaries, including the Baseline Files step, are shown in the UI while the generators run.
 
 Run the API server only:
 
@@ -129,6 +133,14 @@ npm run validate:intel
 
 The validation generator runs safe local validation scripts such as `npm run build` plus detected test, lint, check, or typecheck scripts. It records last validation time, confidence, overall status, commands run, results, and known validation gaps while preserving anything already written under `## Manual Validation Notes`. This is repository intelligence validation, not app runtime validation, and it does not call an LLM.
 
+Generate or refresh `.ai/repository-health.md` locally from deterministic intelligence checks:
+
+```bash
+npm run health
+```
+
+The health generator reads goals, architecture, backlog, decisions, validation, agents, code, and the exported architect prompt to summarize intelligence completeness, quality signals, detected risks, and one recommended next step while preserving anything already written under `## Manual Health Notes`. It uses local file checks only and does not call an LLM, cloud service, or agent.
+
 Export a role-specific prompt from the local `.ai/` repository context:
 
 ```bash
@@ -138,7 +150,7 @@ npm run prompt -- reviewer
 npm run prompt -- debugger
 ```
 
-The prompt exporter reads all seven `.ai/*.md` files and writes deterministic markdown prompts to `.ai/prompts/architect.md`, `.ai/prompts/builder.md`, `.ai/prompts/reviewer.md`, and `.ai/prompts/debugger.md`. Each prompt includes role instructions, product thesis, architecture summary, backlog priorities, validation status, known constraints, task guidance, and the complete local `.ai/` context. It does not call an LLM and does not execute agents.
+The prompt exporter reads the local `.ai/*.md` intelligence files and writes deterministic markdown prompts to `.ai/prompts/architect.md`, `.ai/prompts/builder.md`, `.ai/prompts/reviewer.md`, and `.ai/prompts/debugger.md`. Each prompt includes role instructions, product thesis, architecture summary, backlog priorities, validation status, known constraints, task guidance, and the complete local `.ai/` context. It does not call an LLM and does not execute agents.
 
 Start the Vite development server only:
 
@@ -173,6 +185,7 @@ Implemented now:
 - `npm run decisions` for generating and maintaining `.ai/decisions.md` from README, architecture, backlog, and package metadata without LLM calls.
 - `npm run validate:intel` for generating and maintaining `.ai/validation.md` from safe local deterministic validation commands without LLM calls.
 - `npm run prompt -- <role>` for exporting local, role-specific prompts for architect, builder, reviewer, and debugger workflows without LLM calls or agent execution.
+- `npm run health` for generating `.ai/repository-health.md` from deterministic completeness, quality, and risk checks across the repository intelligence layer.
 
 Intentionally not included:
 
@@ -190,3 +203,4 @@ Intentionally not included:
 - Add richer validation detection for additional ecosystems.
 - Improve markdown rendering.
 - Add cross-links between `.ai` documents.
+- Expand repository health checks as more intelligence artifacts are added.

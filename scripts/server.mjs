@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
-const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md']);
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md']);
 
 const baselineFiles = {
   'goals.md': `# Goals
@@ -59,6 +59,7 @@ const generatorSteps = [
     label: `Prompts (${role})`,
     command: ['node', [join(appRoot, 'scripts/prompt.mjs'), role]],
   })),
+  { id: 'repository-health', label: 'Repository Health', command: ['node', [join(appRoot, 'scripts/health.mjs')]] },
 ];
 
 function sendJson(response, statusCode, data) {

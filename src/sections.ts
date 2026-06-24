@@ -5,7 +5,8 @@ export type SectionId =
   | 'Decisions'
   | 'Validation'
   | 'Agents'
-  | 'Code';
+  | 'Code'
+  | 'Repository Health';
 
 export type Section = {
   id: SectionId;
@@ -56,5 +57,11 @@ export const sections: Section[] = [
     eyebrow: 'Implementation view',
     summary: 'Code remains available, but it is framed by repository understanding instead of replacing it.',
     markdownFile: 'code.md',
+  },
+  {
+    id: 'Repository Health',
+    eyebrow: 'Intelligence audit',
+    summary: 'Quality, completeness, reliability, and next steps for the repository intelligence layer.',
+    markdownFile: 'repository-health.md',
   },
 ];
