@@ -1,6 +1,7 @@
 export type SectionId =
   | 'Goals'
   | 'Architecture'
+  | 'Strategy'
   | 'Backlog'
   | 'Decisions'
   | 'Validation'
@@ -29,6 +30,12 @@ export const sections: Section[] = [
     eyebrow: 'System map',
     summary: 'The current shape of the application, boundaries, dependencies, and important flows.',
     markdownFile: 'architecture.md',
+  },
+  {
+    id: 'Strategy',
+    eyebrow: 'Product strategy',
+    summary: 'North Star Metric, strategic differentiator, current bet, experiment, anti-goals, and success definition.',
+    markdownFile: 'strategy.md',
   },
   {
     id: 'Backlog',

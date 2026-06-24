@@ -16,7 +16,8 @@
     "server": "node scripts/server.mjs",
     "dev:all": "(npm run server & npm run dev)",
     "health": "node scripts/health.mjs",
-    "context:package": "node scripts/context-package.mjs"
+    "context:package": "node scripts/context-package.mjs",
+    "strategy": "node scripts/strategy.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

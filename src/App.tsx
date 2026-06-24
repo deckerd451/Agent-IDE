@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { sections, type Section } from './sections';
 
 type RefreshEvent = {
@@ -25,6 +25,8 @@ type DocumentState = {
   isLoading: boolean;
   sourcePath: string;
 };
+
+const handoffWrapper = 'Using only this repository intelligence package, explain the product, current focus, strategic bet, risks, and safest next development step. Do not assume source-code access.';
 
 const promptFiles = ['prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'] as const;
 const promptRoles = [
@@ -148,11 +150,12 @@ function MissingDocument() {
 }
 
 
-function DocumentActions({ content, downloadName, copyLabel = 'Copy Prompt', downloadLabel = 'Download Prompt' }: { content: string; downloadName: string; copyLabel?: string; downloadLabel?: string }) {
+function DocumentActions({ content, downloadName, copyLabel = 'Copy Prompt', downloadLabel = 'Download Prompt', extraActions }: { content: string; downloadName: string; copyLabel?: string; downloadLabel?: string; extraActions?: ReactNode }) {
   return (
     <div className="actionRow">
       <button onClick={() => void copyText(content)} type="button">{copyLabel}</button>
       <button onClick={() => downloadMarkdown(downloadName, content)} type="button">{downloadLabel}</button>
+      {extraActions}
     </div>
   );
 }
@@ -324,8 +327,8 @@ export function App() {
       }
 
       if (refreshedRepositoryPath) {
-        setSelectedId('Prompt Center');
-        await Promise.all(['goals.md', 'context-package.md', ...promptFiles].map((file) => loadIntelligenceFile(refreshedRepositoryPath, file)));
+        setSelectedId('Strategy');
+        await Promise.all(['goals.md', 'strategy.md', 'context-package.md', ...promptFiles].map((file) => loadIntelligenceFile(refreshedRepositoryPath, file)));
       }
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
@@ -368,10 +371,14 @@ export function App() {
           {connectedPath && <small>Connected: {connectedPath}</small>}
           {error && <div className="summary failure">{error}</div>}
           {summary && <div className="summary success">{summary}</div>}
-          {connectedPath && (
+          {connectedPath && summary && (
+            <div className="nextActions">
+              <strong>Next actions</strong>
             <div className="repositoryShortcuts">
-              <button onClick={() => setSelectedId('Prompt Center')} type="button">Prompt Center</button>
-              <button onClick={() => setSelectedId('Context Package')} type="button">View Context Package</button>
+              <button onClick={() => setSelectedId('Strategy')} type="button">View Strategy</button>
+              <button onClick={() => { const pkg = documents['context-package.md']; if (pkg?.exists) void copyText(pkg.content); }} type="button">Copy Context Package</button>
+              <button onClick={() => { const prompt = documents['prompts/architect.md']; if (prompt?.exists) void copyText(prompt.content); }} type="button">Copy Architect Prompt</button>
+            </div>
             </div>
           )}
           {steps.length > 0 && (
@@ -395,7 +402,7 @@ export function App() {
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}
         {selected.id === 'Context Package' && connectedPath && document && !document.isLoading && document.exists && (
-          <DocumentActions content={document.content} copyLabel="Copy Context Package" downloadLabel="Download Context Package" downloadName="context-package.md" />
+          <DocumentActions content={document.content} copyLabel="Copy Context Package" downloadLabel="Download Context Package" downloadName="context-package.md" extraActions={<button onClick={() => void copyText(`${handoffWrapper}\n\n${document.content}`)} type="button">Copy for Claude/GPT</button>} />
         )}
         {selected.id !== 'Prompt Center' && !connectedPath && <MissingDocument />}
         {selected.id !== 'Prompt Center' && connectedPath && document?.isLoading && <div className="markdownPanel emptyState"><h2>Loading…</h2></div>}

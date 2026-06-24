@@ -9,6 +9,7 @@ const manualHeader = '## Manual Health Notes';
 const requiredFiles = [
   ['Goals', 'goals.md'],
   ['Architecture', 'architecture.md'],
+  ['Strategy', 'strategy.md'],
   ['Backlog', 'backlog.md'],
   ['Decisions', 'decisions.md'],
   ['Validation', 'validation.md'],
@@ -42,10 +43,14 @@ async function readExistingManualNotes() {
   return `${current.slice(manualIndex).trimEnd()}\n`;
 }
 
-function hasSectionText(text, header) {
+function sectionText(text, header) {
   const escaped = header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = text.match(new RegExp(`^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'));
-  return Boolean(match?.[1]?.trim());
+  return match?.[1]?.trim() ?? '';
+}
+
+function hasSectionText(text, header) {
+  return Boolean(sectionText(text, header));
 }
 
 function detectsBacklogNoise(text) {
@@ -94,6 +99,7 @@ function calculateConfidence(docs, signals, risks) {
 function recommendationFor(risks) {
   if (risks.includes('No deterministic validation commands detected')) return 'Add or expose a deterministic validation script such as `npm run build` or `npm test`, then run `npm run validate:intel` and `npm run health` again.';
   if (risks.includes('Validation has low confidence')) return 'Strengthen validation coverage with additional deterministic scripts, then refresh validation and repository health.';
+  if (risks.some((risk) => risk.startsWith('Strategy missing')) || risks.includes('Strategy missing')) return 'Run `npm run strategy`, then fill any missing strategic fields in `.ai/goals.md` or `.ai/strategy.md` manual notes.';
   if (risks.includes('Missing manual goals')) return 'Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.';
   if (risks.includes('Architecture has no product thesis')) return 'Run `npm run audit` after documenting repository purpose in README or `.ai/goals.md`.';
   if (risks.includes('Architecture has no current focus')) return 'Add a current focus to `.ai/goals.md`, then rerun architecture and health generation.';
@@ -111,11 +117,17 @@ const architecture = docs['architecture.md'].text;
 const goals = docs['goals.md'].text;
 const backlog = docs['backlog.md'].text;
 const validation = docs['validation.md'].text;
+const strategy = docs['strategy.md'].text;
 
 const signals = {
   productThesis: /Product Thesis/i.test(architecture),
   currentFocus: /Current Focus/i.test(architecture),
   coreSystems: /Core Systems/i.test(architecture),
+  strategyPresent: docs['strategy.md'].exists,
+  northStarMetric: hasSectionText(strategy, 'North Star Metric') && !/- Not detected yet\./i.test(sectionText(strategy, 'North Star Metric')),
+  strategicDifferentiator: hasSectionText(strategy, 'Strategic Differentiator') && !/- Not detected yet\./i.test(sectionText(strategy, 'Strategic Differentiator')),
+  currentProductBet: hasSectionText(strategy, 'Current Product Bet') && !/- Not detected yet\./i.test(sectionText(strategy, 'Current Product Bet')),
+  whatNotToBuild: hasSectionText(strategy, 'What Not To Build') && !/- Not detected yet\./i.test(sectionText(strategy, 'What Not To Build')),
   evidenceLines: /Evidence:/i.test(architecture) || /Evidence\)/i.test(architecture),
   backlogNoise: detectsBacklogNoise(backlog),
   validationCommands: detectsValidationCommands(validation),
@@ -134,6 +146,11 @@ if (signals.backlogNoise) risks.push('Backlog contains possible noise');
 if (!signals.productThesis) risks.push('Architecture has no product thesis');
 if (!signals.currentFocus) risks.push('Architecture has no current focus');
 if (!hasSectionText(goals, 'Manual Goals')) risks.push('Missing manual goals');
+if (!signals.strategyPresent) risks.push('Strategy missing');
+if (signals.strategyPresent && !signals.northStarMetric) risks.push('Strategy missing North Star Metric');
+if (signals.strategyPresent && !signals.strategicDifferentiator) risks.push('Strategy missing Strategic Differentiator');
+if (signals.strategyPresent && !signals.currentProductBet) risks.push('Strategy missing Current Product Bet');
+if (signals.strategyPresent && !signals.whatNotToBuild) risks.push('Strategy missing What Not To Build');
 
 const overallHealth = calculateOverallHealth(risks);
 const confidence = calculateConfidence(docs, signals, risks);
@@ -152,6 +169,11 @@ const content = [
   `- Product thesis ${signals.productThesis ? 'present' : 'missing'}`,
   `- Current focus ${signals.currentFocus ? 'present' : 'missing'}`,
   `- Core systems ${signals.coreSystems ? 'present' : 'missing'}`,
+  `- Strategy ${signals.strategyPresent ? 'present' : 'missing'}`,
+  `- North Star Metric ${signals.northStarMetric ? 'present' : 'missing'}`,
+  `- Strategic Differentiator ${signals.strategicDifferentiator ? 'present' : 'missing'}`,
+  `- Current Product Bet ${signals.currentProductBet ? 'present' : 'missing'}`,
+  `- What Not To Build ${signals.whatNotToBuild ? 'present' : 'missing'}`,
   `- Evidence lines ${signals.evidenceLines ? 'present' : 'missing'}`,
   `- Backlog noise ${signals.backlogNoise ? 'detected' : 'not detected'}`,
   `- Validation commands ${signals.validationCommands ? 'detected' : 'not detected'}`,

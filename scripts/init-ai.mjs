@@ -8,6 +8,24 @@ const starterFiles = {
 - Keep intent visible before implementation details.
 - Connect future work to measurable repository success.
 `,
+  'strategy.md': `# Strategy
+
+## Product Thesis
+
+## North Star Metric
+
+## Strategic Differentiator
+
+## Current Product Bet
+
+## Current Experiment
+
+## What Not To Build
+
+## Success Definition
+
+## Manual Strategy Notes
+`,
   'architecture.md': `# Architecture
 
 - Describe the system shape, boundaries, dependencies, and important flows.
