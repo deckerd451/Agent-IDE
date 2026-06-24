@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { dedupe, isQualityNoise, normalizeKey, scanComments, scanMarkdownGaps } from '../scripts/backlog.mjs';
+import { classifyComment, dedupe, isQualityNoise, normalizeKey, scanComments, scanMarkdownGaps } from '../scripts/backlog.mjs';
 
 const nearifyGeneratedValidation = `# Validation
 
@@ -21,6 +21,8 @@ assert.equal(isQualityNoise('None detected'), true);
 assert.equal(isQualityNoise('No validation gaps detected from package scripts.'), true);
 assert.equal(isQualityNoise('npm run build -> generated backlog.md'), true);
 assert.equal(isQualityNoise('Confidence: 95%'), true);
+assert.equal(isQualityNoise('Package Scripts Were Detected in Package.json'), true);
+assert.equal(isQualityNoise('Detected scripts: build, test, lint'), true);
 
 const nearifyGeneratedArchitecture = `# Architecture
 
@@ -53,6 +55,12 @@ const nearifyRoadmap = `# Nearify Implementation Roadmap
 
 ## Generated Summary
 - Validation passed successfully.
+
+## Known Gaps
+- Package Scripts Were Detected in Package.json
+- ExploreView is a nav push within the home tab
+- ActiveJoinedEventKey is intentionally NOT removed
+- notifyAuthenticatedUser performs the definitive check
 `;
 
 const roadmapItems = dedupe(scanMarkdownGaps('docs/NEARIFY_IMPLEMENTATION_ROADMAP.md', nearifyRoadmap));
@@ -61,14 +69,26 @@ assert.equal(roadmapItems.some((item) => item.title.includes('Reminder Schedulin
 assert.equal(roadmapItems.some((item) => item.title.includes('Manual Backlog Import')), true);
 assert.equal(roadmapItems.some((item) => item.title.includes('Relationship-context')), true);
 assert.equal(roadmapItems.some((item) => /Validation Passed/i.test(item.title)), false);
+assert.equal(roadmapItems.some((item) => /Package Scripts/i.test(item.title)), false);
+assert.equal(roadmapItems.some((item) => /ExploreView/i.test(item.title)), false);
+assert.equal(roadmapItems.some((item) => /ActiveJoinedEventKey/i.test(item.title)), false);
+assert.equal(roadmapItems.some((item) => /notifyAuthenticatedUser/i.test(item.title)), false);
 assert.equal(roadmapItems.filter((item) => normalizeKey(item.title).includes('event aware follow up reminders')).length, 1);
 
 const nearifySource = [
   '// ' + 'TODO: Add event-aware follow-up reminders.',
   '// ' + 'FIXME: Fix broken reminder scheduling when an event changes time.',
   '// ' + 'NOTE: Confidence message is logged for diagnostics.',
+  '// ' + 'ExploreView is a nav push within the home tab.',
+  '// ' + 'ActiveJoinedEventKey is intentionally NOT removed.',
+  '// ' + 'notifyAuthenticatedUser performs the definitive check.',
 ].join('\n');
 
 const commentItems = scanComments('Sources/Nearify/ReminderScheduler.swift', nearifySource);
-assert.equal(commentItems.length, 3);
+assert.equal(commentItems.length, 2);
 assert.equal(commentItems.some((item) => item.title.includes('Add Event-aware Follow-up Reminders')), true);
+
+assert.equal(classifyComment('TODO', 'Add event-aware follow-up reminders.'), 'actionable');
+assert.equal(classifyComment('NOTE', 'ExploreView is a nav push within the home tab.'), 'architectural');
+assert.equal(classifyComment('NOTE', 'Relationship Context Engine coordinates event state.'), 'architectural');
+assert.equal(classifyComment('NOTE', 'Confidence message is logged for diagnostics.'), 'validation');

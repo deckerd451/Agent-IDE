@@ -34,8 +34,6 @@ const actionableHeadingPatterns = [
   /\bgaps?\b/i,
   /\bfuture work\b/i,
   /\bnext work\b/i,
-  /\blimitations?\b/i,
-  /\bmissing capabilities?\b/i,
   /\bmanual backlog\b/i,
   /\btodos?\b/i,
   /\bfixmes?\b/i,
@@ -43,7 +41,6 @@ const actionableHeadingPatterns = [
   /^roadmap$/i,
   /\bfuture work\b/i,
   /\bimplementation recommendations?\b/i,
-  /\brecommendations?\b/i,
 ];
 const nonGoalHeadingPatterns = [
   /\bintentionally not included\b/i,
@@ -65,6 +62,7 @@ const ignoredQualityPatterns = [
   /\b(?:validation|build|tests?|lint|typecheck|check) (?:passed|succeeded|successful|completed successfully)\b/i,
   /\b(?:success|successful|passed):?\s*(?:validation|build|tests?|lint|typecheck|check)\b/i,
   /\bdetected (?:npm |package |validation )?scripts?\b/i,
+  /\bpackage scripts? (?:was|were) detected\b/i,
   /\bscripts? was detected\b/i,
   /\b(?:npm run|yarn|pnpm|bun) \w[\w:-]*(?:\s*(?:->|was detected|detected)|\s*->\s*generated)\b/i,
   /\blast (?:audit|validation|updated):\b/i,
@@ -78,9 +76,11 @@ const ignoredQualityPatterns = [
 ];
 
 const implementationRecommendationPatterns = [
-  /\b(?:implement|add|build|create|extract|support|generate|export|package|link|document|validate|filter|improve|replace|remove|refactor|introduce|enable|wire|persist|surface)\b/i,
   /\b(?:should|needs?|must)\s+(?:implement|add|build|create|extract|support|generate|export|package|link|document|validate|filter|improve|replace|remove|refactor|introduce|enable|wire|persist|surface)\b/i,
+  /\b(?:recommend(?:ed|ation)?|proposal|proposed)\s*:?.*\b(?:implement|add|build|create|extract|support|generate|export|package|link|document|validate|filter|improve|replace|remove|refactor|introduce|enable|wire|persist|surface)\b/i,
 ];
+
+const actionableCommentMarkers = new Set(['TODO', 'FIXME', 'HACK', 'BUILD', 'ROADMAP', 'FUTURE WORK', 'KNOWN GAPS', 'MANUAL BACKLOG']);
 
 const ignoredNonGoalPatterns = [
   /\bauth(entication)?\b/i,
@@ -186,9 +186,38 @@ function isIgnoredNonGoal(text, context) {
 }
 
 function isActionableRecommendation(text, context) {
-  if (context === 'manual-backlog' || context === 'known-gap') return true;
-  if (/\b(?:todo|fixme|build|roadmap|known gaps?|future work)\b/i.test(context)) return true;
+  if (/\b(?:todo|fixme|hack|build|roadmap|future work)\b/i.test(context)) return true;
+  if (context === 'manual-backlog' || context === 'known-gap' || /\bknown gaps?\b/i.test(context)) {
+    return /^(?:add|fix|implement|build|create|extract|support|generate|export|package|link|document|validate|filter|improve|replace|remove|refactor|introduce|enable|wire|persist|surface)\b/i.test(text)
+      || implementationRecommendationPatterns.some((pattern) => pattern.test(text));
+  }
   return implementationRecommendationPatterns.some((pattern) => pattern.test(text));
+}
+
+function classifyText(text) {
+  const normalizedText = compact(text);
+
+  if (isQualityNoise(normalizedText)) return 'validation';
+  if (/\b(?:intentionally not|definitive check|current behavior|currently|detected|observed)\b/i.test(normalizedText)) return 'informational';
+  if (/\b(?:nav push|architecture|architectural|flow|system|engine|service|within|tab|route|navigation)\b/i.test(normalizedText)) return 'architectural';
+  if (/\b(?:validated?|passed|succeeded|successful)\b/i.test(normalizedText)) return 'validation';
+  return 'informational';
+}
+
+function classifyComment(marker, text) {
+  const normalizedMarker = compact(marker).toUpperCase();
+  const normalizedText = compact(text);
+
+  if (!actionableCommentMarkers.has(normalizedMarker)) {
+    return classifyText(normalizedText);
+  }
+
+  if (isQualityNoise(normalizedText)) return 'validation';
+  if (/\b(?:is|are|was|were|performs?|contains?|uses?|represents?|describes?)\b/i.test(normalizedText) && !implementationRecommendationPatterns.some((pattern) => pattern.test(normalizedText))) {
+    return /\b(?:architecture|flow|system|within|tab|route|navigation)\b/i.test(normalizedText) ? 'architectural' : 'informational';
+  }
+
+  return 'actionable';
 }
 
 function normalizeKey(value) {
@@ -216,7 +245,7 @@ function classifyPriority(text) {
 }
 
 function buildItem({ text, source: itemSource, type, context = 'document' }) {
-  const normalizedText = compact(text.replace(/^(TODO|FIXME|HACK|XXX|NOTE)\b\s*:?\s*/i, ''));
+  const normalizedText = compact(text.replace(/^(TODO|FIXME|HACK|BUILD|ROADMAP|FUTURE WORK|KNOWN GAPS|MANUAL BACKLOG)\b\s*:?\s*/i, ''));
   const sourceText = stripTrailingNoise(normalizedText);
   const taskText = type === 'document' ? actionableText(sourceText) : sourceText;
   const fallbackTitle = type === 'comment' ? 'Review Repository Comment' : 'Review Documented Gap';
@@ -241,14 +270,17 @@ function buildItem({ text, source: itemSource, type, context = 'document' }) {
 function scanComments(path, content) {
   if (!scannableCodeExtensions.has(extname(path))) return [];
 
-  const commentPattern = /(?:\/\/|(?<!#)#|<!--|\/\*|\*)\s*\b(TODO|FIXME|HACK|XXX|NOTE)\b\s*:?(.*?)(?:-->|\*\/)?$/i;
+  const commentPattern = /(?:\/\/|(?<!#)#|<!--|\/\*|\*)\s*\b(TODO|FIXME|HACK|BUILD|ROADMAP|FUTURE WORK|KNOWN GAPS|MANUAL BACKLOG)\b\s*:?(.*?)(?:-->|\*\/)?$/i;
   return content
     .split('\n')
     .map((line, index) => ({ line, lineNumber: index + 1 }))
     .filter(({ line }) => commentPattern.test(line))
-    .map(({ line, lineNumber }) => {
+    .flatMap(({ line, lineNumber }) => {
       const match = line.match(commentPattern);
-      return buildItem({ text: `${match[1]}: ${match[2] ?? ''}`, source: source(path, lineNumber), type: 'comment' });
+      const marker = match[1];
+      const text = match[2] ?? '';
+      if (classifyComment(marker, text) !== 'actionable') return [];
+      return [buildItem({ text: `${marker}: ${text}`, source: source(path, lineNumber), type: 'comment' })];
     });
 }
 
@@ -296,6 +328,7 @@ function scanMarkdownGaps(path, content) {
     const text = bullet[1];
     const context = activeContext;
     if (isIgnoredNonGoal(text, context)) return;
+    if (classifyText(text) !== 'informational' && !isActionableRecommendation(text, context)) return;
     if (!isActionableRecommendation(text, context)) return;
     if (/^implemented now:?$/i.test(activeTopLevelHeading) || /^implemented now:?$/i.test(text)) return;
 
@@ -414,6 +447,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 export {
   actionableText,
   buildItem,
+  classifyComment,
+  classifyText,
   dedupe,
   isQualityNoise,
   normalizeKey,
