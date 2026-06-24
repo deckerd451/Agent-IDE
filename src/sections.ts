@@ -6,7 +6,9 @@ export type SectionId =
   | 'Validation'
   | 'Agents'
   | 'Code'
-  | 'Repository Health';
+  | 'Repository Health'
+  | 'Prompt Center'
+  | 'Context Package';
 
 export type Section = {
   id: SectionId;
@@ -63,5 +65,17 @@ export const sections: Section[] = [
     eyebrow: 'Intelligence audit',
     summary: 'Quality, completeness, reliability, and next steps for the repository intelligence layer.',
     markdownFile: 'repository-health.md',
+  },
+  {
+    id: 'Prompt Center',
+    eyebrow: 'One-click prompts',
+    summary: 'View, copy, and download generated Architect, Builder, Reviewer, and Debugger prompts.',
+    markdownFile: 'prompts/architect.md',
+  },
+  {
+    id: 'Context Package',
+    eyebrow: 'Assistant handoff',
+    summary: 'A compact generated context package for pasting repository intelligence into GPT, Claude, Cursor, Codex, and other assistants.',
+    markdownFile: 'context-package.md',
   },
 ];

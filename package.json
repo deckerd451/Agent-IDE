@@ -15,7 +15,8 @@
     "decisions": "node scripts/decisions.mjs",
     "server": "node scripts/server.mjs",
     "dev:all": "(npm run server & npm run dev)",
-    "health": "node scripts/health.mjs"
+    "health": "node scripts/health.mjs",
+    "context:package": "node scripts/context-package.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
