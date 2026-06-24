@@ -1,5 +1,6 @@
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { basename, extname, join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = process.cwd();
 const aiDir = join(root, '.ai');
@@ -36,6 +37,13 @@ const actionableHeadingPatterns = [
   /\blimitations?\b/i,
   /\bmissing capabilities?\b/i,
   /\bmanual backlog\b/i,
+  /\btodos?\b/i,
+  /\bfixmes?\b/i,
+  /^build$/i,
+  /^roadmap$/i,
+  /\bfuture work\b/i,
+  /\bimplementation recommendations?\b/i,
+  /\brecommendations?\b/i,
 ];
 const nonGoalHeadingPatterns = [
   /\bintentionally not included\b/i,
@@ -48,6 +56,32 @@ const ignoredAlwaysPatterns = [
   /\bagent execution\b/i,
   /\breal agents?\b/i,
 ];
+const ignoredQualityPatterns = [
+  /^none detected\.?$/i,
+  /^no (?:validation )?gaps? detected\b/i,
+  /^no deterministic validation commands were detected\.?$/i,
+  /^confidence:?\s*\d+%?\.?$/i,
+  /\bconfidence (?:score|level|message)\b/i,
+  /\b(?:validation|build|tests?|lint|typecheck|check) (?:passed|succeeded|successful|completed successfully)\b/i,
+  /\b(?:success|successful|passed):?\s*(?:validation|build|tests?|lint|typecheck|check)\b/i,
+  /\bdetected (?:npm |package |validation )?scripts?\b/i,
+  /\bscripts? was detected\b/i,
+  /\b(?:npm run|yarn|pnpm|bun) \w[\w:-]*(?:\s*(?:->|was detected|detected)|\s*->\s*generated)\b/i,
+  /\blast (?:audit|validation|updated):\b/i,
+  /^(?:status|exit code|duration|output summary):\b/i,
+  /^generated (?:summary|backlog|architecture|validation|decisions?)\b/i,
+  /\bgenerated (?:summary|by|from deterministic|architecture metadata)\b/i,
+  /\brepository structure\b/i,
+  /\bmajor (?:areas|files)\b/i,
+  /\bdependencies\b/i,
+  /^version-controlled `?\.ai\/\*\.md`? files\b/i,
+];
+
+const implementationRecommendationPatterns = [
+  /\b(?:implement|add|build|create|extract|support|generate|export|package|link|document|validate|filter|improve|replace|remove|refactor|introduce|enable|wire|persist|surface)\b/i,
+  /\b(?:should|needs?|must)\s+(?:implement|add|build|create|extract|support|generate|export|package|link|document|validate|filter|improve|replace|remove|refactor|introduce|enable|wire|persist|surface)\b/i,
+];
+
 const ignoredNonGoalPatterns = [
   /\bauth(entication)?\b/i,
   /\bdatabase(s)?\b/i,
@@ -138,14 +172,33 @@ function actionableText(value) {
   return `Add ${cleaned}`;
 }
 
+function isQualityNoise(text) {
+  const normalized = compact(text.replace(/^[-*]\s+/, '').replace(/^\*+|\*+$/g, ''));
+  if (!normalized) return true;
+  return ignoredQualityPatterns.some((pattern) => pattern.test(normalized));
+}
+
 function isIgnoredNonGoal(text, context) {
+  if (isQualityNoise(text)) return true;
   if (ignoredAlwaysPatterns.some((pattern) => pattern.test(text))) return true;
   if (context === 'known-gap' || context === 'manual-backlog') return false;
   return ignoredNonGoalPatterns.some((pattern) => pattern.test(text));
 }
 
+function isActionableRecommendation(text, context) {
+  if (context === 'manual-backlog' || context === 'known-gap') return true;
+  if (/\b(?:todo|fixme|build|roadmap|known gaps?|future work)\b/i.test(context)) return true;
+  return implementationRecommendationPatterns.some((pattern) => pattern.test(text));
+}
+
 function normalizeKey(value) {
-  return compact(value).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return compact(value)
+    .toLowerCase()
+    .replace(/`[^`]+`/g, ' ')
+    .replace(/\b(?:add|build|create|implement|support|enable|improve|refactor|the|a|an|to|for|from|with|that|should|needs?|must|manual|backlog|todo|fixme)\b/g, ' ')
+    .replace(/\b(?:feature|task|work|item|capability|implementation)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 }
 
 function source(path, lineNumber) {
@@ -188,7 +241,7 @@ function buildItem({ text, source: itemSource, type, context = 'document' }) {
 function scanComments(path, content) {
   if (!scannableCodeExtensions.has(extname(path))) return [];
 
-  const commentPattern = /(?:\/\/|#|<!--|\/\*|\*)\s*\b(TODO|FIXME|HACK|XXX|NOTE)\b\s*:?(.*?)(?:-->|\*\/)?$/i;
+  const commentPattern = /(?:\/\/|(?<!#)#|<!--|\/\*|\*)\s*\b(TODO|FIXME|HACK|XXX|NOTE)\b\s*:?(.*?)(?:-->|\*\/)?$/i;
   return content
     .split('\n')
     .map((line, index) => ({ line, lineNumber: index + 1 }))
@@ -229,7 +282,7 @@ function scanMarkdownGaps(path, content) {
       }
 
       if (actionableHeadingPatterns.some((pattern) => pattern.test(headingText))) {
-        activeContext = 'actionable';
+        activeContext = headingText.toLowerCase();
         return;
       }
 
@@ -243,6 +296,7 @@ function scanMarkdownGaps(path, content) {
     const text = bullet[1];
     const context = activeContext;
     if (isIgnoredNonGoal(text, context)) return;
+    if (!isActionableRecommendation(text, context)) return;
     if (/^implemented now:?$/i.test(activeTopLevelHeading) || /^implemented now:?$/i.test(text)) return;
 
     items.push(
@@ -299,37 +353,38 @@ function calculateConfidence({ filesScanned, items }) {
   return `${Math.min(score, 95)}%`;
 }
 
-const files = await walk(root);
-const manualBacklog = await readExistingManualBacklog();
-const allItems = [];
-let filesScanned = 0;
+async function main() {
+  const files = await walk(root);
+  const manualBacklog = await readExistingManualBacklog();
+  const allItems = [];
+  let filesScanned = 0;
 
-for (const file of files) {
-  const isReadme = basename(file).toLowerCase().startsWith('readme') && extname(file).toLowerCase() === '.md';
-  const shouldScanCode = scannableCodeExtensions.has(extname(file));
-  if (!isReadme && !shouldScanCode) continue;
+  for (const file of files) {
+    const isReadme = basename(file).toLowerCase().startsWith('readme') && extname(file).toLowerCase() === '.md';
+    const shouldScanCode = scannableCodeExtensions.has(extname(file));
+    if (!isReadme && !shouldScanCode) continue;
 
-  const content = await readTextIfExists(join(root, file));
-  filesScanned += 1;
-  allItems.push(...scanComments(file, content));
-  if (isReadme) allItems.push(...scanMarkdownGaps(file, content));
-}
-
-if (await pathExists(aiDir)) {
-  const aiEntries = await readdir(aiDir, { withFileTypes: true });
-  for (const entry of aiEntries) {
-    if (!entry.isFile() || extname(entry.name) !== '.md' || entry.name === 'backlog.md') continue;
-    const file = `.ai/${entry.name}`;
-    const content = await readTextIfExists(join(aiDir, entry.name));
+    const content = await readTextIfExists(join(root, file));
     filesScanned += 1;
-    allItems.push(...scanMarkdownGaps(file, content));
+    allItems.push(...scanComments(file, content));
+    if (isReadme) allItems.push(...scanMarkdownGaps(file, content));
   }
-}
 
-const items = dedupe(allItems);
-const grouped = Object.fromEntries(priorityOrder.map((priority) => [priority, items.filter((item) => item.priority === priority)]));
-const auditedAt = new Date().toISOString();
-const generated = `# Backlog
+  if (await pathExists(aiDir)) {
+    const aiEntries = await readdir(aiDir, { withFileTypes: true });
+    for (const entry of aiEntries) {
+      if (!entry.isFile() || extname(entry.name) !== '.md' || entry.name === 'backlog.md') continue;
+      const file = `.ai/${entry.name}`;
+      const content = await readTextIfExists(join(aiDir, entry.name));
+      filesScanned += 1;
+      allItems.push(...scanMarkdownGaps(file, content));
+    }
+  }
+
+  const items = dedupe(allItems);
+  const grouped = Object.fromEntries(priorityOrder.map((priority) => [priority, items.filter((item) => item.priority === priority)]));
+  const auditedAt = new Date().toISOString();
+  const generated = `# Backlog
 
 Last Audit: ${auditedAt}
 Confidence: ${calculateConfidence({ filesScanned, items })}
@@ -345,8 +400,23 @@ ${formatItems(grouped['Low Priority'])}
 
 ${manualBacklog}`;
 
-await mkdir(aiDir, { recursive: true });
-await writeFile(backlogPath, generated);
+  await mkdir(aiDir, { recursive: true });
+  await writeFile(backlogPath, generated);
 
-console.log(`Updated ${relative(root, backlogPath)}.`);
-console.log(`Items: ${items.length}`);
+  console.log(`Updated ${relative(root, backlogPath)}.`);
+  console.log(`Items: ${items.length}`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await main();
+}
+
+export {
+  actionableText,
+  buildItem,
+  dedupe,
+  isQualityNoise,
+  normalizeKey,
+  scanComments,
+  scanMarkdownGaps,
+};
