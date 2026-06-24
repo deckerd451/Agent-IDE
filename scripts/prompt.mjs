@@ -12,6 +12,7 @@ const aiFiles = [
   'validation.md',
   'agents.md',
   'code.md',
+  'repository-health.md',
 ];
 
 const roles = {
@@ -117,6 +118,7 @@ function buildPrompt(role, docs) {
     section('Architecture Summary', docs['architecture.md']),
     section('Backlog Priorities', docs['backlog.md']),
     section('Validation Status', docs['validation.md']),
+    section('Repository Health', docs['repository-health.md']),
     section('Known Constraints', [bullets(constraints), docs['decisions.md'], docs['agents.md']].join('\n\n')),
     section('Task Guidance', bullets(role.taskGuidance)),
     section('Complete Repository Context', aiFiles.map((fileName) => fenced(fileName, docs[fileName])).join('\n\n')),

@@ -1,0 +1,165 @@
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
+const root = process.cwd();
+const aiDir = join(root, '.ai');
+const outputPath = join(aiDir, 'repository-health.md');
+const manualHeader = '## Manual Health Notes';
+
+const requiredFiles = [
+  ['Goals', 'goals.md'],
+  ['Architecture', 'architecture.md'],
+  ['Backlog', 'backlog.md'],
+  ['Decisions', 'decisions.md'],
+  ['Validation', 'validation.md'],
+  ['Agents', 'agents.md'],
+  ['Code', 'code.md'],
+  ['Architect Prompt', 'prompts/architect.md'],
+];
+
+async function pathExists(path) {
+  try {
+    await stat(path);
+    return true;
+  } catch (error) {
+    if (error?.code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+async function readAiFile(fileName) {
+  const path = join(aiDir, fileName);
+  const exists = await pathExists(path);
+  if (!exists) return { exists, text: '' };
+  return { exists, text: await readFile(path, 'utf8') };
+}
+
+async function readExistingManualNotes() {
+  if (!(await pathExists(outputPath))) return `${manualHeader}\n`;
+  const current = await readFile(outputPath, 'utf8');
+  const manualIndex = current.indexOf(manualHeader);
+  if (manualIndex === -1) return `${manualHeader}\n`;
+  return `${current.slice(manualIndex).trimEnd()}\n`;
+}
+
+function hasSectionText(text, header) {
+  const escaped = header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = text.match(new RegExp(`^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'));
+  return Boolean(match?.[1]?.trim());
+}
+
+function detectsBacklogNoise(text) {
+  const noisePatterns = [
+    /No validation gaps detected from package scripts\.?/i,
+    /No deterministic validation commands were detected\.?/i,
+    /Last (?:audit|validation|updated):/i,
+    /Generated (?:summary|backlog|architecture|validation|decision)/i,
+    /Validation (?:passed|succeeded|completed successfully)/i,
+  ];
+  return noisePatterns.some((pattern) => pattern.test(text));
+}
+
+function detectsValidationCommands(text) {
+  const commandsRun = text.match(/^## Commands Run\s*([\s\S]*?)(?=^##\s+|(?![\s\S]))/im)?.[1] ?? '';
+  return /`npm run [^`]+`/.test(commandsRun) && !/-\s+None\b/i.test(commandsRun);
+}
+
+function validationConfidence(text) {
+  const match = text.match(/^## Confidence\s*\n-\s*(Low|Medium|High)\b/im);
+  return match?.[1] ?? 'Unknown';
+}
+
+function formatCompleteness(docs) {
+  return requiredFiles.map(([label, fileName]) => `- ${label}: ${docs[fileName].exists ? 'Present' : 'Missing'}`).join('\n');
+}
+
+function calculateOverallHealth(risks) {
+  if (risks.length === 0) return 'Healthy';
+  if (risks.length <= 2) return 'Needs Attention';
+  return 'At Risk';
+}
+
+function calculateConfidence(docs, signals, risks) {
+  const presentCount = requiredFiles.filter(([, fileName]) => docs[fileName].exists).length;
+  if (presentCount === requiredFiles.length && signals.productThesis && signals.currentFocus && signals.coreSystems && risks.length <= 1) return 'High';
+  if (presentCount >= 6) return 'Medium';
+  return 'Low';
+}
+
+function recommendationFor(risks) {
+  if (risks.includes('No deterministic validation commands detected')) return 'Add or expose a deterministic validation script such as `npm run build` or `npm test`, then run `npm run validate:intel` and `npm run health` again.';
+  if (risks.includes('Validation has low confidence')) return 'Strengthen validation coverage with additional deterministic scripts, then refresh validation and repository health.';
+  if (risks.includes('Missing manual goals')) return 'Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.';
+  if (risks.includes('Architecture has no product thesis')) return 'Run `npm run audit` after documenting repository purpose in README or `.ai/goals.md`.';
+  if (risks.includes('Architecture has no current focus')) return 'Add a current focus to `.ai/goals.md`, then rerun architecture and health generation.';
+  if (risks.includes('Backlog is empty')) return 'Add explicit future work or task-marker comments, then run `npm run backlog` and `npm run health` again.';
+  if (risks.includes('Backlog contains possible noise')) return 'Review `.ai/backlog.md`, remove validation/status noise, then rerun `npm run backlog` and `npm run health`.';
+  if (risks.some((risk) => risk.startsWith('Missing intelligence file:'))) return 'Run Refresh Intelligence or the missing generator commands to recreate absent `.ai/` artifacts.';
+  return 'Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.';
+}
+
+const entries = await Promise.all(requiredFiles.map(async ([, fileName]) => [fileName, await readAiFile(fileName)]));
+const docs = Object.fromEntries(entries);
+const manualNotes = await readExistingManualNotes();
+
+const architecture = docs['architecture.md'].text;
+const goals = docs['goals.md'].text;
+const backlog = docs['backlog.md'].text;
+const validation = docs['validation.md'].text;
+
+const signals = {
+  productThesis: /Product Thesis/i.test(architecture),
+  currentFocus: /Current Focus/i.test(architecture),
+  coreSystems: /Core Systems/i.test(architecture),
+  evidenceLines: /Evidence:/i.test(architecture) || /Evidence\)/i.test(architecture),
+  backlogNoise: detectsBacklogNoise(backlog),
+  validationCommands: detectsValidationCommands(validation),
+  manualSections: [goals, architecture, backlog, docs['decisions.md'].text, validation, docs['agents.md'].text, docs['code.md'].text].some((text) => /^## Manual /im.test(text)),
+};
+
+const risks = [];
+for (const [label, fileName] of requiredFiles) {
+  if (!docs[fileName].exists) risks.push(`Missing intelligence file: ${label}`);
+}
+if (validationConfidence(validation) === 'Low') risks.push('Validation has low confidence');
+if (!signals.validationCommands) risks.push('No deterministic validation commands detected');
+if (docs['backlog.md'].exists && !backlog.trim().replace(/^#.*$/m, '').trim()) risks.push('Backlog is empty');
+if (signals.backlogNoise) risks.push('Backlog contains possible noise');
+if (!signals.productThesis) risks.push('Architecture has no product thesis');
+if (!signals.currentFocus) risks.push('Architecture has no current focus');
+if (!hasSectionText(goals, 'Manual Goals')) risks.push('Missing manual goals');
+
+const overallHealth = calculateOverallHealth(risks);
+const confidence = calculateConfidence(docs, signals, risks);
+
+const content = [
+  '# Repository Health',
+  '',
+  `Last Audit: ${new Date().toISOString()}`,
+  `Overall Health: ${overallHealth}`,
+  `Confidence: ${confidence}`,
+  '',
+  '## Intelligence Completeness',
+  formatCompleteness(docs),
+  '',
+  '## Quality Signals',
+  `- Product thesis ${signals.productThesis ? 'present' : 'missing'}`,
+  `- Current focus ${signals.currentFocus ? 'present' : 'missing'}`,
+  `- Core systems ${signals.coreSystems ? 'present' : 'missing'}`,
+  `- Evidence lines ${signals.evidenceLines ? 'present' : 'missing'}`,
+  `- Backlog noise ${signals.backlogNoise ? 'detected' : 'not detected'}`,
+  `- Validation commands ${signals.validationCommands ? 'detected' : 'not detected'}`,
+  `- Manual sections ${signals.manualSections ? 'preserved' : 'not detected'}`,
+  '',
+  '## Risks',
+  risks.length ? risks.map((risk) => `- ${risk}`).join('\n') : '- No repository health risks detected.',
+  '',
+  '## Recommended Next Step',
+  recommendationFor(risks),
+  '',
+  manualNotes,
+].join('\n');
+
+await mkdir(aiDir, { recursive: true });
+await writeFile(outputPath, content);
+console.log(`Wrote ${outputPath}`);

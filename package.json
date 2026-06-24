@@ -14,7 +14,8 @@
     "prompt": "node scripts/prompt.mjs",
     "decisions": "node scripts/decisions.mjs",
     "server": "node scripts/server.mjs",
-    "dev:all": "(npm run server & npm run dev)"
+    "dev:all": "(npm run server & npm run dev)",
+    "health": "node scripts/health.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
