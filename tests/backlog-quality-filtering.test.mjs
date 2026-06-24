@@ -92,3 +92,36 @@ assert.equal(classifyComment('TODO', 'Add event-aware follow-up reminders.'), 'a
 assert.equal(classifyComment('NOTE', 'ExploreView is a nav push within the home tab.'), 'architectural');
 assert.equal(classifyComment('NOTE', 'Relationship Context Engine coordinates event state.'), 'architectural');
 assert.equal(classifyComment('NOTE', 'Confidence message is logged for diagnostics.'), 'validation');
+
+const nearifyDescriptiveComments = [
+  '// a Stable Display Name',
+  '// a Signature of the Current Evaluation State',
+  '// Signals From a Live EventAttendee + Encounter Tracker',
+  '// Visibility Set: Hero + all Queue People',
+  '// Share Items: VCard Primary + Text Fallback',
+  '// Per-profile Encounter Aggregation From Stored Encounters',
+  '// MARK: Relationship Context Engine',
+  '// SECTION: Implementation notes',
+].join('\n');
+
+assert.deepEqual(scanComments('Sources/Nearify/RelationshipContext.swift', nearifyDescriptiveComments), []);
+
+const explicitNearifyTasks = [
+  '// BUG: Fix stale encounter aggregation.',
+  '// IMPLEMENT: Add deterministic relationship-context fixtures.',
+  '// ACTION: Validate vCard text fallback.',
+  '// Future Work: Support richer event attendee signals.',
+  '// Known Gap: Missing live encounter tracker sync.',
+].join('\n');
+
+const explicitCommentItems = scanComments('Sources/Nearify/RelationshipContext.swift', explicitNearifyTasks);
+assert.equal(explicitCommentItems.length, 5);
+assert.equal(explicitCommentItems.some((item) => item.title.includes('Stale Encounter Aggregation')), true);
+assert.equal(explicitCommentItems.some((item) => item.title.includes('Deterministic Relationship-context Fixtures')), true);
+assert.equal(explicitCommentItems.some((item) => item.title.includes('VCard Text Fallback')), true);
+assert.equal(explicitCommentItems.some((item) => item.title.includes('Richer Event Attendee Signals')), true);
+assert.equal(explicitCommentItems.some((item) => item.title.includes('Live Encounter Tracker Sync')), true);
+
+assert.equal(classifyComment('BUG', 'Fix stale encounter aggregation.'), 'actionable');
+assert.equal(classifyComment('IMPLEMENT:', 'Add deterministic relationship-context fixtures.'), 'actionable');
+assert.equal(classifyComment('ACTION:', 'Validate vCard text fallback.'), 'actionable');

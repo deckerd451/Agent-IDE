@@ -80,7 +80,7 @@ const implementationRecommendationPatterns = [
   /\b(?:recommend(?:ed|ation)?|proposal|proposed)\s*:?.*\b(?:implement|add|build|create|extract|support|generate|export|package|link|document|validate|filter|improve|replace|remove|refactor|introduce|enable|wire|persist|surface)\b/i,
 ];
 
-const actionableCommentMarkers = new Set(['TODO', 'FIXME', 'HACK', 'BUILD', 'ROADMAP', 'FUTURE WORK', 'KNOWN GAPS', 'MANUAL BACKLOG']);
+const explicitCommentTaskMarkers = ['TODO', 'FIXME', 'HACK', 'BUG', 'ROADMAP', 'FUTURE WORK', 'KNOWN GAP', 'IMPLEMENT', 'ACTION'];
 
 const ignoredNonGoalPatterns = [
   /\bauth(entication)?\b/i,
@@ -186,7 +186,7 @@ function isIgnoredNonGoal(text, context) {
 }
 
 function isActionableRecommendation(text, context) {
-  if (/\b(?:todo|fixme|hack|build|roadmap|future work)\b/i.test(context)) return true;
+  if (/\b(?:todo|fixme|hack|bug|build|roadmap|future work|implement|action)\b/i.test(context)) return true;
   if (context === 'manual-backlog' || context === 'known-gap' || /\bknown gaps?\b/i.test(context)) {
     return /^(?:add|fix|implement|build|create|extract|support|generate|export|package|link|document|validate|filter|improve|replace|remove|refactor|introduce|enable|wire|persist|surface)\b/i.test(text)
       || implementationRecommendationPatterns.some((pattern) => pattern.test(text));
@@ -205,10 +205,10 @@ function classifyText(text) {
 }
 
 function classifyComment(marker, text) {
-  const normalizedMarker = compact(marker).toUpperCase();
+  const normalizedMarker = compact(marker).toUpperCase().replace(/:$/, '');
   const normalizedText = compact(text);
 
-  if (!actionableCommentMarkers.has(normalizedMarker)) {
+  if (!explicitCommentTaskMarkers.includes(normalizedMarker)) {
     return classifyText(normalizedText);
   }
 
@@ -245,7 +245,7 @@ function classifyPriority(text) {
 }
 
 function buildItem({ text, source: itemSource, type, context = 'document' }) {
-  const normalizedText = compact(text.replace(/^(TODO|FIXME|HACK|BUILD|ROADMAP|FUTURE WORK|KNOWN GAPS|MANUAL BACKLOG)\b\s*:?\s*/i, ''));
+  const normalizedText = compact(text.replace(/^(TODO|FIXME|HACK|BUG|ROADMAP|FUTURE WORK|KNOWN GAP|IMPLEMENT|ACTION)\b\s*:?\s*/i, ''));
   const sourceText = stripTrailingNoise(normalizedText);
   const taskText = type === 'document' ? actionableText(sourceText) : sourceText;
   const fallbackTitle = type === 'comment' ? 'Review Repository Comment' : 'Review Documented Gap';
@@ -267,18 +267,34 @@ function buildItem({ text, source: itemSource, type, context = 'document' }) {
   };
 }
 
+function parseExplicitTaskComment(line) {
+  const commentMatch = line.match(/^\s*(?:\/\/|(?<!#)#|<!--|\/\*|\*)\s*(.*?)(?:-->|\*\/)?$/);
+  if (!commentMatch) return null;
+
+  const commentText = compact(commentMatch[1]);
+  if (!commentText) return null;
+
+  const markerAlternation = explicitCommentTaskMarkers
+    .map((marker) => marker.replace(/ /g, '\\s+'))
+    .join('|');
+  const markerPattern = new RegExp(`(?:^|\\b)(${markerAlternation})(?:\\b|:)\\s*:?-?\\s*(.*)$`, 'i');
+  const match = commentText.match(markerPattern);
+  if (!match) return null;
+
+  const marker = compact(match[1]).toUpperCase();
+  const text = match[2] ?? '';
+  return { marker, text };
+}
+
 function scanComments(path, content) {
   if (!scannableCodeExtensions.has(extname(path))) return [];
 
-  const commentPattern = /(?:\/\/|(?<!#)#|<!--|\/\*|\*)\s*\b(TODO|FIXME|HACK|BUILD|ROADMAP|FUTURE WORK|KNOWN GAPS|MANUAL BACKLOG)\b\s*:?(.*?)(?:-->|\*\/)?$/i;
   return content
     .split('\n')
-    .map((line, index) => ({ line, lineNumber: index + 1 }))
-    .filter(({ line }) => commentPattern.test(line))
-    .flatMap(({ line, lineNumber }) => {
-      const match = line.match(commentPattern);
-      const marker = match[1];
-      const text = match[2] ?? '';
+    .map((line, index) => ({ parsed: parseExplicitTaskComment(line), lineNumber: index + 1 }))
+    .flatMap(({ parsed, lineNumber }) => {
+      if (!parsed) return [];
+      const { marker, text } = parsed;
       if (classifyComment(marker, text) !== 'actionable') return [];
       return [buildItem({ text: `${marker}: ${text}`, source: source(path, lineNumber), type: 'comment' })];
     });
