@@ -8,6 +8,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md']);
+
 const generatorSteps = [
   { id: 'architecture', label: 'Architecture', command: ['node', [join(appRoot, 'scripts/audit.mjs')]] },
   { id: 'backlog', label: 'Backlog', command: ['node', [join(appRoot, 'scripts/backlog.mjs')]] },
@@ -107,14 +109,22 @@ async function handleRefresh(request, response) {
 async function handleFile(request, response, url) {
   const repositoryPath = url.searchParams.get('repositoryPath');
   const file = url.searchParams.get('file');
-  const allowedFiles = new Set(['architecture.md', 'backlog.md', 'validation.md', 'decisions.md']);
-  if (!file || !allowedFiles.has(file)) return sendJson(response, 400, { error: 'Unsupported file.' });
+  if (!file || !allowedIntelligenceFiles.has(file)) return sendJson(response, 400, { error: 'Unsupported file.' });
+
   const resolvedPath = await validateRepositoryPath(repositoryPath);
-  const content = await readFile(join(resolvedPath, '.ai', file), 'utf8').catch((error) => {
-    if (error?.code === 'ENOENT') return '';
+  const sourcePath = join(resolvedPath, '.ai', file);
+  const content = await readFile(sourcePath, 'utf8').catch((error) => {
+    if (error?.code === 'ENOENT') return null;
     throw error;
   });
-  sendJson(response, 200, { repositoryPath: resolvedPath, file, content });
+
+  sendJson(response, 200, {
+    repositoryPath: resolvedPath,
+    file,
+    sourcePath,
+    exists: content !== null,
+    content: content ?? '',
+  });
 }
 
 const server = createServer(async (request, response) => {
