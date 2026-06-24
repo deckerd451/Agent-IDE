@@ -44,6 +44,12 @@ Agent IDE reads repository understanding from plain markdown files in `.ai/`:
   agents.md
   code.md
   repository-health.md
+  context-package.md
+  prompts/
+    architect.md
+    builder.md
+    reviewer.md
+    debugger.md
 ```
 
 Each sidebar tab maps directly to one file. If a file is missing, the app shows an empty state that names the missing file and suggests running the initializer.
@@ -70,9 +76,10 @@ Agent IDE includes a small local Node server so the Vite UI can connect to any r
     reviewer.md
     debugger.md
   repository-health.md
+  context-package.md
 ```
 
-Refresh first creates any missing baseline files for `goals.md`, `agents.md`, and `code.md` without overwriting existing repository notes, then runs the deterministic architecture, backlog, validation, decisions, prompt, and repository health generators. The refresh stays local-first: no LLM calls, cloud services, authentication, or databases are used. Progress and success/failure summaries, including the Baseline Files step, are shown in the UI while the generators run.
+Refresh first creates any missing baseline files for `goals.md`, `agents.md`, and `code.md` without overwriting existing repository notes, then runs the deterministic architecture, backlog, validation, decisions, prompt, repository health, and context package generators. The refresh stays local-first: no LLM calls, cloud services, authentication, or databases are used. Progress and success/failure summaries, including the Baseline Files step, are shown in the UI while the generators run.
 
 Run the API server only:
 
@@ -85,6 +92,19 @@ Run the local server and Vite UI together:
 ```bash
 npm run dev:all
 ```
+
+
+## Prompt Center and Context Package
+
+The **Prompt Center** makes generated role prompts available directly in the Agent IDE UI. After **Refresh Intelligence** completes, open **Prompt Center** to view rendered markdown cards for Architect, Builder, Reviewer, and Debugger. Each card shows its `.ai/prompts/<role>.md` source path and provides **Copy Prompt** and **Download Prompt** actions. Missing prompt files show an in-app file-not-found state instead of requiring terminal inspection.
+
+The **Copy Architect Context** action copies `.ai/prompts/architect.md` immediately from Prompt Center without requiring users to expand or inspect the Architect card. This supports the fast handoff workflow:
+
+```text
+Repository → Refresh Intelligence → Prompt Center → Copy Architect Context → Paste into Claude, GPT, Cursor, Codex, Gemini, Windsurf, or another assistant
+```
+
+Agent IDE also generates `.ai/context-package.md`, a compact assistant handoff containing Product Thesis, Current Focus, Core Systems, Key Decisions, Validation Summary, Current Backlog, and Repository Health Summary. Open **Context Package** in the sidebar to view the rendered package, then use **Copy Context Package** or **Download Context Package** when a shorter cross-assistant context bundle is more useful than a role prompt.
 
 ## Run locally
 
@@ -152,6 +172,15 @@ npm run prompt -- debugger
 
 The prompt exporter reads the local `.ai/*.md` intelligence files and writes deterministic markdown prompts to `.ai/prompts/architect.md`, `.ai/prompts/builder.md`, `.ai/prompts/reviewer.md`, and `.ai/prompts/debugger.md`. Each prompt includes role instructions, product thesis, architecture summary, backlog priorities, validation status, known constraints, task guidance, and the complete local `.ai/` context. It does not call an LLM and does not execute agents.
 
+
+Generate or refresh `.ai/context-package.md` locally:
+
+```bash
+npm run context:package
+```
+
+The context package generator reads local `.ai/` intelligence and writes a compact assistant handoff with product thesis, current focus, core systems, key decisions, validation summary, backlog, and repository health summary. It is deterministic and does not call an LLM.
+
 Start the Vite development server only:
 
 ```bash
@@ -186,6 +215,9 @@ Implemented now:
 - `npm run validate:intel` for generating and maintaining `.ai/validation.md` from safe local deterministic validation commands without LLM calls.
 - `npm run prompt -- <role>` for exporting local, role-specific prompts for architect, builder, reviewer, and debugger workflows without LLM calls or agent execution.
 - `npm run health` for generating `.ai/repository-health.md` from deterministic completeness, quality, and risk checks across the repository intelligence layer.
+- Prompt Center for viewing, copying, and downloading generated Architect, Builder, Reviewer, and Debugger prompts from the UI.
+- Context Package for viewing, copying, and downloading `.ai/context-package.md` as a compact assistant handoff.
+- `npm run context:package` for generating `.ai/context-package.md` without LLM calls or agent execution.
 
 Intentionally not included:
 

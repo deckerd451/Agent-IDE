@@ -409,3 +409,97 @@ h1 {
     display: grid;
   }
 }
+
+.actionRow,
+.quickActions {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 16px;
+  max-width: 920px;
+}
+
+.actionRow button,
+.quickActions button {
+  background: #d7dde8;
+  border: 0;
+  border-radius: 12px;
+  color: #0b1018;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 10px 14px;
+}
+
+.actionRow button:disabled,
+.quickActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.promptCenter {
+  display: grid;
+  gap: 14px;
+  max-width: 920px;
+}
+
+.promptCard {
+  background: rgba(13, 19, 30, 0.74);
+  border: 1px solid #222c3d;
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.promptCard summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 20px 24px;
+}
+
+.promptCard summary::-webkit-details-marker {
+  display: none;
+}
+
+.promptCard summary span,
+.promptCard summary small {
+  display: block;
+}
+
+.promptCard summary span {
+  color: #f4f7fb;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.promptCard summary small {
+  color: #7f8ca3;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.82rem;
+  margin-top: 8px;
+}
+
+.promptCard .actionRow {
+  padding: 0 24px;
+}
+
+.promptCard .markdownPanel {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  max-width: none;
+}
+
+.repositoryShortcuts {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.repositoryShortcuts button {
+  background: #111a28;
+  border: 1px solid #273246;
+  border-radius: 12px;
+  color: #f4f7fb;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 10px 14px;
+}

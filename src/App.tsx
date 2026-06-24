@@ -26,7 +26,14 @@ type DocumentState = {
   sourcePath: string;
 };
 
-const intelligenceFiles = new Set(sections.map((section) => section.markdownFile));
+const promptFiles = ['prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'] as const;
+const promptRoles = [
+  { role: 'Architect', file: 'prompts/architect.md', downloadName: 'architect.md' },
+  { role: 'Builder', file: 'prompts/builder.md', downloadName: 'builder.md' },
+  { role: 'Reviewer', file: 'prompts/reviewer.md', downloadName: 'reviewer.md' },
+  { role: 'Debugger', file: 'prompts/debugger.md', downloadName: 'debugger.md' },
+] as const;
+const intelligenceFiles = new Set([...sections.map((section) => section.markdownFile), ...promptFiles]);
 const serverBaseUrl = import.meta.env.VITE_AGENT_IDE_SERVER_URL ?? 'http://localhost:5174';
 const selectedTabStorageKey = 'agent-ide:selected-intelligence-tab';
 
@@ -115,11 +122,79 @@ function MarkdownLikeContent({ markdown }: { markdown: string }) {
   return <div className="markdownPanel">{elements}</div>;
 }
 
+async function copyText(text: string) {
+  await navigator.clipboard.writeText(text);
+}
+
+function downloadMarkdown(fileName: string, content: string) {
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 function MissingDocument() {
   return (
     <div className="markdownPanel emptyState">
       <h2>File not found in connected repository.</h2>
       <p>Generate intelligence or create the requested file under the connected repository&apos;s <code>.ai/</code> folder.</p>
+    </div>
+  );
+}
+
+
+function DocumentActions({ content, downloadName, copyLabel = 'Copy Prompt', downloadLabel = 'Download Prompt' }: { content: string; downloadName: string; copyLabel?: string; downloadLabel?: string }) {
+  return (
+    <div className="actionRow">
+      <button onClick={() => void copyText(content)} type="button">{copyLabel}</button>
+      <button onClick={() => downloadMarkdown(downloadName, content)} type="button">{downloadLabel}</button>
+    </div>
+  );
+}
+
+function PromptCenter({ connectedPath, documents, loadFile }: { connectedPath: string; documents: Record<string, DocumentState>; loadFile: (path: string, file: string) => Promise<void> }) {
+  useEffect(() => {
+    if (!connectedPath) return;
+    for (const prompt of promptRoles) {
+      void loadFile(connectedPath, prompt.file).catch(() => undefined);
+    }
+  }, [connectedPath, loadFile]);
+
+  const architect = documents['prompts/architect.md'];
+
+  return (
+    <div className="promptCenter">
+      <div className="quickActions">
+        <button disabled={!architect?.exists} onClick={() => architect && void copyText(architect.content)} type="button">
+          Copy Architect Context
+        </button>
+      </div>
+      {promptRoles.map((prompt) => {
+        const document = documents[prompt.file];
+        const sourcePath = document?.sourcePath ?? (connectedPath ? `${connectedPath}/.ai/${prompt.file}` : `.ai/${prompt.file}`);
+        return (
+          <details className="promptCard" key={prompt.file} open={prompt.role === 'Architect'}>
+            <summary>
+              <span>{prompt.role}</span>
+              <small>{sourcePath}</small>
+            </summary>
+            {!connectedPath && <MissingDocument />}
+            {connectedPath && document?.isLoading && <div className="markdownPanel emptyState"><h2>Loading…</h2></div>}
+            {connectedPath && document && !document.isLoading && document.exists && (
+              <>
+                <DocumentActions content={document.content} downloadName={prompt.downloadName} />
+                <MarkdownLikeContent markdown={document.content} />
+              </>
+            )}
+            {connectedPath && document && !document.isLoading && !document.exists && <MissingDocument />}
+          </details>
+        );
+      })}
     </div>
   );
 }
@@ -249,8 +324,8 @@ export function App() {
       }
 
       if (refreshedRepositoryPath) {
-        setSelectedId('Goals');
-        await loadIntelligenceFile(refreshedRepositoryPath, 'goals.md');
+        setSelectedId('Prompt Center');
+        await Promise.all(['goals.md', 'context-package.md', ...promptFiles].map((file) => loadIntelligenceFile(refreshedRepositoryPath, file)));
       }
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
@@ -293,6 +368,12 @@ export function App() {
           {connectedPath && <small>Connected: {connectedPath}</small>}
           {error && <div className="summary failure">{error}</div>}
           {summary && <div className="summary success">{summary}</div>}
+          {connectedPath && (
+            <div className="repositoryShortcuts">
+              <button onClick={() => setSelectedId('Prompt Center')} type="button">Prompt Center</button>
+              <button onClick={() => setSelectedId('Context Package')} type="button">View Context Package</button>
+            </div>
+          )}
           {steps.length > 0 && (
             <ol className="progressList">
               {steps.map((step) => (
@@ -310,10 +391,16 @@ export function App() {
           <small>{document?.sourcePath ?? (connectedPath ? `${connectedPath}/.ai/${selected.markdownFile}` : `.ai/${selected.markdownFile}`)}</small>
         </section>
 
-        {!connectedPath && <MissingDocument />}
-        {connectedPath && document?.isLoading && <div className="markdownPanel emptyState"><h2>Loading…</h2></div>}
-        {connectedPath && document && !document.isLoading && document.exists && <MarkdownLikeContent markdown={document.content} />}
-        {connectedPath && document && !document.isLoading && !document.exists && <MissingDocument />}
+        {selected.id === 'Prompt Center' && (
+          <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
+        )}
+        {selected.id === 'Context Package' && connectedPath && document && !document.isLoading && document.exists && (
+          <DocumentActions content={document.content} copyLabel="Copy Context Package" downloadLabel="Download Context Package" downloadName="context-package.md" />
+        )}
+        {selected.id !== 'Prompt Center' && !connectedPath && <MissingDocument />}
+        {selected.id !== 'Prompt Center' && connectedPath && document?.isLoading && <div className="markdownPanel emptyState"><h2>Loading…</h2></div>}
+        {selected.id !== 'Prompt Center' && connectedPath && document && !document.isLoading && document.exists && <MarkdownLikeContent markdown={document.content} />}
+        {selected.id !== 'Prompt Center' && connectedPath && document && !document.isLoading && !document.exists && <MissingDocument />}
       </main>
     </div>
   );
