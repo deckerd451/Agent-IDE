@@ -122,13 +122,16 @@ function normalizeComparable(value) {
     .toLowerCase();
 }
 
-function isMissingStrategyValue(text, header) {
-  const value = strategyValue(text, header);
-  return !value || /- Not detected yet\./i.test(value);
+function isHeadingOnly(value) {
+  const cleaned = value.trim();
+  const withoutMarkdownMarker = cleaned.replace(/^#+\s*/, '').trim();
+  if (/^(success definition|success criteria|strategy success definition|current experiment|strategic differentiator|product thesis)$/i.test(withoutMarkdownMarker)) return true;
+  return /^#+\s+\S/.test(cleaned) && !/\n/.test(cleaned);
 }
 
-function isHeadingOnly(value) {
-  return /^(success definition|success criteria|current experiment|strategic differentiator|product thesis)$/i.test(value.replace(/^#+\s*/, '').trim());
+function isMissingStrategyValue(text, header) {
+  const value = strategyValue(text, header);
+  return !value || /- Not detected yet\./i.test(value) || isHeadingOnly(value);
 }
 
 function detectsBacklogNoise(text) {
