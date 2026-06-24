@@ -72,5 +72,8 @@ Strategy inference must be repository-specific and evidence-driven.
   'README.md': '# Agent IDE\n\nLocal-first repository intelligence for coding agents.\n',
 });
 assert.doesNotMatch(agentIdeStrategy, /relationship memory|real-world overlap|reconnect with today|follow-ups/i);
+assert.match(agentIdeStrategy, /Repository intelligence that turns repository understanding into reusable AI context for developer workflows\./);
+const agentIdeFieldText = agentIdeStrategy.replace(/^Evidence:.*$/gim, '').replace(/^## Strategy Evidence Sources[\s\S]*?(?=^## Strategy Warnings)/m, '');
+assert.doesNotMatch(agentIdeFieldText, /strategy\.mjs|audit\.mjs|markdown parsing|file scanning|generator internals|deterministically reads|\.ai\//i);
 assert.match(agentIdeStrategy, /Can the system reliably deliver the current focus: Improve evidence-driven strategy generation for each repository\?/);
 assert.match(agentIdeStrategy, /## Strategy Confidence\nHigh|## Strategy Confidence\nMedium/);

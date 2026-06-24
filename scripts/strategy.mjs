@@ -82,13 +82,17 @@ async function strategyDocs() {
   return Object.fromEntries(await Promise.all(matches.map(async (path) => [relative(root, path), await readFile(path, 'utf8')])));
 }
 
+function containsImplementationDetail(value) {
+  return /(?:\b(?:strategy|audit|health|backlog|prompt|context-package|validate-intel|server)\.mjs\b|(?:^|[\s`])\.ai\/|README\.md|docs\/|package\.json|npm run|node scripts\/|generator|deterministic(?:ally)?|reads? files?|writes? outputs?|markdown parsing|file scanning|repository scanning|script behavior|pipeline|derive strategic|local Node server|Vite UI)/i.test(value);
+}
+
 function explicitValue(sources, heading, options = {}) {
   const headingOptions = heading === 'Success Definition' || heading === 'Success Criteria'
     ? { preserveBullets: true, ...options }
     : options;
   for (const source of sources) {
     const value = cleanSectionValue(section(source.text, heading), headingOptions);
-    if (value && !isHeadingOnly(value)) return { value, evidence: source.name };
+    if (value && !isHeadingOnly(value) && !containsImplementationDetail(value)) return { value, evidence: source.name };
   }
   return null;
 }
@@ -99,15 +103,33 @@ function successCriteriaValue(sources) {
     ?? explicitValue(sources, 'Success Definition');
 }
 
-function matchLine(sources, patterns) {
+function matchLine(sources, patterns, { allowImplementation = false } = {}) {
   for (const source of sources) {
     const lines = source.text.split('\n').map((line) => line.trim()).filter(Boolean);
     for (const pattern of patterns) {
       const hit = lines.find((line) => pattern.test(line));
-      if (hit) return { value: hit.replace(/^[-*]\s+/, ''), evidence: source.name };
+      if (hit) {
+        const value = hit.replace(/^[-*]\s+/, '');
+        if (allowImplementation || !containsImplementationDetail(value)) return { value, evidence: source.name };
+      }
     }
   }
   return null;
+}
+
+function beliefFromFocus(currentFocus, priorities) {
+  const focus = currentFocus.value.replace(/[.?]$/, '');
+  const priorityText = priorities?.value ? ` through ${priorities.value.replace(/\n/g, '; ').replace(/[.?]$/, '')}` : '';
+  return { value: `The team is testing whether ${focus.toLowerCase()} can create clearer product value${priorityText}.`, evidence: [currentFocus.evidence, priorities?.evidence].filter(Boolean).join(', ') };
+}
+
+function inferCurrentProductBet(sources) {
+  const explicit = explicitValue(sources, 'Current Product Bet') ?? explicitValue(sources, 'Product Bet');
+  if (explicit) return explicit;
+  const currentFocus = explicitValue(sources, 'Current Focus');
+  if (!currentFocus) return null;
+  const priorities = explicitValue(sources, 'Current Priorities') ?? explicitValue(sources, 'Priorities');
+  return beliefFromFocus(currentFocus, priorities);
 }
 
 function inferCurrentExperiment(sources) {
@@ -136,11 +158,28 @@ function relationshipEvidence(sources) {
   return matchLine(sources, [/relationship memory/i, /encounter evidence/i, /real-world overlap/i, /physically grounded relationship graph/i, /follow-up intelligence/i, /real-world encounters?/i]);
 }
 
+function repositoryIntelligenceDifferentiator(sources) {
+  const all = sources.map((source) => source.text).join('\n');
+  if (/repository intelligence/i.test(all) && /(?:assistant handoffs?|AI context|context package|coding agents?|developer workflow|repository understanding)/i.test(all)) {
+    const evidence = sources
+      .filter((source) => /repository intelligence|assistant handoffs?|AI context|context package|coding agents?|developer workflow|repository understanding/i.test(source.text))
+      .map((source) => source.name);
+    return {
+      value: 'Repository intelligence that turns repository understanding into reusable AI context for developer workflows.',
+      evidence: [...new Set(evidence)].join(', '),
+    };
+  }
+  return null;
+}
+
 function inferStrategicDifferentiator(sources, productThesis) {
   const candidates = [
     explicitValue(sources, 'Strategic Differentiator'),
+    explicitValue(sources, 'Unique Value'),
+    explicitValue(sources, 'Product Purpose'),
+    repositoryIntelligenceDifferentiator(sources),
     relationshipEvidence(sources),
-    matchLine(sources, [/competitive advantage/i, /unique advantage/i, /differentiator/i, /moat/i]),
+    matchLine(sources, [/competitive advantage/i, /unique advantage/i, /differentiator/i, /moat/i, /repository intelligence/i, /developer workflow/i, /reusable AI context/i, /repository understanding/i]),
   ].filter(Boolean);
   const thesis = normalizeComparable(productThesis?.value ?? '');
   return candidates.find((candidate) => normalizeComparable(candidate.value) !== thesis) ?? null;
@@ -148,12 +187,20 @@ function inferStrategicDifferentiator(sources, productThesis) {
 
 
 const leakageTerms = ['relationship memory', 'encounters', 'overlap', 'reconnect', 'follow-ups'];
+const strategyFieldLeakageHeaders = ['Product Thesis', 'Strategic Differentiator', 'Current Product Bet', 'Current Experiment', 'What Not To Build', 'Success Definition'];
 
 function evidenceSourceText(sources) {
   return sources
     .filter((source) => /^(\.ai\/(?:goals|architecture|decisions)\.md|README\.md|docs\/)/.test(source.name))
     .map((source) => source.text)
     .join('\n');
+}
+
+function detectImplementationLeakage(inferredFields) {
+  return inferredFields
+    .filter(({ heading }) => strategyFieldLeakageHeaders.includes(heading))
+    .filter(({ inferred }) => containsImplementationDetail(inferred.value))
+    .map(({ heading }) => heading);
 }
 
 function detectStrategyLeakage(strategyText, sources) {
@@ -186,6 +233,11 @@ function inferField(field, sources) {
     if (differentiator) return differentiator;
   }
 
+  if (field === 'Current Product Bet') {
+    const bet = inferCurrentProductBet(sources);
+    if (bet) return bet;
+  }
+
   if (field === 'Current Experiment') {
     const experiment = inferCurrentExperiment(sources);
     if (experiment) return experiment;
@@ -197,7 +249,7 @@ function inferField(field, sources) {
   const patterns = {
     'North Star Metric': [/north star/i, /follow[- ]?ups? completed/i, /primary metric/i],
     'Strategic Differentiator': [/strategic differentiator/i, /differentiator/i, /relationship memory/i],
-    'Current Product Bet': [/current product bet/i, /strategic bet/i, /between events/i],
+    'Current Product Bet': [/current product bet/i, /strategic bet/i, /belief/i, /hypothesis/i, /between events/i],
     'Current Experiment': [/current experiment/i, /experiment/i],
     'What Not To Build': [/what not to build/i, /do not build/i, /not primarily/i, /primarily an event app/i],
     'Success Definition': [/success definition/i, /success criteria/i, /reach out to today/i],
@@ -229,7 +281,8 @@ const manualNotes = await readManualNotes();
 const inferredFields = headings.map((heading) => ({ heading, inferred: inferField(heading, sources) }));
 const strategyBody = inferredFields.flatMap(({ heading, inferred }) => [`## ${heading}`, inferred.value, inferred.evidence ? `\nEvidence: ${inferred.evidence}` : '']).join('\n');
 const leakage = detectStrategyLeakage(strategyBody, sources);
-const confidence = strategyConfidence(inferredFields, leakage);
+const implementationLeakage = detectImplementationLeakage(inferredFields);
+const confidence = strategyConfidence(inferredFields, [...leakage, ...implementationLeakage]);
 const evidenceSources = [...new Set(inferredFields.map(({ inferred }) => inferred.evidence).filter(Boolean).flatMap((evidence) => evidence.split(',').map((item) => item.trim()).filter(Boolean)))];
 const sections = [
   strategyBody,
@@ -239,6 +292,7 @@ const sections = [
   evidenceSources.length ? evidenceSources.map((source) => `- ${source}`).join('\n') : '- No strategy evidence sources detected.',
   '## Strategy Warnings',
   leakage.length ? `- Strategy Leakage warning: strategy mentions ${leakage.join(', ')} without supporting goals/docs/architecture evidence.` : '- No strategy leakage detected.',
+  implementationLeakage.length ? `- Implementation Leakage Warning: strategy fields contain implementation-level details in ${implementationLeakage.join(', ')}.` : '- No implementation leakage detected.',
 ];
 
 const content = ['# Strategy', '', ...sections, manualNotes].join('\n').replace(/\n{3,}/g, '\n\n');
