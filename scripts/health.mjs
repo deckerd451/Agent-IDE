@@ -53,6 +53,32 @@ function hasSectionText(text, header) {
   return Boolean(sectionText(text, header));
 }
 
+function strategyValue(text, header) {
+  return sectionText(text, header)
+    .split('\n')
+    .filter((line) => !/^Evidence:/i.test(line.trim()))
+    .join('\n')
+    .trim();
+}
+
+function normalizeComparable(value) {
+  return value
+    .replace(/^[-*]\s+/gm, '')
+    .replace(/^#+\s+/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function isMissingStrategyValue(text, header) {
+  const value = strategyValue(text, header);
+  return !value || /- Not detected yet\./i.test(value);
+}
+
+function isHeadingOnly(value) {
+  return /^(success definition|success criteria|current experiment|strategic differentiator|product thesis)$/i.test(value.replace(/^#+\s*/, '').trim());
+}
+
 function detectsBacklogNoise(text) {
   const noisePatterns = [
     /No validation gaps detected from package scripts\.?/i,
@@ -124,16 +150,31 @@ const signals = {
   currentFocus: /Current Focus/i.test(architecture),
   coreSystems: /Core Systems/i.test(architecture),
   strategyPresent: docs['strategy.md'].exists,
-  northStarMetric: hasSectionText(strategy, 'North Star Metric') && !/- Not detected yet\./i.test(sectionText(strategy, 'North Star Metric')),
-  strategicDifferentiator: hasSectionText(strategy, 'Strategic Differentiator') && !/- Not detected yet\./i.test(sectionText(strategy, 'Strategic Differentiator')),
-  currentProductBet: hasSectionText(strategy, 'Current Product Bet') && !/- Not detected yet\./i.test(sectionText(strategy, 'Current Product Bet')),
-  whatNotToBuild: hasSectionText(strategy, 'What Not To Build') && !/- Not detected yet\./i.test(sectionText(strategy, 'What Not To Build')),
+  northStarMetric: !isMissingStrategyValue(strategy, 'North Star Metric'),
+  strategicDifferentiator: !isMissingStrategyValue(strategy, 'Strategic Differentiator'),
+  currentProductBet: !isMissingStrategyValue(strategy, 'Current Product Bet'),
+  currentExperiment: !isMissingStrategyValue(strategy, 'Current Experiment'),
+  whatNotToBuild: !isMissingStrategyValue(strategy, 'What Not To Build'),
+  successDefinition: !isMissingStrategyValue(strategy, 'Success Definition'),
   evidenceLines: /Evidence:/i.test(architecture) || /Evidence\)/i.test(architecture),
   backlogNoise: detectsBacklogNoise(backlog),
   validationCommands: detectsValidationCommands(validation),
   xcodeValidationMetadata: detectsXcodeValidationMetadata(validation),
   manualSections: [goals, architecture, backlog, docs['decisions.md'].text, validation, docs['agents.md'].text, docs['code.md'].text].some((text) => /^## Manual /im.test(text)),
 };
+
+const productThesisValue = strategyValue(strategy, 'Product Thesis') || sectionText(architecture, 'Product Thesis');
+const differentiatorValue = strategyValue(strategy, 'Strategic Differentiator');
+const successDefinitionValue = strategyValue(strategy, 'Success Definition');
+const currentExperimentValue = strategyValue(strategy, 'Current Experiment');
+const hasCurrentFocusContent = hasSectionText(goals, 'Current Focus') || hasSectionText(architecture, 'Current Focus');
+const strategyQualityWarnings = [];
+if (signals.strategyPresent && (!differentiatorValue || normalizeComparable(differentiatorValue) === normalizeComparable(productThesisValue))) strategyQualityWarnings.push('Missing differentiator warning');
+if (signals.strategyPresent && hasCurrentFocusContent && !currentExperimentValue) strategyQualityWarnings.push('Missing experiment warning');
+if (signals.strategyPresent && (!successDefinitionValue || isHeadingOnly(successDefinitionValue))) strategyQualityWarnings.push('Weak success definition warning');
+const strategyQualityScore = signals.strategyPresent
+  ? Math.max(0, 100 - (strategyQualityWarnings.length * 25) - (['North Star Metric', 'Current Product Bet', 'What Not To Build'].filter((header) => isMissingStrategyValue(strategy, header)).length * 10))
+  : 0;
 
 const risks = [];
 for (const [label, fileName] of requiredFiles) {
@@ -150,7 +191,10 @@ if (!signals.strategyPresent) risks.push('Strategy missing');
 if (signals.strategyPresent && !signals.northStarMetric) risks.push('Strategy missing North Star Metric');
 if (signals.strategyPresent && !signals.strategicDifferentiator) risks.push('Strategy missing Strategic Differentiator');
 if (signals.strategyPresent && !signals.currentProductBet) risks.push('Strategy missing Current Product Bet');
+if (signals.strategyPresent && !signals.currentExperiment && hasCurrentFocusContent) risks.push('Strategy missing Current Experiment');
 if (signals.strategyPresent && !signals.whatNotToBuild) risks.push('Strategy missing What Not To Build');
+if (signals.strategyPresent && !signals.successDefinition) risks.push('Strategy missing Success Definition');
+risks.push(...strategyQualityWarnings);
 
 const overallHealth = calculateOverallHealth(risks);
 const confidence = calculateConfidence(docs, signals, risks);
@@ -173,7 +217,10 @@ const content = [
   `- North Star Metric ${signals.northStarMetric ? 'present' : 'missing'}`,
   `- Strategic Differentiator ${signals.strategicDifferentiator ? 'present' : 'missing'}`,
   `- Current Product Bet ${signals.currentProductBet ? 'present' : 'missing'}`,
+  `- Current Experiment ${signals.currentExperiment ? 'present' : 'missing'}`,
   `- What Not To Build ${signals.whatNotToBuild ? 'present' : 'missing'}`,
+  `- Success Definition ${signals.successDefinition ? 'present' : 'missing'}`,
+  `- Strategy quality score ${strategyQualityScore}/100`,
   `- Evidence lines ${signals.evidenceLines ? 'present' : 'missing'}`,
   `- Backlog noise ${signals.backlogNoise ? 'detected' : 'not detected'}`,
   `- Validation commands ${signals.validationCommands ? 'detected' : 'not detected'}`,
