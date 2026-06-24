@@ -1,4 +1,4 @@
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const root = process.cwd();
@@ -26,6 +26,25 @@ async function pathExists(path) {
     if (error?.code === 'ENOENT') return false;
     throw error;
   }
+}
+
+async function readIfExists(path) {
+  const exists = await pathExists(path);
+  if (!exists) return '';
+  return readFile(path, 'utf8');
+}
+
+async function readStrategyEvidenceDocs() {
+  const docsDir = join(root, 'docs');
+  const readme = await readIfExists(join(root, 'README.md'));
+  const productDocs = [];
+  if (await pathExists(docsDir)) {
+    const entries = await readdir(docsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isFile() && /(?:STRATEGY|PRODUCT|ROADMAP|VISION)/i.test(entry.name)) productDocs.push(await readFile(join(docsDir, entry.name), 'utf8'));
+    }
+  }
+  return [readme, ...productDocs].filter((text) => text.trim());
 }
 
 async function readAiFile(fileName) {
@@ -59,6 +78,29 @@ function strategyValue(text, header) {
     .filter((line) => !/^Evidence:/i.test(line.trim()))
     .join('\n')
     .trim();
+}
+
+
+const leakageTerms = ['relationship memory', 'encounters', 'overlap', 'reconnect', 'follow-ups'];
+
+function detectStrategyLeakage(strategy, evidenceDocs) {
+  const evidence = evidenceDocs.join('\n');
+  return leakageTerms.filter((term) => {
+    const strategyPattern = new RegExp(term.replace('-', '[- ]?'), 'i');
+    if (!strategyPattern.test(strategy)) return false;
+    const evidencePattern = term === 'encounters' ? /encounters?|real-world encounters?/i : strategyPattern;
+    return !evidencePattern.test(evidence);
+  });
+}
+
+function strategyConfidenceValue(strategy, leakage) {
+  const explicit = strategyValue(strategy, 'Strategy Confidence');
+  if (explicit && !/- Not detected yet\./i.test(explicit)) return explicit.split('\n')[0].trim();
+  if (leakage.length) return 'Low';
+  const evidenceCount = (strategy.match(/^Evidence:/gim) ?? []).length;
+  if (evidenceCount >= 5) return 'High';
+  if (evidenceCount >= 3) return 'Medium';
+  return 'Low';
 }
 
 function normalizeComparable(value) {
@@ -138,6 +180,7 @@ function recommendationFor(risks) {
 const entries = await Promise.all(requiredFiles.map(async ([, fileName]) => [fileName, await readAiFile(fileName)]));
 const docs = Object.fromEntries(entries);
 const manualNotes = await readExistingManualNotes();
+const strategyEvidenceDocs = await readStrategyEvidenceDocs();
 
 const architecture = docs['architecture.md'].text;
 const goals = docs['goals.md'].text;
@@ -168,10 +211,13 @@ const differentiatorValue = strategyValue(strategy, 'Strategic Differentiator');
 const successDefinitionValue = strategyValue(strategy, 'Success Definition');
 const currentExperimentValue = strategyValue(strategy, 'Current Experiment');
 const hasCurrentFocusContent = hasSectionText(goals, 'Current Focus') || hasSectionText(architecture, 'Current Focus');
+const leakage = signals.strategyPresent ? detectStrategyLeakage(strategy, [goals, architecture, docs['decisions.md'].text, ...strategyEvidenceDocs]) : [];
+const strategyConfidence = signals.strategyPresent ? strategyConfidenceValue(strategy, leakage) : 'Low';
 const strategyQualityWarnings = [];
 if (signals.strategyPresent && (!differentiatorValue || normalizeComparable(differentiatorValue) === normalizeComparable(productThesisValue))) strategyQualityWarnings.push('Missing differentiator warning');
 if (signals.strategyPresent && hasCurrentFocusContent && !currentExperimentValue) strategyQualityWarnings.push('Missing experiment warning');
 if (signals.strategyPresent && (!successDefinitionValue || isHeadingOnly(successDefinitionValue))) strategyQualityWarnings.push('Weak success definition warning');
+if (leakage.length) strategyQualityWarnings.push(`Strategy Leakage warning: strategy mentions ${leakage.join(', ')} without supporting goals/docs/architecture evidence`);
 const strategyQualityScore = signals.strategyPresent
   ? Math.max(0, 100 - (strategyQualityWarnings.length * 25) - (['North Star Metric', 'Current Product Bet', 'What Not To Build'].filter((header) => isMissingStrategyValue(strategy, header)).length * 10))
   : 0;
@@ -221,6 +267,8 @@ const content = [
   `- What Not To Build ${signals.whatNotToBuild ? 'present' : 'missing'}`,
   `- Success Definition ${signals.successDefinition ? 'present' : 'missing'}`,
   `- Strategy quality score ${strategyQualityScore}/100`,
+  `- Strategy leakage ${leakage.length ? 'detected' : 'not detected'}`,
+  `- Strategy confidence ${strategyConfidence}`,
   `- Evidence lines ${signals.evidenceLines ? 'present' : 'missing'}`,
   `- Backlog noise ${signals.backlogNoise ? 'detected' : 'not detected'}`,
   `- Validation commands ${signals.validationCommands ? 'detected' : 'not detected'}`,

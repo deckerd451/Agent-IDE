@@ -114,7 +114,7 @@ function inferCurrentExperiment(sources) {
   const currentFocus = explicitValue(sources, 'Current Focus');
   if (!currentFocus) return null;
   const priorities = explicitValue(sources, 'Current Priorities') ?? explicitValue(sources, 'Priorities');
-  const text = `${currentFocus.value} ${priorities?.value ?? ''} ${sources.map((source) => source.text).join(' ')}`;
+  const text = `${currentFocus.value} ${priorities?.value ?? ''}`;
   if (/reconnect|reach out|follow[- ]?up|between events|relationship/i.test(text)) {
     return { value: 'Can the system reliably identify who a user should reconnect with today?', evidence: [currentFocus.evidence, priorities?.evidence].filter(Boolean).join(', ') };
   }
@@ -127,29 +127,51 @@ function inferCurrentExperiment(sources) {
   return { value: `Can the system reliably deliver the current focus: ${currentFocus.value.replace(/[.?]$/, '')}?`, evidence: [currentFocus.evidence, priorities?.evidence].filter(Boolean).join(', ') };
 }
 
+function relationshipEvidence(sources) {
+  const all = sources.map((source) => source.text).join('\n');
+  const evidenceNames = sources.filter((source) => /relationship memory|encounter evidence|real-world overlap/i.test(source.text)).map((source) => source.name);
+  if (/relationship memory/i.test(all) && /encounter evidence/i.test(all) && /real-world overlap/i.test(all)) {
+    return { value: 'Relationship memory anchored in encounter evidence and real-world overlap.', evidence: [...new Set(evidenceNames)].join(', ') };
+  }
+  return matchLine(sources, [/relationship memory/i, /encounter evidence/i, /real-world overlap/i, /physically grounded relationship graph/i, /follow-up intelligence/i, /real-world encounters?/i]);
+}
+
 function inferStrategicDifferentiator(sources, productThesis) {
-  const nearify = inferNearify(sources, 'Strategic Differentiator');
   const candidates = [
     explicitValue(sources, 'Strategic Differentiator'),
-    nearify ? { value: nearify, evidence: 'deterministic Nearify product signals' } : null,
-    matchLine(sources, [/relationship memory/i, /encounter evidence/i, /real-world overlap/i, /physically grounded relationship graph/i, /follow-up intelligence/i]),
+    relationshipEvidence(sources),
+    matchLine(sources, [/competitive advantage/i, /unique advantage/i, /differentiator/i, /moat/i]),
   ].filter(Boolean);
   const thesis = normalizeComparable(productThesis?.value ?? '');
   return candidates.find((candidate) => normalizeComparable(candidate.value) !== thesis) ?? null;
 }
 
-function inferNearify(sources, field) {
-  const all = sources.map((source) => source.text).join('\n');
-  if (!/Nearify/i.test(all)) return null;
-  const hasFollowUps = /follow[- ]?ups?/i.test(all);
-  const hasBetweenEvents = /between events/i.test(all);
-  const hasRelationshipMemory = /relationship memory|relationship context|real-world relationships?|real-world encounters?|encounter|overlap|follow[- ]?up intelligence/i.test(all);
-  if (field === 'North Star Metric' && hasFollowUps) return 'Follow-Ups Completed';
-  if (field === 'Strategic Differentiator' && hasRelationshipMemory) return 'Relationship memory anchored in encounter evidence and real-world overlap.';
-  if (field === 'Current Product Bet' && hasBetweenEvents) return 'Between Events experience.';
-  if (field === 'What Not To Build' && /event app|events?/i.test(all)) return 'Do not treat Nearify as primarily an event app.';
-  if (field === 'Success Definition' && (hasFollowUps || /reach out/i.test(all))) return 'User knows who to reach out to today and completes more follow-ups.';
-  return null;
+
+const leakageTerms = ['relationship memory', 'encounters', 'overlap', 'reconnect', 'follow-ups'];
+
+function evidenceSourceText(sources) {
+  return sources
+    .filter((source) => /^(\.ai\/(?:goals|architecture|decisions)\.md|README\.md|docs\/)/.test(source.name))
+    .map((source) => source.text)
+    .join('\n');
+}
+
+function detectStrategyLeakage(strategyText, sources) {
+  const evidence = evidenceSourceText(sources);
+  return leakageTerms.filter((term) => {
+    const strategyPattern = new RegExp(term.replace('-', '[- ]?'), 'i');
+    if (!strategyPattern.test(strategyText)) return false;
+    const evidencePattern = term === 'encounters' ? /encounters?|real-world encounters?/i : strategyPattern;
+    return !evidencePattern.test(evidence);
+  });
+}
+
+function strategyConfidence(inferredFields, leakageTermsFound) {
+  if (leakageTermsFound.length) return 'Low';
+  const detected = inferredFields.filter((field) => field.inferred.value && !/- Not detected yet\./i.test(field.inferred.value));
+  if (detected.length >= 5 && detected.every((field) => field.inferred.evidence)) return 'High';
+  if (detected.length >= 3) return 'Medium';
+  return 'Low';
 }
 
 function inferField(field, sources) {
@@ -183,9 +205,6 @@ function inferField(field, sources) {
   const matched = matchLine(sources, patterns[field] ?? []);
   if (matched) return matched;
 
-  const nearify = inferNearify(sources, field);
-  if (nearify) return { value: nearify, evidence: 'deterministic Nearify product signals' };
-
   if (field === 'Product Thesis') {
     const architectureThesis = explicitValue(sources, 'Product Thesis') ?? explicitValue(sources, 'Product Purpose');
     if (architectureThesis) return architectureThesis;
@@ -207,10 +226,20 @@ const sources = [
 ].filter((source) => source.text.trim());
 
 const manualNotes = await readManualNotes();
-const sections = headings.flatMap((heading) => {
-  const inferred = inferField(heading, sources);
-  return [`## ${heading}`, inferred.value, inferred.evidence ? `\nEvidence: ${inferred.evidence}` : ''];
-});
+const inferredFields = headings.map((heading) => ({ heading, inferred: inferField(heading, sources) }));
+const strategyBody = inferredFields.flatMap(({ heading, inferred }) => [`## ${heading}`, inferred.value, inferred.evidence ? `\nEvidence: ${inferred.evidence}` : '']).join('\n');
+const leakage = detectStrategyLeakage(strategyBody, sources);
+const confidence = strategyConfidence(inferredFields, leakage);
+const evidenceSources = [...new Set(inferredFields.map(({ inferred }) => inferred.evidence).filter(Boolean).flatMap((evidence) => evidence.split(',').map((item) => item.trim()).filter(Boolean)))];
+const sections = [
+  strategyBody,
+  '## Strategy Confidence',
+  confidence,
+  '## Strategy Evidence Sources',
+  evidenceSources.length ? evidenceSources.map((source) => `- ${source}`).join('\n') : '- No strategy evidence sources detected.',
+  '## Strategy Warnings',
+  leakage.length ? `- Strategy Leakage warning: strategy mentions ${leakage.join(', ')} without supporting goals/docs/architecture evidence.` : '- No strategy leakage detected.',
+];
 
 const content = ['# Strategy', '', ...sections, manualNotes].join('\n').replace(/\n{3,}/g, '\n\n');
 await mkdir(aiDir, { recursive: true });
