@@ -34,7 +34,7 @@ function compact(value) { return value.replace(/\s+/g, ' ').trim(); }
 
 function section(markdown, heading) {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = markdown.match(new RegExp(`^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'));
+  const match = markdown.match(new RegExp(`^##\\s+${escaped}\\s*$\\n?([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'));
   return match?.[1]?.trim() ?? '';
 }
 
@@ -64,7 +64,9 @@ function normalizeComparable(value) {
 
 function isHeadingOnly(value) {
   const cleaned = withoutEvidence(value).trim();
-  return /^(success definition|success criteria|current experiment|strategic differentiator|product thesis)$/i.test(cleaned.replace(/^#+\s*/, ''));
+  const withoutMarkdownMarker = cleaned.replace(/^#+\s*/, '').trim();
+  if (/^(success definition|success criteria|strategy success definition|current experiment|strategic differentiator|product thesis)$/i.test(withoutMarkdownMarker)) return true;
+  return /^#+\s+\S/.test(cleaned) && !/\n/.test(cleaned);
 }
 
 function firstSentence(markdown) {
@@ -110,7 +112,7 @@ function matchLine(sources, patterns, { allowImplementation = false } = {}) {
       const hit = lines.find((line) => pattern.test(line));
       if (hit) {
         const value = hit.replace(/^[-*]\s+/, '');
-        if (allowImplementation || !containsImplementationDetail(value)) return { value, evidence: source.name };
+        if (!isHeadingOnly(value) && (allowImplementation || !containsImplementationDetail(value))) return { value, evidence: source.name };
       }
     }
   }

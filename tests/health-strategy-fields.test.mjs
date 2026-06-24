@@ -72,3 +72,23 @@ assert.equal(leakageResult.status, 0, leakageResult.stderr);
 const leakageHealth = await readFile(join(leakageDir, '.ai/repository-health.md'), 'utf8');
 assert.match(leakageHealth, /Product Signal Quality/);
 assert.match(leakageHealth, /Implementation Leakage Warning detected in Strategic Differentiator/);
+
+
+const headingOnlyDir = await mkdtemp(join(tmpdir(), 'agent-ide-health-heading-only-'));
+await mkdir(join(headingOnlyDir, '.ai/prompts'), { recursive: true });
+for (const file of ['goals.md','architecture.md','backlog.md','decisions.md','validation.md','agents.md','code.md']) await writeFile(join(headingOnlyDir, '.ai', file), `# ${file}
+
+## Manual Goals
+Present
+`);
+await writeFile(join(headingOnlyDir, '.ai/prompts/architect.md'), '# Architect\n');
+await writeFile(join(headingOnlyDir, '.ai/strategy.md'), `# Strategy
+
+## Success Definition
+Success Criteria
+`);
+const headingOnlyResult = spawnSync(process.execPath, [resolve('scripts/health.mjs')], { cwd: headingOnlyDir, encoding: 'utf8' });
+assert.equal(headingOnlyResult.status, 0, headingOnlyResult.stderr);
+const headingOnlyHealth = await readFile(join(headingOnlyDir, '.ai/repository-health.md'), 'utf8');
+assert.match(headingOnlyHealth, /- Success Definition missing/);
+assert.match(headingOnlyHealth, /Strategy missing Success Definition/);
