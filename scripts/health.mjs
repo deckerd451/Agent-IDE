@@ -64,6 +64,11 @@ function detectsValidationCommands(text) {
   return /`npm run [^`]+`/.test(commandsRun) && !/-\s+None\b/i.test(commandsRun);
 }
 
+function detectsXcodeValidationMetadata(text) {
+  const xcodeSection = text.match(/^## Xcode Project Validation\s*([\s\S]*?)(?=^##\s+|(?![\s\S]))/im)?.[1] ?? '';
+  return /Xcode project validation metadata detected/i.test(xcodeSection) || /`xcodebuild -list -project [^`]+`/.test(xcodeSection);
+}
+
 function validationConfidence(text) {
   const match = text.match(/^## Confidence\s*\n-\s*(Low|Medium|High)\b/im);
   return match?.[1] ?? 'Unknown';
@@ -114,6 +119,7 @@ const signals = {
   evidenceLines: /Evidence:/i.test(architecture) || /Evidence\)/i.test(architecture),
   backlogNoise: detectsBacklogNoise(backlog),
   validationCommands: detectsValidationCommands(validation),
+  xcodeValidationMetadata: detectsXcodeValidationMetadata(validation),
   manualSections: [goals, architecture, backlog, docs['decisions.md'].text, validation, docs['agents.md'].text, docs['code.md'].text].some((text) => /^## Manual /im.test(text)),
 };
 
@@ -122,7 +128,7 @@ for (const [label, fileName] of requiredFiles) {
   if (!docs[fileName].exists) risks.push(`Missing intelligence file: ${label}`);
 }
 if (validationConfidence(validation) === 'Low') risks.push('Validation has low confidence');
-if (!signals.validationCommands) risks.push('No deterministic validation commands detected');
+if (!signals.validationCommands && !signals.xcodeValidationMetadata) risks.push('No deterministic validation commands detected');
 if (docs['backlog.md'].exists && !backlog.trim().replace(/^#.*$/m, '').trim()) risks.push('Backlog is empty');
 if (signals.backlogNoise) risks.push('Backlog contains possible noise');
 if (!signals.productThesis) risks.push('Architecture has no product thesis');
@@ -149,6 +155,7 @@ const content = [
   `- Evidence lines ${signals.evidenceLines ? 'present' : 'missing'}`,
   `- Backlog noise ${signals.backlogNoise ? 'detected' : 'not detected'}`,
   `- Validation commands ${signals.validationCommands ? 'detected' : 'not detected'}`,
+  `- Xcode validation metadata ${signals.xcodeValidationMetadata ? 'detected' : 'not detected'}`,
   `- Manual sections ${signals.manualSections ? 'preserved' : 'not detected'}`,
   '',
   '## Risks',
