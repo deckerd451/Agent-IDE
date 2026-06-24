@@ -1,5 +1,6 @@
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
 const root = process.cwd();
@@ -7,6 +8,7 @@ const aiDir = join(root, '.ai');
 const validationPath = join(aiDir, 'validation.md');
 const packageJsonPath = join(root, 'package.json');
 const manualHeader = '## Manual Validation Notes';
+const ignoredProjectDirs = new Set(['.git', 'node_modules', '.ai', 'dist', 'build', 'DerivedData']);
 const safeValidationScriptNames = [
   'build',
   'typecheck',
@@ -36,6 +38,114 @@ async function readExistingManualNotes() {
   if (manualIndex === -1) return `${manualHeader}\n`;
 
   return `${current.slice(manualIndex).trimEnd()}\n`;
+}
+
+
+async function detectXcodeProjects(dir = root) {
+  const entries = await readdir(dir, { withFileTypes: true }).catch((error) => {
+    if (error?.code === 'ENOENT' || error?.code === 'EACCES' || error?.code === 'EPERM') return [];
+    throw error;
+  });
+  const projects = [];
+  const workspaces = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const absolutePath = join(dir, entry.name);
+    const relativePath = relative(root, absolutePath) || entry.name;
+
+    if (entry.name.endsWith('.xcodeproj')) {
+      projects.push(relativePath);
+      continue;
+    }
+    if (entry.name.endsWith('.xcworkspace')) {
+      workspaces.push(relativePath);
+      continue;
+    }
+    if (ignoredProjectDirs.has(entry.name)) continue;
+
+    const nested = await detectXcodeProjects(absolutePath);
+    projects.push(...nested.projects);
+    workspaces.push(...nested.workspaces);
+  }
+
+  return { projects: projects.sort(), workspaces: workspaces.sort() };
+}
+
+function detectXcodeCommands(xcodeProjects) {
+  return xcodeProjects.projects.map((project) => ({
+    project,
+    command: `xcodebuild -list -project ${JSON.stringify(project)}`,
+  }));
+}
+
+function parseXcodeSchemes(output) {
+  const lines = stripAnsi(output).split('\n');
+  const schemes = [];
+  let inSchemes = false;
+
+  for (const line of lines) {
+    if (/^\s*Schemes:\s*$/.test(line)) {
+      inSchemes = true;
+      continue;
+    }
+    if (inSchemes) {
+      const scheme = line.trim();
+      if (!scheme) continue;
+      if (scheme.endsWith(':')) break;
+      schemes.push(scheme);
+    }
+  }
+
+  return schemes;
+}
+
+function formatXcodeMetadata(xcodeProjects, xcodeResults) {
+  if (xcodeProjects.projects.length === 0 && xcodeProjects.workspaces.length === 0) {
+    return '- No Xcode project or workspace metadata detected.';
+  }
+
+  const sections = ['- Xcode project validation metadata detected.'];
+  if (xcodeProjects.projects.length > 0) {
+    sections.push('- Projects detected:');
+    sections.push(...xcodeProjects.projects.map((project) => `  - \`${project}\``));
+  }
+  if (xcodeProjects.workspaces.length > 0) {
+    sections.push('- Workspaces detected:');
+    sections.push(...xcodeProjects.workspaces.map((workspace) => `  - \`${workspace}\``));
+  }
+
+  sections.push('- Safe validation candidates:');
+  if (xcodeResults.length > 0) {
+    sections.push(...xcodeResults.map((result) => `  - \`${result.command}\``));
+  } else {
+    sections.push('  - None; no `.xcodeproj` bundle was detected for `xcodebuild -list -project`.');
+  }
+  sections.push('- Full simulator/device build: Not run by default; no full `xcodebuild build` command was executed.');
+
+  return sections.join('\n');
+}
+
+function formatXcodeResults(results) {
+  if (results.length === 0) return '- No `xcodebuild -list` commands were run.';
+
+  return results
+    .map((result) => {
+      const status = result.exitCode === 0 ? 'PASS' : 'UNAVAILABLE';
+      const schemes = parseXcodeSchemes(result.output);
+      return [
+        `### ${result.command}`,
+        `- Status: ${status}`,
+        `- Exit code: ${result.exitCode}`,
+        `- Duration: ${(result.durationMs / 1000).toFixed(1)}s`,
+        `- Schemes detected: ${schemes.length > 0 ? schemes.map((scheme) => `\`${scheme}\``).join(', ') : 'None available from command output.'}`,
+        '- Output summary:',
+        '```text',
+        summarizeOutput(result.output),
+        '```',
+      ].join('\n');
+    })
+    .join('\n\n');
 }
 
 function detectCommands(scripts) {
@@ -114,7 +224,7 @@ function formatResults(results) {
     .join('\n\n');
 }
 
-function formatKnownGaps(scripts, commands) {
+function formatKnownGaps(scripts, commands, xcodeProjects) {
   const commandNames = new Set(commands.map(({ scriptName }) => scriptName));
   const gaps = [];
 
@@ -133,14 +243,18 @@ function formatKnownGaps(scripts, commands) {
   if (Object.keys(scripts).length === 0) {
     gaps.push('No package scripts were detected in `package.json`.');
   }
+  if (xcodeProjects.projects.length > 0 || xcodeProjects.workspaces.length > 0) {
+    gaps.push('Xcode metadata validation is partial: `xcodebuild -list` is safe and deterministic, but full simulator/device builds are not run by default.');
+  }
 
   return gaps.map((gap) => `- ${gap}`).join('\n') || '- No validation gaps detected from package scripts.';
 }
 
-function confidenceFor(results, commands) {
+function confidenceFor(results, commands, xcodeProjects) {
   if (results.some((result) => result.exitCode !== 0)) return 'Low';
   if (commands.length >= 3) return 'High';
   if (commands.some(({ scriptName }) => scriptName === 'build')) return 'Medium';
+  if (xcodeProjects.projects.length > 0 || xcodeProjects.workspaces.length > 0) return 'Medium';
   return 'Low';
 }
 
@@ -152,12 +266,20 @@ async function main() {
   const packageJson = JSON.parse(packageText || '{}');
   const scripts = packageJson.scripts ?? {};
   const commands = detectCommands(scripts);
+  const xcodeProjects = await detectXcodeProjects();
+  const xcodeCommands = detectXcodeCommands(xcodeProjects);
   const manualNotes = await readExistingManualNotes();
   const results = [];
+  const xcodeResults = [];
 
   for (const { command } of commands) {
     console.log(`\n> ${command}`);
     results.push(await runCommand(command));
+  }
+
+  for (const { command } of xcodeCommands) {
+    console.log(`\n> ${command}`);
+    xcodeResults.push(await runCommand(command));
   }
 
   const overallStatus = results.every((result) => result.exitCode === 0) ? 'Passing' : 'Failing';
@@ -168,7 +290,7 @@ async function main() {
     `- ${new Date().toISOString()}`,
     '',
     '## Confidence',
-    `- ${confidenceFor(results, commands)}`,
+    `- ${confidenceFor(results, commands, xcodeProjects)}`,
     '',
     `## Overall Status: ${overallStatus}`,
     '',
@@ -178,8 +300,14 @@ async function main() {
     '## Results',
     formatResults(results),
     '',
+    '## Xcode Project Validation',
+    formatXcodeMetadata(xcodeProjects, xcodeResults),
+    '',
+    '## Xcode List Results',
+    formatXcodeResults(xcodeResults),
+    '',
     '## Known Gaps',
-    formatKnownGaps(scripts, commands),
+    formatKnownGaps(scripts, commands, xcodeProjects),
     '',
     manualNotes,
   ].join('\n');
@@ -191,7 +319,17 @@ async function main() {
   if (overallStatus === 'Failing') process.exitCode = 1;
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
+
+export {
+  detectXcodeCommands,
+  detectXcodeProjects,
+  formatXcodeMetadata,
+  formatXcodeResults,
+  parseXcodeSchemes,
+};
