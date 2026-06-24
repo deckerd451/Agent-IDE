@@ -82,6 +82,16 @@ function strategyValue(text, header) {
 
 
 const leakageTerms = ['relationship memory', 'encounters', 'overlap', 'reconnect', 'follow-ups'];
+const strategyFieldLeakageHeaders = ['Product Thesis', 'Strategic Differentiator', 'Current Product Bet', 'Current Experiment', 'What Not To Build', 'Success Definition'];
+
+function containsImplementationDetail(value) {
+  return /(?:\b(?:strategy|audit|health|backlog|prompt|context-package|validate-intel|server)\.mjs\b|(?:^|[\s`])\.ai\/|README\.md|docs\/|package\.json|npm run|node scripts\/|generator|deterministic(?:ally)?|reads? files?|writes? outputs?|markdown parsing|file scanning|repository scanning|script behavior|pipeline|derive strategic|local Node server|Vite UI)/i.test(value);
+}
+
+
+function detectImplementationLeakage(strategy) {
+  return strategyFieldLeakageHeaders.filter((header) => containsImplementationDetail(strategyValue(strategy, header)));
+}
 
 function detectStrategyLeakage(strategy, evidenceDocs) {
   const evidence = evidenceDocs.join('\n');
@@ -212,12 +222,14 @@ const successDefinitionValue = strategyValue(strategy, 'Success Definition');
 const currentExperimentValue = strategyValue(strategy, 'Current Experiment');
 const hasCurrentFocusContent = hasSectionText(goals, 'Current Focus') || hasSectionText(architecture, 'Current Focus');
 const leakage = signals.strategyPresent ? detectStrategyLeakage(strategy, [goals, architecture, docs['decisions.md'].text, ...strategyEvidenceDocs]) : [];
-const strategyConfidence = signals.strategyPresent ? strategyConfidenceValue(strategy, leakage) : 'Low';
+const implementationLeakage = signals.strategyPresent ? detectImplementationLeakage(strategy) : [];
+const strategyConfidence = signals.strategyPresent ? strategyConfidenceValue(strategy, [...leakage, ...implementationLeakage]) : 'Low';
 const strategyQualityWarnings = [];
 if (signals.strategyPresent && (!differentiatorValue || normalizeComparable(differentiatorValue) === normalizeComparable(productThesisValue))) strategyQualityWarnings.push('Missing differentiator warning');
 if (signals.strategyPresent && hasCurrentFocusContent && !currentExperimentValue) strategyQualityWarnings.push('Missing experiment warning');
 if (signals.strategyPresent && (!successDefinitionValue || isHeadingOnly(successDefinitionValue))) strategyQualityWarnings.push('Weak success definition warning');
 if (leakage.length) strategyQualityWarnings.push(`Strategy Leakage warning: strategy mentions ${leakage.join(', ')} without supporting goals/docs/architecture evidence`);
+if (implementationLeakage.length) strategyQualityWarnings.push(`Implementation Leakage Warning: strategy fields contain implementation-level details in ${implementationLeakage.join(', ')}`);
 const strategyQualityScore = signals.strategyPresent
   ? Math.max(0, 100 - (strategyQualityWarnings.length * 25) - (['North Star Metric', 'Current Product Bet', 'What Not To Build'].filter((header) => isMissingStrategyValue(strategy, header)).length * 10))
   : 0;
@@ -267,7 +279,9 @@ const content = [
   `- What Not To Build ${signals.whatNotToBuild ? 'present' : 'missing'}`,
   `- Success Definition ${signals.successDefinition ? 'present' : 'missing'}`,
   `- Strategy quality score ${strategyQualityScore}/100`,
+  `- Product Signal Quality ${strategyQualityScore >= 80 && !implementationLeakage.length ? 'strong' : strategyQualityScore >= 50 ? 'mixed' : 'weak'}`,
   `- Strategy leakage ${leakage.length ? 'detected' : 'not detected'}`,
+  `- Implementation Leakage Warning ${implementationLeakage.length ? `detected in ${implementationLeakage.join(', ')}` : 'not detected'}`,
   `- Strategy confidence ${strategyConfidence}`,
   `- Evidence lines ${signals.evidenceLines ? 'present' : 'missing'}`,
   `- Backlog noise ${signals.backlogNoise ? 'detected' : 'not detected'}`,
