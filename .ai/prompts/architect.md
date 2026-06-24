@@ -22,20 +22,62 @@
 
 - Add automation only after the local `.ai/` contract is useful on its own.
 
+## Strategy
+
+# Strategy
+
+## Product Thesis
+Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
+Product Thesis Evidence:
+README.md, .ai/goals.md, scripts/audit.mjs
+
+Evidence: .ai/architecture.md
+## North Star Metric
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+## Strategic Differentiator
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+## Current Product Bet
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+## Current Experiment
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+## What Not To Build
+The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, and Success Definition while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. For Nearify-style relationship products, it surfaces Follow-Ups Completed, relationship memory from real-world encounters, the Between Events experience, the warning not to treat the product as primarily an event app, and the success test that users know who to reach out to today and complete more follow-ups.
+
+Evidence: README.md
+## Success Definition
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+## Manual Strategy Notes
+
 ## Architecture Summary
 
 # Architecture
 
-Last Audit: 2026-06-23T20:49:08.787Z
+Last Audit: 2026-06-24T00:16:59.907Z
 Confidence: 95%
 
 ## Product Thesis
 Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
 
+Product Thesis Evidence:
+README.md, .ai/goals.md, scripts/audit.mjs
+
 ## Core Systems
-- Dashboard UI: React/Vite interface that makes repository-understanding markdown the primary navigation surface instead of a file tree.
-- Repository Intelligence Contract: Version-controlled `.ai/*.md` files that define goals, architecture, backlog, decisions, validation, agent constraints, and code notes.
-- Local Audit Engine: `scripts/audit.mjs` deterministically scans local repository signals and regenerates `.ai/architecture.md` without LLM calls.
+- Dashboard UI: Inferred from target repository structure and naming.
+  Evidence: src/App.tsx, src/sections.ts, package.json
+- Repository Intelligence Contract: Inferred from target repository structure and naming.
+  Evidence: .ai/*.md, scripts/init-ai.mjs, README.md
+- Local Audit Engine: Inferred from target repository structure and naming.
+  Evidence: scripts/audit.mjs, package.json
 
 ## Primary Flows
 - Repository -> .ai files -> Dashboard
@@ -44,7 +86,10 @@ Agent IDE exists to make repository understanding the primary developer interfac
 - npm run backlog -> generated backlog.md
 
 ## Current Focus
-The repository is currently evolving toward making repository understanding the primary surface of Agent IDE.
+The repository is currently focused on making repository understanding the primary surface of Agent IDE.
+
+Current Focus Evidence:
+.ai/goals.md
 
 ## Key Commands
 - npm run dev
@@ -73,6 +118,7 @@ The repository is currently evolving toward making repository understanding the 
 ### Major Areas
 - scripts/
 - src/
+- tests/
 
 ### Major Files
 - index.html
@@ -97,42 +143,32 @@ The repository is currently evolving toward making repository understanding the 
 
 # Backlog
 
-Last Audit: 2026-06-23T21:01:52.342Z
+Last Audit: 2026-06-24T01:30:47.539Z
 Confidence: 95%
 
 ## High Priority
-- **Add Automated UI Interaction Tests**
-  - Source: .ai/validation.md:12
-  - Reason: Repository documentation identifies actionable follow-up work from: No automated UI interaction tests.
-  - Suggested Next Step: Define the smallest local, deterministic change needed to add automated ui interaction tests.
-- **Add Packaged CLI**
-  - Source: .ai/architecture.md:34
-  - Reason: Repository documentation identifies actionable follow-up work from: No packaged CLI.
-  - Suggested Next Step: Define the smallest local, deterministic change needed to add packaged cli.
-- **Add Validation Generation**
-  - Source: .ai/architecture.md:33
-  - Reason: Repository documentation identifies actionable follow-up work from: No validation generation.
-  - Suggested Next Step: Define the smallest local, deterministic change needed to add validation generation.
+- None detected
 
 ## Medium Priority
-- **Add Agent Prompt Export**
-  - Source: README.md:118
-  - Reason: Repository documentation identifies actionable follow-up work from: Add agent prompt export.
-  - Suggested Next Step: Define the smallest local, deterministic change needed to add agent prompt export.
 - **Add Backlog Quality Filtering**
-  - Source: README.md:115
+  - Source: README.md:189
   - Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering.
 - **Add Cross-links Between .ai Documents**
-  - Source: README.md:117
+  - Source: README.md:192
   - Reason: Repository documentation identifies actionable follow-up work from: Add cross-links between `.ai` documents.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add cross-links between `.ai` documents.
-
-## Low Priority
+- **Add Richer Validation Detection**
+  - Source: README.md:190
+  - Reason: Repository documentation identifies actionable follow-up work from: Add richer validation detection for additional ecosystems.
+  - Suggested Next Step: Define the smallest local, deterministic change needed to add richer validation detection for additional ecosystems.
 - **Improve Markdown Rendering**
-  - Source: README.md:116
+  - Source: README.md:191
   - Reason: Repository documentation identifies actionable follow-up work from: Improve markdown rendering.
   - Suggested Next Step: Define the smallest local, deterministic change needed to improve markdown rendering.
+
+## Low Priority
+- None detected
 
 ## Manual Backlog
 
@@ -178,6 +214,42 @@ Confidence: 95%
 
 ## Manual Validation Notes
 
+## Repository Health
+
+# Repository Health
+
+Last Audit: 2026-06-24T13:20:29.589Z
+Overall Health: Needs Attention
+Confidence: Medium
+
+## Intelligence Completeness
+- Goals: Present
+- Architecture: Present
+- Backlog: Present
+- Decisions: Present
+- Validation: Present
+- Agents: Present
+- Code: Present
+- Architect Prompt: Present
+
+## Quality Signals
+- Product thesis present
+- Current focus present
+- Core systems present
+- Evidence lines present
+- Backlog noise detected
+- Validation commands detected
+- Manual sections preserved
+
+## Risks
+- Backlog contains possible noise
+- Missing manual goals
+
+## Recommended Next Step
+Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
+
+## Manual Health Notes
+
 ## Known Constraints
 
 - Do not make LLM calls.
@@ -187,16 +259,78 @@ Confidence: 95%
 
 # Decisions
 
-- Store repository understanding as version-controlled markdown in `.ai/`.
-- Keep the first contract file-based and local-only.
-- Avoid adding agents, LLM calls, databases, auth, code editing, or CLI packaging in this prototype step.
+Last Audit: 2026-06-23T21:34:57.307Z
+Confidence: 95%
 
-## Template
+## Active Decisions
 
-- Decision:
-- Context:
-- Alternatives:
-- Consequences:
+### Repository understanding is primary
+
+Context:
+The README and architecture describe Agent IDE as a developer environment where repository understanding is the primary interface rather than the file tree.
+
+Reason:
+Starting from goals, architecture, backlog, decisions, validation, agents, and code notes gives humans and automation the context needed before changing implementation details.
+
+Consequences:
+The UI and generation scripts should prioritize repository context surfaces, and feature work should preserve the dashboard-oriented understanding workflow.
+
+### .ai markdown is canonical repository memory
+
+Context:
+The repository contract maps sidebar sections directly to version-controlled markdown files in `.ai/`.
+
+Reason:
+Plain markdown keeps product, architecture, backlog, decisions, validation, agents, and code context local, reviewable, and shared by humans and future automation.
+
+Consequences:
+Repository intelligence should be generated into `.ai/*.md`, manual sections must be preserved, and changes to repository memory should remain diffable.
+
+### Local-first before cloud
+
+Context:
+The documented scope emphasizes a local Vite app, repository-local `.ai/` files, and local npm scripts for intelligence generation.
+
+Reason:
+Local-first workflows keep the prototype simple, inspectable, and usable without external services while the repository-understanding contract matures.
+
+Consequences:
+New intelligence commands should read local files, write local markdown, avoid cloud dependencies, and remain safe to run from the repository checkout.
+
+### No LLM dependency in core intelligence generation
+
+Context:
+README and architecture repeatedly state that audit, backlog, validation, and prompt generation do not call an LLM, and LLM integration is intentionally out of scope.
+
+Reason:
+Core repository intelligence should be reproducible and understandable from checked-in source material instead of depending on model availability or hidden inference.
+
+Consequences:
+Generation scripts must not call LLM APIs, should document deterministic inputs, and should treat future LLM features as optional layers rather than core requirements.
+
+### Deterministic generation preferred over inference
+
+Context:
+Existing commands derive architecture, backlog, validation, and prompts from explicit local repository signals such as README content, `.ai/` documents, package scripts, source structure, comments, and dependencies.
+
+Reason:
+Deterministic generation makes repository intelligence auditable, repeatable, and suitable for version control review.
+
+Consequences:
+Decision generation should use transparent heuristics, avoid opaque summarization, preserve manual decisions, and prefer stable output over speculative conclusions.
+
+### Decisions explain why rather than what to build next
+
+Context:
+The README distinguishes decisions from backlog by describing decisions as technical tradeoffs and why they were made, while backlog captures future work items.
+
+Reason:
+Separating rationale from tasks prevents decision records from becoming another task list and keeps architectural intent visible.
+
+Consequences:
+Generated decision records should include context, reason, and consequences, and should not duplicate backlog items or suggested next steps.
+
+## Manual Decisions
 
 # Agents
 
@@ -239,16 +373,22 @@ Confidence: 95%
 ```markdown
 # Architecture
 
-Last Audit: 2026-06-23T20:49:08.787Z
+Last Audit: 2026-06-24T00:16:59.907Z
 Confidence: 95%
 
 ## Product Thesis
 Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
 
+Product Thesis Evidence:
+README.md, .ai/goals.md, scripts/audit.mjs
+
 ## Core Systems
-- Dashboard UI: React/Vite interface that makes repository-understanding markdown the primary navigation surface instead of a file tree.
-- Repository Intelligence Contract: Version-controlled `.ai/*.md` files that define goals, architecture, backlog, decisions, validation, agent constraints, and code notes.
-- Local Audit Engine: `scripts/audit.mjs` deterministically scans local repository signals and regenerates `.ai/architecture.md` without LLM calls.
+- Dashboard UI: Inferred from target repository structure and naming.
+  Evidence: src/App.tsx, src/sections.ts, package.json
+- Repository Intelligence Contract: Inferred from target repository structure and naming.
+  Evidence: .ai/*.md, scripts/init-ai.mjs, README.md
+- Local Audit Engine: Inferred from target repository structure and naming.
+  Evidence: scripts/audit.mjs, package.json
 
 ## Primary Flows
 - Repository -> .ai files -> Dashboard
@@ -257,7 +397,10 @@ Agent IDE exists to make repository understanding the primary developer interfac
 - npm run backlog -> generated backlog.md
 
 ## Current Focus
-The repository is currently evolving toward making repository understanding the primary surface of Agent IDE.
+The repository is currently focused on making repository understanding the primary surface of Agent IDE.
+
+Current Focus Evidence:
+.ai/goals.md
 
 ## Key Commands
 - npm run dev
@@ -286,6 +429,7 @@ The repository is currently evolving toward making repository understanding the 
 ### Major Areas
 - scripts/
 - src/
+- tests/
 
 ### Major Files
 - index.html
@@ -307,47 +451,75 @@ The repository is currently evolving toward making repository understanding the 
 ## Manual Notes
 ```
 
+### .ai/strategy.md
+
+```markdown
+# Strategy
+
+## Product Thesis
+Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
+Product Thesis Evidence:
+README.md, .ai/goals.md, scripts/audit.mjs
+
+Evidence: .ai/architecture.md
+## North Star Metric
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+## Strategic Differentiator
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+## Current Product Bet
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+## Current Experiment
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+## What Not To Build
+The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, and Success Definition while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. For Nearify-style relationship products, it surfaces Follow-Ups Completed, relationship memory from real-world encounters, the Between Events experience, the warning not to treat the product as primarily an event app, and the success test that users know who to reach out to today and complete more follow-ups.
+
+Evidence: README.md
+## Success Definition
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+## Manual Strategy Notes
+```
+
 ### .ai/backlog.md
 
 ```markdown
 # Backlog
 
-Last Audit: 2026-06-23T21:01:52.342Z
+Last Audit: 2026-06-24T01:30:47.539Z
 Confidence: 95%
 
 ## High Priority
-- **Add Automated UI Interaction Tests**
-  - Source: .ai/validation.md:12
-  - Reason: Repository documentation identifies actionable follow-up work from: No automated UI interaction tests.
-  - Suggested Next Step: Define the smallest local, deterministic change needed to add automated ui interaction tests.
-- **Add Packaged CLI**
-  - Source: .ai/architecture.md:34
-  - Reason: Repository documentation identifies actionable follow-up work from: No packaged CLI.
-  - Suggested Next Step: Define the smallest local, deterministic change needed to add packaged cli.
-- **Add Validation Generation**
-  - Source: .ai/architecture.md:33
-  - Reason: Repository documentation identifies actionable follow-up work from: No validation generation.
-  - Suggested Next Step: Define the smallest local, deterministic change needed to add validation generation.
+- None detected
 
 ## Medium Priority
-- **Add Agent Prompt Export**
-  - Source: README.md:118
-  - Reason: Repository documentation identifies actionable follow-up work from: Add agent prompt export.
-  - Suggested Next Step: Define the smallest local, deterministic change needed to add agent prompt export.
 - **Add Backlog Quality Filtering**
-  - Source: README.md:115
+  - Source: README.md:189
   - Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering.
 - **Add Cross-links Between .ai Documents**
-  - Source: README.md:117
+  - Source: README.md:192
   - Reason: Repository documentation identifies actionable follow-up work from: Add cross-links between `.ai` documents.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add cross-links between `.ai` documents.
-
-## Low Priority
+- **Add Richer Validation Detection**
+  - Source: README.md:190
+  - Reason: Repository documentation identifies actionable follow-up work from: Add richer validation detection for additional ecosystems.
+  - Suggested Next Step: Define the smallest local, deterministic change needed to add richer validation detection for additional ecosystems.
 - **Improve Markdown Rendering**
-  - Source: README.md:116
+  - Source: README.md:191
   - Reason: Repository documentation identifies actionable follow-up work from: Improve markdown rendering.
   - Suggested Next Step: Define the smallest local, deterministic change needed to improve markdown rendering.
+
+## Low Priority
+- None detected
 
 ## Manual Backlog
 ```
@@ -357,16 +529,78 @@ Confidence: 95%
 ```markdown
 # Decisions
 
-- Store repository understanding as version-controlled markdown in `.ai/`.
-- Keep the first contract file-based and local-only.
-- Avoid adding agents, LLM calls, databases, auth, code editing, or CLI packaging in this prototype step.
+Last Audit: 2026-06-23T21:34:57.307Z
+Confidence: 95%
 
-## Template
+## Active Decisions
 
-- Decision:
-- Context:
-- Alternatives:
-- Consequences:
+### Repository understanding is primary
+
+Context:
+The README and architecture describe Agent IDE as a developer environment where repository understanding is the primary interface rather than the file tree.
+
+Reason:
+Starting from goals, architecture, backlog, decisions, validation, agents, and code notes gives humans and automation the context needed before changing implementation details.
+
+Consequences:
+The UI and generation scripts should prioritize repository context surfaces, and feature work should preserve the dashboard-oriented understanding workflow.
+
+### .ai markdown is canonical repository memory
+
+Context:
+The repository contract maps sidebar sections directly to version-controlled markdown files in `.ai/`.
+
+Reason:
+Plain markdown keeps product, architecture, backlog, decisions, validation, agents, and code context local, reviewable, and shared by humans and future automation.
+
+Consequences:
+Repository intelligence should be generated into `.ai/*.md`, manual sections must be preserved, and changes to repository memory should remain diffable.
+
+### Local-first before cloud
+
+Context:
+The documented scope emphasizes a local Vite app, repository-local `.ai/` files, and local npm scripts for intelligence generation.
+
+Reason:
+Local-first workflows keep the prototype simple, inspectable, and usable without external services while the repository-understanding contract matures.
+
+Consequences:
+New intelligence commands should read local files, write local markdown, avoid cloud dependencies, and remain safe to run from the repository checkout.
+
+### No LLM dependency in core intelligence generation
+
+Context:
+README and architecture repeatedly state that audit, backlog, validation, and prompt generation do not call an LLM, and LLM integration is intentionally out of scope.
+
+Reason:
+Core repository intelligence should be reproducible and understandable from checked-in source material instead of depending on model availability or hidden inference.
+
+Consequences:
+Generation scripts must not call LLM APIs, should document deterministic inputs, and should treat future LLM features as optional layers rather than core requirements.
+
+### Deterministic generation preferred over inference
+
+Context:
+Existing commands derive architecture, backlog, validation, and prompts from explicit local repository signals such as README content, `.ai/` documents, package scripts, source structure, comments, and dependencies.
+
+Reason:
+Deterministic generation makes repository intelligence auditable, repeatable, and suitable for version control review.
+
+Consequences:
+Decision generation should use transparent heuristics, avoid opaque summarization, preserve manual decisions, and prefer stable output over speculative conclusions.
+
+### Decisions explain why rather than what to build next
+
+Context:
+The README distinguishes decisions from backlog by describing decisions as technical tradeoffs and why they were made, while backlog captures future work items.
+
+Reason:
+Separating rationale from tasks prevents decision records from becoming another task list and keeps architectural intent visible.
+
+Consequences:
+Generated decision records should include context, reason, and consequences, and should not duplicate backlog items or suggested next steps.
+
+## Manual Decisions
 ```
 
 ### .ai/validation.md
@@ -439,4 +673,42 @@ Confidence: 95%
 
 - `src/App.tsx` renders the application shell.
 - `src/sections.ts` defines sidebar section metadata.
+```
+
+### .ai/repository-health.md
+
+```markdown
+# Repository Health
+
+Last Audit: 2026-06-24T13:20:29.589Z
+Overall Health: Needs Attention
+Confidence: Medium
+
+## Intelligence Completeness
+- Goals: Present
+- Architecture: Present
+- Backlog: Present
+- Decisions: Present
+- Validation: Present
+- Agents: Present
+- Code: Present
+- Architect Prompt: Present
+
+## Quality Signals
+- Product thesis present
+- Current focus present
+- Core systems present
+- Evidence lines present
+- Backlog noise detected
+- Validation commands detected
+- Manual sections preserved
+
+## Risks
+- Backlog contains possible noise
+- Missing manual goals
+
+## Recommended Next Step
+Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
+
+## Manual Health Notes
 ```

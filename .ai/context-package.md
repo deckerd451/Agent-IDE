@@ -1,6 +1,6 @@
 # Context Package
 
-Generated: 2026-06-24T16:15:13.917Z
+Generated: 2026-06-24T16:35:14.591Z
 
 ## Product Thesis
 Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
@@ -13,6 +13,27 @@ The repository is currently focused on making repository understanding the prima
 
 Current Focus Evidence:
 .ai/goals.md
+
+## Strategy
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
+
+The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, and Success Definition while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. For Nearify-style relationship products, it surfaces Follow-Ups Completed, relationship memory from real-world encounters, the Between Events experience, the warning not to treat the product as primarily an event app, and the success test that users know who to reach out to today and complete more follow-ups.
+
+Evidence: README.md
+
+**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+
+Evidence: README.md
 
 ## Core Systems
 - Dashboard UI: Inferred from target repository structure and naming.

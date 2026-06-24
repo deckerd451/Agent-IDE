@@ -7,6 +7,7 @@ const outputDir = join(aiDir, 'prompts');
 const aiFiles = [
   'goals.md',
   'architecture.md',
+  'strategy.md',
   'backlog.md',
   'decisions.md',
   'validation.md',
@@ -115,6 +116,7 @@ function buildPrompt(role, docs) {
   return `# Agent IDE ${role.title} Prompt\n\n${[
     section('Role Instructions', bullets(role.instructions)),
     section('Product Thesis', docs['goals.md']),
+    section('Strategy', docs['strategy.md']),
     section('Architecture Summary', docs['architecture.md']),
     section('Backlog Priorities', docs['backlog.md']),
     section('Validation Status', docs['validation.md']),

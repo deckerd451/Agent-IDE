@@ -4,6 +4,7 @@ Agent IDE is a prototype developer environment where the primary interface is re
 
 - Goals
 - Architecture
+- Strategy
 - Backlog
 - Decisions
 - Validation
@@ -21,6 +22,7 @@ Agent IDE treats repository understanding as the primary surface:
 
 - **Goals** explain what the repository is trying to accomplish.
 - **Architecture** explains how the system is shaped and where boundaries are.
+- **Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
 - **Backlog** connects future work to goals and implementation context.
 - **Decisions** preserve technical tradeoffs and why they were made.
 - **Validation** describes how the team proves the repository still works.
@@ -38,6 +40,7 @@ Agent IDE reads repository understanding from plain markdown files in `.ai/`:
 .ai/
   goals.md
   architecture.md
+  strategy.md
   backlog.md
   decisions.md
   validation.md
@@ -67,6 +70,7 @@ Agent IDE includes a small local Node server so the Vite UI can connect to any r
   agents.md
   code.md
   architecture.md
+  strategy.md
   backlog.md
   validation.md
   decisions.md
@@ -79,7 +83,7 @@ Agent IDE includes a small local Node server so the Vite UI can connect to any r
   context-package.md
 ```
 
-Refresh first creates any missing baseline files for `goals.md`, `agents.md`, and `code.md` without overwriting existing repository notes, then runs the deterministic architecture, backlog, validation, decisions, prompt, repository health, and context package generators. The refresh stays local-first: no LLM calls, cloud services, authentication, or databases are used. Progress and success/failure summaries, including the Baseline Files step, are shown in the UI while the generators run.
+Refresh first creates any missing baseline files for `goals.md`, `agents.md`, and `code.md` without overwriting existing repository notes, then runs the deterministic architecture, strategy, backlog, validation, decisions, prompt, repository health, and context package generators. The refresh stays local-first: no LLM calls, cloud services, authentication, or databases are used. Progress and success/failure summaries, including the Baseline Files step, are shown in the UI while the generators run.
 
 Run the API server only:
 
@@ -96,7 +100,7 @@ npm run dev:all
 
 ## Prompt Center and Context Package
 
-The **Prompt Center** makes generated role prompts available directly in the Agent IDE UI. After **Refresh Intelligence** completes, open **Prompt Center** to view rendered markdown cards for Architect, Builder, Reviewer, and Debugger. Each card shows its `.ai/prompts/<role>.md` source path and provides **Copy Prompt** and **Download Prompt** actions. Missing prompt files show an in-app file-not-found state instead of requiring terminal inspection.
+The **Prompt Center** makes generated role prompts available directly in the Agent IDE UI. After **Refresh Intelligence** completes, Agent IDE shows a **Next actions** panel with buttons to view Strategy, copy the Context Package, and copy the Architect Prompt. Open **Prompt Center** to view rendered markdown cards for Architect, Builder, Reviewer, and Debugger. Each card shows its `.ai/prompts/<role>.md` source path and provides **Copy Prompt** and **Download Prompt** actions. Missing prompt files show an in-app file-not-found state instead of requiring terminal inspection.
 
 The **Copy Architect Context** action copies `.ai/prompts/architect.md` immediately from Prompt Center without requiring users to expand or inspect the Architect card. This supports the fast handoff workflow:
 
@@ -104,7 +108,7 @@ The **Copy Architect Context** action copies `.ai/prompts/architect.md` immediat
 Repository → Refresh Intelligence → Prompt Center → Copy Architect Context → Paste into Claude, GPT, Cursor, Codex, Gemini, Windsurf, or another assistant
 ```
 
-Agent IDE also generates `.ai/context-package.md`, a compact assistant handoff containing Product Thesis, Current Focus, Core Systems, Key Decisions, Validation Summary, Current Backlog, and Repository Health Summary. Open **Context Package** in the sidebar to view the rendered package, then use **Copy Context Package** or **Download Context Package** when a shorter cross-assistant context bundle is more useful than a role prompt.
+Agent IDE also generates `.ai/context-package.md`, a compact assistant handoff containing Product Thesis, Current Focus, Core Systems, Key Decisions, Validation Summary, Current Backlog, and Repository Health Summary. Open **Context Package** in the sidebar to view the rendered package, then use **Copy Context Package**, **Copy for Claude/GPT**, or **Download Context Package** when a shorter cross-assistant context bundle is more useful than a role prompt.
 
 ## Run locally
 
@@ -127,6 +131,14 @@ npm run audit
 ```
 
 The audit infers repository understanding from the selected target repository's own local signals: `README.md`, `docs/**/*.md`, `.ai/goals.md`, prominent project files, top-level folders, Swift/TypeScript source file names and symbols, package scripts, and dependencies. It writes product thesis, product thesis evidence, evidence-backed core systems, primary flows, current focus, current focus evidence, key commands, known gaps, and a lower repository-structure section while preserving the timestamp, confidence score, and anything already written under `## Manual Notes`. Current focus extraction first reads `.ai/goals.md` and surfaces the body of `## Current Focus` verbatim with `.ai/goals.md` as evidence; if that explicit section is missing, the audit falls back to deterministic backlog or roadmap-style inference without LLM calls. Product thesis extraction prefers `.ai/goals.md`, README/project overview, and goals language over status notes, filters implementation/audit/validation-only disclaimers, and falls back to deterministic domain-system inference when no strong written thesis is present. For arbitrary target repositories, architecture generation stays deterministic, does not call an LLM, and avoids hardcoding Agent IDE systems unless the target repository is Agent IDE itself.
+
+Generate or refresh `.ai/strategy.md` locally:
+
+```bash
+npm run strategy
+```
+
+The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, and Success Definition while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. For Nearify-style relationship products, it surfaces Follow-Ups Completed, relationship memory from real-world encounters, the Between Events experience, the warning not to treat the product as primarily an event app, and the success test that users know who to reach out to today and complete more follow-ups.
 
 Generate or refresh `.ai/backlog.md` locally:
 
@@ -170,7 +182,7 @@ npm run prompt -- reviewer
 npm run prompt -- debugger
 ```
 
-The prompt exporter reads the local `.ai/*.md` intelligence files and writes deterministic markdown prompts to `.ai/prompts/architect.md`, `.ai/prompts/builder.md`, `.ai/prompts/reviewer.md`, and `.ai/prompts/debugger.md`. Each prompt includes role instructions, product thesis, architecture summary, backlog priorities, validation status, known constraints, task guidance, and the complete local `.ai/` context. It does not call an LLM and does not execute agents.
+The prompt exporter reads the local `.ai/*.md` intelligence files, including `.ai/strategy.md`, and writes deterministic markdown prompts to `.ai/prompts/architect.md`, `.ai/prompts/builder.md`, `.ai/prompts/reviewer.md`, and `.ai/prompts/debugger.md`. Each prompt includes role instructions, product thesis, architecture summary, backlog priorities, validation status, known constraints, task guidance, and the complete local `.ai/` context. It does not call an LLM and does not execute agents.
 
 
 Generate or refresh `.ai/context-package.md` locally:
@@ -179,7 +191,7 @@ Generate or refresh `.ai/context-package.md` locally:
 npm run context:package
 ```
 
-The context package generator reads local `.ai/` intelligence and writes a compact assistant handoff with product thesis, current focus, core systems, key decisions, validation summary, backlog, and repository health summary. It is deterministic and does not call an LLM.
+The context package generator reads local `.ai/` intelligence and writes a compact assistant handoff with product thesis, current focus, strategy, core systems, key decisions, validation summary, backlog, and repository health summary. It is deterministic and does not call an LLM.
 
 Start the Vite development server only:
 
@@ -210,13 +222,14 @@ Implemented now:
 - Helpful empty states for missing markdown files.
 - `npm run init:ai` for creating starter files without overwriting existing content.
 - `npm run audit` for generating and maintaining `.ai/architecture.md` as local repository understanding from README, `.ai/` files, package scripts, repository structure, and dependencies.
+- `npm run strategy` for generating `.ai/strategy.md` from local product and roadmap signals without LLM calls or agent execution.
 - `npm run backlog` for generating and maintaining `.ai/backlog.md` from local code comments plus README and `.ai/` gaps without LLM calls.
 - `npm run decisions` for generating and maintaining `.ai/decisions.md` from README, architecture, backlog, and package metadata without LLM calls.
 - `npm run validate:intel` for generating and maintaining `.ai/validation.md` from safe local deterministic validation commands without LLM calls.
 - `npm run prompt -- <role>` for exporting local, role-specific prompts for architect, builder, reviewer, and debugger workflows without LLM calls or agent execution.
 - `npm run health` for generating `.ai/repository-health.md` from deterministic completeness, quality, and risk checks across the repository intelligence layer.
 - Prompt Center for viewing, copying, and downloading generated Architect, Builder, Reviewer, and Debugger prompts from the UI.
-- Context Package for viewing, copying, and downloading `.ai/context-package.md` as a compact assistant handoff.
+- Context Package for viewing, copying, copying with the Claude/GPT handoff wrapper, and downloading `.ai/context-package.md` as a compact assistant handoff.
 - `npm run context:package` for generating `.ai/context-package.md` without LLM calls or agent execution.
 
 Intentionally not included:

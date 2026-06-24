@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
-const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
 
 const baselineFiles = {
   'goals.md': `# Goals
@@ -23,6 +23,24 @@ const baselineFiles = {
 ## Success Criteria
 
 ## Manual Goals
+`,
+  'strategy.md': `# Strategy
+
+## Product Thesis
+
+## North Star Metric
+
+## Strategic Differentiator
+
+## Current Product Bet
+
+## Current Experiment
+
+## What Not To Build
+
+## Success Definition
+
+## Manual Strategy Notes
 `,
   'agents.md': `# Agents
 ## Current Status
@@ -54,6 +72,7 @@ const generatorSteps = [
   { id: 'backlog', label: 'Backlog', command: ['node', [join(appRoot, 'scripts/backlog.mjs')]] },
   { id: 'validation', label: 'Validation', command: ['node', [join(appRoot, 'scripts/validate-intel.mjs')]] },
   { id: 'decisions', label: 'Decisions', command: ['node', [join(appRoot, 'scripts/decisions.mjs')]] },
+  { id: 'strategy', label: 'Strategy', command: ['node', [join(appRoot, 'scripts/strategy.mjs')]] },
   ...['architect', 'builder', 'reviewer', 'debugger'].map((role) => ({
     id: `prompts:${role}`,
     label: `Prompts (${role})`,
