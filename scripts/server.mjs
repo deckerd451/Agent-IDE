@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { mkdir, readFile, stat } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -9,6 +9,45 @@ const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
 const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md']);
+
+const baselineFiles = {
+  'goals.md': `# Goals
+## Product Purpose
+
+## North Star Metric
+
+## Current Focus
+
+## Current Priorities
+
+## Success Criteria
+
+## Manual Goals
+`,
+  'agents.md': `# Agents
+## Current Status
+No autonomous agents run in this repository.
+
+## Intended Roles
+- Architect
+- Builder
+- Reviewer
+- Debugger
+
+## Operating Constraints
+- Use repository intelligence before editing code.
+- Preserve local-first, reviewable changes.
+`,
+  'code.md': `# Code
+## Implementation Entry Points
+Generated placeholder. Use this file to record important code entry points.
+
+## Notes
+Code should be interpreted through Goals, Architecture, Decisions, Backlog, and Validation.
+`,
+};
+
+const baselineStep = { id: 'baseline-files', label: 'Baseline Files' };
 
 const generatorSteps = [
   { id: 'architecture', label: 'Architecture', command: ['node', [join(appRoot, 'scripts/audit.mjs')]] },
@@ -75,6 +114,41 @@ function writeEvent(response, event) {
   response.write(`${JSON.stringify(event)}\n`);
 }
 
+async function ensureBaselineFiles(repositoryPath) {
+  const startedAt = Date.now();
+  const aiDir = join(repositoryPath, '.ai');
+  const created = [];
+  const preserved = [];
+
+  await mkdir(aiDir, { recursive: true });
+
+  for (const [fileName, content] of Object.entries(baselineFiles)) {
+    try {
+      await writeFile(join(aiDir, fileName), content, { flag: 'wx' });
+      created.push(fileName);
+    } catch (error) {
+      if (error?.code === 'EEXIST') {
+        preserved.push(fileName);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  const details = [
+    created.length ? `Created: ${created.join(', ')}` : 'Created: none',
+    preserved.length ? `Preserved existing: ${preserved.join(', ')}` : 'Preserved existing: none',
+  ];
+
+  return {
+    id: baselineStep.id,
+    label: baselineStep.label,
+    exitCode: 0,
+    durationMs: Date.now() - startedAt,
+    output: details.join('\n'),
+  };
+}
+
 async function handleRefresh(request, response) {
   const { repositoryPath } = await readJson(request);
   const resolvedPath = await validateRepositoryPath(repositoryPath);
@@ -85,9 +159,13 @@ async function handleRefresh(request, response) {
     'Cache-Control': 'no-cache',
     'Access-Control-Allow-Origin': '*',
   });
-  writeEvent(response, { type: 'started', repositoryPath: resolvedPath, total: generatorSteps.length });
+  writeEvent(response, { type: 'started', repositoryPath: resolvedPath, total: generatorSteps.length + 1 });
 
   const results = [];
+  writeEvent(response, { type: 'step-started', id: baselineStep.id, label: baselineStep.label });
+  const baselineResult = await ensureBaselineFiles(resolvedPath);
+  results.push(baselineResult);
+  writeEvent(response, { type: 'step-finished', ...baselineResult });
   for (const step of generatorSteps) {
     writeEvent(response, { type: 'step-started', id: step.id, label: step.label });
     const result = await runStep(step, resolvedPath);
