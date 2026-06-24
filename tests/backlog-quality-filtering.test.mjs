@@ -112,6 +112,11 @@ const explicitNearifyTasks = [
   '// ACTION: Validate vCard text fallback.',
   '// Future Work: Support richer event attendee signals.',
   '// Known Gap: Missing live encounter tracker sync.',
+  '// TODO support later',
+  '// TODO:',
+  '// Buttons',
+  '// Context',
+  '// language',
 ].join('\n');
 
 const explicitCommentItems = scanComments('Sources/Nearify/RelationshipContext.swift', explicitNearifyTasks);
@@ -125,3 +130,30 @@ assert.equal(explicitCommentItems.some((item) => item.title.includes('Live Encou
 assert.equal(classifyComment('BUG', 'Fix stale encounter aggregation.'), 'actionable');
 assert.equal(classifyComment('IMPLEMENT:', 'Add deterministic relationship-context fixtures.'), 'actionable');
 assert.equal(classifyComment('ACTION:', 'Validate vCard text fallback.'), 'actionable');
+
+
+const nearifyCommentLabels = [
+  '// Area',
+  '// Button',
+  '// Buttons',
+  '// Language',
+  '// Status',
+  '// Type',
+  '// Row',
+  '// Rows',
+  '// Context',
+  '// Facts',
+  '// Hierarchy',
+  '// TODO support later',
+  '// TODO:',
+  '// Note TODO: add hidden task later',
+].join('\n');
+
+const labelItems = scanComments('Sources/Nearify/CommentLabels.swift', nearifyCommentLabels);
+assert.deepEqual(labelItems, []);
+
+const forbiddenBacklogFragments = ['Area', 'Button', 'Buttons', 'Language', 'Status', 'Type', 'Row', 'Rows', 'Context', 'Facts', 'Hierarchy'];
+const generatedLabelBacklog = ['## High Priority', '- None detected', '## Medium Priority', '- None detected', '## Low Priority', '- None detected', ...labelItems.map((item) => item.title)].join('\n');
+for (const fragment of forbiddenBacklogFragments) {
+  assert.equal(generatedLabelBacklog.includes(fragment), false, `${fragment} should not appear in generated backlog`);
+}

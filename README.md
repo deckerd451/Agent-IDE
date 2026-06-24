@@ -110,7 +110,7 @@ Generate or refresh `.ai/backlog.md` locally:
 npm run backlog
 ```
 
-The backlog generator scans local code comments for explicit actionable markers (TODO, FIXME, HACK, BUILD, ROADMAP, FUTURE WORK, KNOWN GAPS, and MANUAL BACKLOG), then scans README and `.ai/` markdown for known gaps, future work, manual backlog, and explicit implementation recommendations. It classifies comments as actionable, informational, architectural, or validation; only actionable comments and high-confidence documented work items become prioritized backlog entries. Explanatory comments, architecture descriptions, validation output, detected scripts, configuration observations, and current-behavior notes are omitted. It writes prioritized backlog items with source, reason, and suggested next step while preserving anything already written under `## Manual Backlog`.
+The backlog generator only scans source comments when they start with an explicit task marker followed by a colon: TODO, FIXME, BUG, HACK, ROADMAP, FUTURE WORK, KNOWN GAP, IMPLEMENT, or ACTION. Generic comment harvesting is disabled, so section labels, headings, architecture comments, explanatory comments, generated markdown, validation output, and comments such as `// Buttons` or `// TODO support later` are omitted. README and `.ai/` markdown extraction is preserved for Future Work, Known Gaps, Manual Backlog, and explicit implementation recommendations. It writes prioritized backlog items with source, reason, and suggested next step while preserving anything already written under `## Manual Backlog`.
 
 
 Generate or refresh `.ai/decisions.md` locally:
