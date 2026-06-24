@@ -1,6 +1,6 @@
 # Architecture
 
-Last Audit: 2026-06-23T23:35:19.931Z
+Last Audit: 2026-06-24T00:16:59.907Z
 Confidence: 95%
 
 ## Product Thesis
@@ -25,6 +25,9 @@ README.md, .ai/goals.md, scripts/audit.mjs
 
 ## Current Focus
 The repository is currently focused on making repository understanding the primary surface of Agent IDE.
+
+Current Focus Evidence:
+.ai/goals.md
 
 ## Key Commands
 - npm run dev

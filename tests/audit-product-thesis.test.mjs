@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  inferCurrentFocus,
   inferProductThesis,
   isProductThesisBroadEnough,
   isProductThesisExcludedSource,
@@ -140,3 +141,48 @@ assert.deepEqual(productThesisCandidates(roadmapTableThenProse, 'docs/NEARIFY_IM
     preferred: true,
   },
 ]);
+
+
+const goalsWithCurrentFocus = `# Goals
+
+## Active
+- Improve unrelated active goal.
+
+## Current Focus
+Between Events experience: helping users know who to reach out to today when they are not currently at an event.
+
+## Future
+- Later work.
+`;
+
+const explicitFocusResult = inferCurrentFocus('', { 'goals.md': goalsWithCurrentFocus, 'backlog.md': '## Next\n- Infer this instead.' }, null, []);
+
+assert.deepEqual(explicitFocusResult, {
+  focus: 'Between Events experience: helping users know who to reach out to today when they are not currently at an event.',
+  evidence: '.ai/goals.md',
+});
+
+const multilineGoalsFocus = `# Goals
+
+## Current Focus
+Line one of the focus.
+
+- Keep this bullet verbatim too.
+`;
+
+assert.deepEqual(inferCurrentFocus('', { 'goals.md': multilineGoalsFocus }, null, []), {
+  focus: 'Line one of the focus.\n\n- Keep this bullet verbatim too.',
+  evidence: '.ai/goals.md',
+});
+
+const inferredFocusResult = inferCurrentFocus('', { 'backlog.md': '## Next\n- Build fallback focus' }, null, []);
+
+assert.equal(inferredFocusResult.focus, 'The repository is currently focused on build fallback focus.');
+assert.equal(inferredFocusResult.evidence, '.ai/backlog.md');
+
+const roadmapFocusResult = inferCurrentFocus('', {}, null, [], {
+  'docs/PRODUCT_ROADMAP.md': '## Next\n- Enable relationship reminders from roadmap',
+});
+
+assert.equal(roadmapFocusResult.focus, 'The repository is currently focused on enable relationship reminders from roadmap.');
+assert.equal(roadmapFocusResult.evidence, 'docs/PRODUCT_ROADMAP.md');
