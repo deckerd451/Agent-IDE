@@ -138,7 +138,7 @@ Generate or refresh `.ai/strategy.md` locally:
 npm run strategy
 ```
 
-The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, and Success Definition while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. For Nearify-style relationship products, it surfaces Follow-Ups Completed, relationship memory from real-world encounters, the Between Events experience, the warning not to treat the product as primarily an event app, and the success test that users know who to reach out to today and complete more follow-ups.
+The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, and Success Definition while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. For Nearify-style relationship products, it surfaces Follow-Ups Completed, relationship memory anchored in encounter evidence and real-world overlap, the Between Events experience, a deterministic reconnect-with-today experiment, the warning not to treat the product as primarily an event app, and goals-based success criteria without duplicating the product thesis.
 
 Generate or refresh `.ai/backlog.md` locally:
 
@@ -171,7 +171,7 @@ Generate or refresh `.ai/repository-health.md` locally from deterministic intell
 npm run health
 ```
 
-The health generator reads goals, architecture, backlog, decisions, validation, agents, code, and the exported architect prompt to summarize intelligence completeness, quality signals, detected risks, and one recommended next step while preserving anything already written under `## Manual Health Notes`. It uses local file checks only and does not call an LLM, cloud service, or agent.
+The health generator reads goals, architecture, backlog, decisions, validation, agents, code, and the exported architect prompt to summarize intelligence completeness, quality signals, strategy quality score, detected risks, strategy quality warnings, and one recommended next step while preserving anything already written under `## Manual Health Notes`. It uses local file checks only and does not call an LLM, cloud service, or agent.
 
 Export a role-specific prompt from the local `.ai/` repository context:
 

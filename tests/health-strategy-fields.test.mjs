@@ -13,6 +13,9 @@ await writeFile(join(dir, '.ai/strategy.md'), `# Strategy
 ## North Star Metric
 - Not detected yet.
 
+## Product Thesis
+Relationship memory
+
 ## Strategic Differentiator
 Relationship memory
 
@@ -28,5 +31,8 @@ const health = await readFile(join(dir, '.ai/repository-health.md'), 'utf8');
 assert.match(health, /- Strategy present/);
 assert.match(health, /- North Star Metric missing/);
 assert.match(health, /- Current Product Bet missing/);
+assert.match(health, /- Strategy quality score \d+\/100/);
 assert.match(health, /Strategy missing North Star Metric/);
 assert.match(health, /Strategy missing Current Product Bet/);
+assert.match(health, /Missing differentiator warning/);
+assert.match(health, /Weak success definition warning/);

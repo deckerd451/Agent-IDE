@@ -38,13 +38,33 @@ function section(markdown, heading) {
   return match?.[1]?.trim() ?? '';
 }
 
-function cleanSectionValue(value) {
+function cleanSectionValue(value, { preserveBullets = false } = {}) {
   return value
     .split('\n')
-    .map((line) => line.replace(/^[-*]\s+/, '').trim())
+    .map((line) => {
+      const trimmed = line.trim();
+      return preserveBullets ? trimmed : trimmed.replace(/^[-*]\s+/, '').trim();
+    })
     .filter(Boolean)
     .join('\n')
     .trim();
+}
+
+function withoutEvidence(value) {
+  return value
+    .split('\n')
+    .filter((line) => !/^Evidence:/i.test(line.trim()))
+    .join('\n')
+    .trim();
+}
+
+function normalizeComparable(value) {
+  return compact(withoutEvidence(value).replace(/^[-*]\s+/gm, '').replace(/^#+\s+/gm, '')).toLowerCase();
+}
+
+function isHeadingOnly(value) {
+  const cleaned = withoutEvidence(value).trim();
+  return /^(success definition|success criteria|current experiment|strategic differentiator|product thesis)$/i.test(cleaned.replace(/^#+\s*/, ''));
 }
 
 function firstSentence(markdown) {
@@ -62,12 +82,21 @@ async function strategyDocs() {
   return Object.fromEntries(await Promise.all(matches.map(async (path) => [relative(root, path), await readFile(path, 'utf8')])));
 }
 
-function explicitValue(sources, heading) {
+function explicitValue(sources, heading, options = {}) {
+  const headingOptions = heading === 'Success Definition' || heading === 'Success Criteria'
+    ? { preserveBullets: true, ...options }
+    : options;
   for (const source of sources) {
-    const value = cleanSectionValue(section(source.text, heading));
-    if (value) return { value, evidence: source.name };
+    const value = cleanSectionValue(section(source.text, heading), headingOptions);
+    if (value && !isHeadingOnly(value)) return { value, evidence: source.name };
   }
   return null;
+}
+
+function successCriteriaValue(sources) {
+  return explicitValue(sources.filter((source) => source.name === '.ai/goals.md'), 'Success Criteria')
+    ?? explicitValue(sources, 'Success Criteria')
+    ?? explicitValue(sources, 'Success Definition');
 }
 
 function matchLine(sources, patterns) {
@@ -81,14 +110,42 @@ function matchLine(sources, patterns) {
   return null;
 }
 
+function inferCurrentExperiment(sources) {
+  const currentFocus = explicitValue(sources, 'Current Focus');
+  if (!currentFocus) return null;
+  const priorities = explicitValue(sources, 'Current Priorities') ?? explicitValue(sources, 'Priorities');
+  const text = `${currentFocus.value} ${priorities?.value ?? ''} ${sources.map((source) => source.text).join(' ')}`;
+  if (/reconnect|reach out|follow[- ]?up|between events|relationship/i.test(text)) {
+    return { value: 'Can the system reliably identify who a user should reconnect with today?', evidence: [currentFocus.evidence, priorities?.evidence].filter(Boolean).join(', ') };
+  }
+  if (/onboard|activation|first run|setup/i.test(text)) {
+    return { value: 'Can the system reliably guide a user to initial value during onboarding?', evidence: [currentFocus.evidence, priorities?.evidence].filter(Boolean).join(', ') };
+  }
+  if (/search|discover|find/i.test(text)) {
+    return { value: 'Can the system reliably help a user find the next valuable action?', evidence: [currentFocus.evidence, priorities?.evidence].filter(Boolean).join(', ') };
+  }
+  return { value: `Can the system reliably deliver the current focus: ${currentFocus.value.replace(/[.?]$/, '')}?`, evidence: [currentFocus.evidence, priorities?.evidence].filter(Boolean).join(', ') };
+}
+
+function inferStrategicDifferentiator(sources, productThesis) {
+  const nearify = inferNearify(sources, 'Strategic Differentiator');
+  const candidates = [
+    explicitValue(sources, 'Strategic Differentiator'),
+    nearify ? { value: nearify, evidence: 'deterministic Nearify product signals' } : null,
+    matchLine(sources, [/relationship memory/i, /encounter evidence/i, /real-world overlap/i, /physically grounded relationship graph/i, /follow-up intelligence/i]),
+  ].filter(Boolean);
+  const thesis = normalizeComparable(productThesis?.value ?? '');
+  return candidates.find((candidate) => normalizeComparable(candidate.value) !== thesis) ?? null;
+}
+
 function inferNearify(sources, field) {
   const all = sources.map((source) => source.text).join('\n');
   if (!/Nearify/i.test(all)) return null;
   const hasFollowUps = /follow[- ]?ups?/i.test(all);
   const hasBetweenEvents = /between events/i.test(all);
-  const hasRelationshipMemory = /relationship memory|relationship context|real-world relationships?|real-world encounters?|encounter/i.test(all);
+  const hasRelationshipMemory = /relationship memory|relationship context|real-world relationships?|real-world encounters?|encounter|overlap|follow[- ]?up intelligence/i.test(all);
   if (field === 'North Star Metric' && hasFollowUps) return 'Follow-Ups Completed';
-  if (field === 'Strategic Differentiator' && hasRelationshipMemory) return 'Relationship memory from real-world encounters.';
+  if (field === 'Strategic Differentiator' && hasRelationshipMemory) return 'Relationship memory anchored in encounter evidence and real-world overlap.';
   if (field === 'Current Product Bet' && hasBetweenEvents) return 'Between Events experience.';
   if (field === 'What Not To Build' && /event app|events?/i.test(all)) return 'Do not treat Nearify as primarily an event app.';
   if (field === 'Success Definition' && (hasFollowUps || /reach out/i.test(all))) return 'User knows who to reach out to today and completes more follow-ups.';
@@ -96,8 +153,24 @@ function inferNearify(sources, field) {
 }
 
 function inferField(field, sources) {
+  if (field === 'Success Definition') {
+    const success = successCriteriaValue(sources);
+    if (success) return success;
+  }
+
+  if (field === 'Strategic Differentiator') {
+    const productThesis = explicitValue(sources, 'Product Thesis') ?? explicitValue(sources, 'Product Purpose');
+    const differentiator = inferStrategicDifferentiator(sources, productThesis);
+    if (differentiator) return differentiator;
+  }
+
+  if (field === 'Current Experiment') {
+    const experiment = inferCurrentExperiment(sources);
+    if (experiment) return experiment;
+  }
+
   const explicit = explicitValue(sources, field);
-  if (explicit) return explicit;
+  if (explicit && (field !== 'Strategic Differentiator' || normalizeComparable(explicit.value) !== normalizeComparable(explicitValue(sources, 'Product Thesis')?.value ?? ''))) return explicit;
 
   const patterns = {
     'North Star Metric': [/north star/i, /follow[- ]?ups? completed/i, /primary metric/i],
