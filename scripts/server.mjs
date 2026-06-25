@@ -82,6 +82,154 @@ const generatorSteps = [
   { id: 'context-package', label: 'Context Package', command: ['node', [join(appRoot, 'scripts/context-package.mjs')]] },
 ];
 
+
+const controlFiles = ['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'repository-health.md', 'context-package.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'];
+
+async function readAiText(repositoryPath, fileName) {
+  return readFile(join(repositoryPath, '.ai', fileName), 'utf8').catch((error) => {
+    if (error?.code === 'ENOENT') return '';
+    throw error;
+  });
+}
+
+function mdSection(markdown, heading) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = markdown.match(new RegExp(`^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'));
+  return match?.[1]?.trim() ?? '';
+}
+
+function firstLine(value, fallback = 'Unknown') {
+  return value.split('\n').map((line) => line.replace(/^[-*]\s+/, '').trim()).find(Boolean) ?? fallback;
+}
+
+function metricFromHealth(health, label) {
+  return health.match(new RegExp(`^${label}:\\s*(.+)$`, 'im'))?.[1]?.trim() ?? 'Unknown';
+}
+
+function qualitySignal(health, label) {
+  const match = health.match(new RegExp(`^-\\s*${label}\\s+(.+)$`, 'im'));
+  return match?.[1]?.trim() ?? 'Unknown';
+}
+
+function completenessScore(health) {
+  const section = mdSection(health, 'Intelligence Completeness');
+  const rows = [...section.matchAll(/^-\s+[^:]+:\s+(Present|Missing)/gim)];
+  if (!rows.length) return 'Unknown';
+  const present = rows.filter((row) => row[1].toLowerCase() === 'present').length;
+  return `${present}/${rows.length} present`;
+}
+
+function topBacklogItem(backlog) {
+  const prioritized = mdSection(backlog, 'Prioritized Backlog') || mdSection(backlog, 'Current Backlog') || mdSection(backlog, 'Manual Backlog') || backlog;
+  return prioritized.split('\n').map((line) => line.trim()).find((line) => /^[-*]\s+/.test(line))?.replace(/^[-*]\s+/, '').trim() ?? '';
+}
+
+function auditRecommendation(health) {
+  const risks = mdSection(health, 'Risks');
+  const firstRisk = risks.split('\n').map((line) => line.trim()).find((line) => /^[-*]\s+/.test(line) && !/No repository health risks/i.test(line));
+  return firstRisk ? `Resolve audit finding: ${firstRisk.replace(/^[-*]\s+/, '')}` : '';
+}
+
+function summarizeSnapshot(docs) {
+  const health = docs['repository-health.md'] ?? '';
+  const strategy = docs['strategy.md'] ?? '';
+  const validation = docs['validation.md'] ?? '';
+  const backlog = docs['backlog.md'] ?? '';
+  const healthRecommendation = firstLine(mdSection(health, 'Recommended Next Step'), '');
+  const recommendedNextStep = auditRecommendation(health) || healthRecommendation || topBacklogItem(backlog) || 'Refresh repository intelligence to generate a recommended next step.';
+  return {
+    timestamp: new Date().toISOString(),
+    overallHealth: metricFromHealth(health, 'Overall Health'),
+    intelligenceCompleteness: completenessScore(health),
+    strategyQuality: qualitySignal(health, 'Strategy quality score'),
+    productSignalQuality: qualitySignal(health, 'Product Signal Quality'),
+    repositoryHandoffReadiness: docs['context-package.md'] && docs['prompts/architect.md'] && docs['prompts/builder.md'] && docs['prompts/reviewer.md'] && docs['prompts/debugger.md'] ? 'Ready' : 'Incomplete',
+    lastRefresh: metricFromHealth(health, 'Last Audit'),
+    currentConfidence: metricFromHealth(health, 'Confidence'),
+    strategyConfidence: qualitySignal(health, 'Strategy confidence') || firstLine(mdSection(strategy, 'Strategy Confidence'), 'Unknown'),
+    validationConfidence: firstLine(mdSection(validation, 'Confidence'), 'Unknown'),
+    recommendedNextStep,
+    sections: {
+      strategy: ['Product Thesis', 'North Star Metric', 'Strategic Differentiator', 'Current Product Bet', 'Current Experiment', 'What Not To Build', 'Success Definition'].map((h) => `${h}: ${firstLine(mdSection(strategy, h), '')}`).join('\n'),
+      architecture: ['Product Thesis', 'Current Focus', 'Core Systems', 'Primary Flows'].map((h) => `${h}: ${firstLine(mdSection(docs['architecture.md'] ?? '', h), '')}`).join('\n'),
+      backlog: (mdSection(backlog, 'Prioritized Backlog') || mdSection(backlog, 'Current Backlog') || backlog).split('\n').filter((line) => /^[-*]\s+/.test(line.trim())).map((line) => line.trim()).join('\n'),
+      decisions: (mdSection(docs['decisions.md'] ?? '', 'Active Decisions') || docs['decisions.md'] || '').split('\n').filter((line) => /^[-*]\s+/.test(line.trim())).map((line) => line.trim()).join('\n'),
+      validation: `${firstLine(mdSection(validation, 'Overall Status'), '')}\n${firstLine(mdSection(validation, 'Confidence'), '')}`,
+      healthScore: `${metricFromHealth(health, 'Overall Health')} / ${metricFromHealth(health, 'Confidence')}`,
+    },
+  };
+}
+
+function lineSet(value) { return new Set(value.split('\n').map((line) => line.trim()).filter(Boolean)); }
+function setDiff(next, previous) { return [...next].filter((item) => !previous.has(item)); }
+function diffSnapshots(previous, current) {
+  if (!previous) return { summary: 'No previous intelligence snapshot was available; this refresh established the baseline.', strategyChanges: [], architectureChanges: [], backlogAdditions: [], backlogRemovals: [], decisionAdditions: [], validationChanges: [], healthScoreChanges: [] };
+  const diffSection = (key) => setDiff(lineSet(current.sections[key]), lineSet(previous.sections[key]));
+  const backlogPrevious = lineSet(previous.sections.backlog);
+  const backlogCurrent = lineSet(current.sections.backlog);
+  const result = {
+    summary: 'No material intelligence changes detected.',
+    strategyChanges: diffSection('strategy'),
+    architectureChanges: diffSection('architecture'),
+    backlogAdditions: setDiff(backlogCurrent, backlogPrevious),
+    backlogRemovals: setDiff(backlogPrevious, backlogCurrent),
+    decisionAdditions: diffSection('decisions'),
+    validationChanges: diffSection('validation'),
+    healthScoreChanges: previous.sections.healthScore === current.sections.healthScore ? [] : [`${previous.sections.healthScore} → ${current.sections.healthScore}`],
+  };
+  const count = Object.entries(result).filter(([, value]) => Array.isArray(value)).reduce((sum, [, value]) => sum + value.length, 0);
+  if (count) result.summary = `${count} deterministic intelligence change${count === 1 ? '' : 's'} detected since the previous refresh.`;
+  return result;
+}
+
+function evidenceItems(docs) {
+  const items = [];
+  for (const [file, content] of Object.entries(docs)) {
+    const lines = content.split('\n');
+    let section = 'Document';
+    lines.forEach((line, index) => {
+      const heading = line.match(/^##\s+(.+)$/);
+      if (heading) section = heading[1].trim();
+      const evidence = line.match(/Evidence(?:\s+Sources?)?:\s*(.+)$/i);
+      if (evidence) {
+        items.push({ file, section, line: index + 1, evidence: evidence[1].trim(), confidence: /confidence/i.test(section) ? firstLine(line) : 'Evidence-backed' });
+      }
+    });
+  }
+  return items;
+}
+
+function handoffPackages(docs) {
+  return {
+    context: docs['context-package.md'] ?? '',
+    architect: docs['prompts/architect.md'] ?? '',
+    builder: docs['prompts/builder.md'] ?? '',
+    reviewer: docs['prompts/reviewer.md'] ?? '',
+    debugger: docs['prompts/debugger.md'] ?? '',
+  };
+}
+
+async function readControlPlane(repositoryPath) {
+  const docs = Object.fromEntries(await Promise.all(controlFiles.map(async (file) => [file, await readAiText(repositoryPath, file)])));
+  const aiDir = join(repositoryPath, '.ai');
+  const snapshot = summarizeSnapshot(docs);
+  const savedDiff = JSON.parse(await readFile(join(aiDir, 'intelligence-diff.json'), 'utf8').catch(() => 'null'));
+  const timeline = JSON.parse(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => '[]'));
+  return { status: snapshot, diff: savedDiff ?? diffSnapshots(null, snapshot), evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
+}
+
+async function persistControlPlane(repositoryPath, previousSnapshot) {
+  const data = await readControlPlane(repositoryPath);
+  data.diff = diffSnapshots(previousSnapshot, data.status);
+  const timelinePath = join(repositoryPath, '.ai', 'intelligence-timeline.json');
+  const timeline = JSON.parse(await readFile(timelinePath, 'utf8').catch(() => '[]'));
+  timeline.push({ timestamp: data.status.timestamp, repositoryHealth: data.status.overallHealth, strategyQuality: data.status.strategyQuality, confidence: data.status.currentConfidence, recommendation: data.status.recommendedNextStep });
+  await writeFile(join(repositoryPath, '.ai', 'intelligence-snapshot.json'), JSON.stringify(data.status, null, 2));
+  await writeFile(join(repositoryPath, '.ai', 'intelligence-diff.json'), JSON.stringify(data.diff, null, 2));
+  await writeFile(timelinePath, JSON.stringify(timeline.slice(-100), null, 2));
+  return data;
+}
+
 function sendJson(response, statusCode, data) {
   response.writeHead(statusCode, {
     'Content-Type': 'application/json',
@@ -174,6 +322,7 @@ async function handleRefresh(request, response) {
   const { repositoryPath } = await readJson(request);
   const resolvedPath = await validateRepositoryPath(repositoryPath);
   await mkdir(join(resolvedPath, '.ai'), { recursive: true });
+  const previousSnapshot = JSON.parse(await readFile(join(resolvedPath, '.ai', 'intelligence-snapshot.json'), 'utf8').catch(() => 'null'));
 
   response.writeHead(200, {
     'Content-Type': 'application/x-ndjson',
@@ -195,6 +344,7 @@ async function handleRefresh(request, response) {
   }
 
   const failed = results.filter((result) => result.exitCode !== 0);
+  if (failed.length === 0) await persistControlPlane(resolvedPath, previousSnapshot);
   writeEvent(response, {
     type: failed.length === 0 ? 'success' : 'failure',
     repositoryPath: resolvedPath,
@@ -232,6 +382,10 @@ const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host}`);
     if (request.method === 'POST' && url.pathname === '/api/repository/refresh') return handleRefresh(request, response);
     if (request.method === 'GET' && url.pathname === '/api/repository/file') return handleFile(request, response, url);
+    if (request.method === 'GET' && url.pathname === '/api/repository/control-plane') {
+      const resolvedPath = await validateRepositoryPath(url.searchParams.get('repositoryPath'));
+      return sendJson(response, 200, await readControlPlane(resolvedPath));
+    }
     if (request.method === 'GET' && url.pathname === '/api/health') return sendJson(response, 200, { ok: true });
     sendJson(response, 404, { error: 'Not found' });
   } catch (error) {
