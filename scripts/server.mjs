@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { persistQuality } from './intelligence-quality.mjs';
+import { verifyIntelligence } from './intelligence-verification.mjs';
 import { generateNextImprovement } from './next-improvement.mjs';
 import { fileURLToPath } from 'node:url';
 
@@ -10,7 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
-const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'intelligence-quality.json', 'intelligence-history.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
 
 const baselineFiles = {
   'goals.md': `# Goals
@@ -355,15 +356,16 @@ async function readControlPlane(repositoryPath) {
   const snapshot = summarizeSnapshot(docs, repositoryPath);
   const savedDiff = JSON.parse(await readFile(join(aiDir, 'intelligence-diff.json'), 'utf8').catch(() => 'null'));
   const quality = JSON.parse(await readFile(join(aiDir, 'intelligence-quality.json'), 'utf8').catch(() => 'null'));
+  const verification = await verifyIntelligence(repositoryPath, { displayedContents: docs, persist: false });
   const qualityHistory = JSON.parse(await readFile(join(aiDir, 'intelligence-history.json'), 'utf8').catch(() => '[]'));
   const timeline = JSON.parse(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => '[]'));
   const recommendation = docs['next-improvement-prompt.md']?.trim()
     ? { title: firstLine(docs['next-improvement-prompt.md'].replace(/^#\s*/, ''), snapshot.recommendedNextStep), actionability: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Actionability', 'Not classified.'), packageType: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Package Type', 'implementation'), explanation: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Source risk/recommendation', 'See generated prompt.'), whyItMatters: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Reason', 'Generated from Control Plane intelligence.'), evidenceSource: '.ai/next-improvement-prompt.md', prompt: docs['next-improvement-prompt.md'] }
     : recommendationDetails(docs);
-  return { status: snapshot, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
+  return { status: snapshot, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
 }
 
-async function persistControlPlane(repositoryPath, previousSnapshot) {
+async function persistControlPlane(repositoryPath, previousSnapshot, refreshStartedAt = new Date()) {
   const data = await readControlPlane(repositoryPath);
   data.diff = diffSnapshots(previousSnapshot, data.status);
   const timelinePath = join(repositoryPath, '.ai', 'intelligence-timeline.json');
@@ -372,9 +374,6 @@ async function persistControlPlane(repositoryPath, previousSnapshot) {
   await writeFile(join(repositoryPath, '.ai', 'intelligence-snapshot.json'), JSON.stringify(data.status, null, 2));
   await writeFile(join(repositoryPath, '.ai', 'intelligence-diff.json'), JSON.stringify(data.diff, null, 2));
   await writeFile(timelinePath, JSON.stringify(timeline.slice(-100), null, 2));
-  const qualityResult = await persistQuality(repositoryPath);
-  data.quality = qualityResult.snapshot;
-  data.qualityHistory = qualityResult.history;
   const nextImprovement = await generateNextImprovement(repositoryPath);
   data.recommendation = {
     title: nextImprovement.choice.title,
@@ -386,6 +385,12 @@ async function persistControlPlane(repositoryPath, previousSnapshot) {
     prompt: nextImprovement.prompt,
   };
   data.packages.builder = nextImprovement.prompt;
+  await persistQuality(repositoryPath);
+  data.verification = await verifyIntelligence(repositoryPath, { refreshStartedAt });
+  const qualityResult = await persistQuality(repositoryPath);
+  data.quality = qualityResult.snapshot;
+  data.qualityHistory = qualityResult.history;
+  data.verification = await verifyIntelligence(repositoryPath, { refreshStartedAt });
   return data;
 }
 
@@ -488,7 +493,8 @@ async function handleRefresh(request, response) {
     'Cache-Control': 'no-cache',
     'Access-Control-Allow-Origin': '*',
   });
-  writeEvent(response, { type: 'started', repositoryPath: resolvedPath, total: generatorSteps.length + 1 });
+  const startedAt = Date.now();
+  writeEvent(response, { type: 'started', repositoryPath: resolvedPath, total: generatorSteps.length + 2 });
 
   const results = [];
   writeEvent(response, { type: 'step-started', id: baselineStep.id, label: baselineStep.label });
@@ -503,7 +509,11 @@ async function handleRefresh(request, response) {
   }
 
   const failed = results.filter((result) => result.exitCode !== 0);
-  if (failed.length === 0) await persistControlPlane(resolvedPath, previousSnapshot);
+  if (failed.length === 0) {
+    writeEvent(response, { type: 'step-started', id: 'verification', label: 'Intelligence Verification' });
+    await persistControlPlane(resolvedPath, previousSnapshot, new Date(startedAt));
+    writeEvent(response, { type: 'step-finished', id: 'verification', label: 'Intelligence Verification', exitCode: 0, durationMs: Date.now() - startedAt, output: 'Generated .ai/intelligence-verification.json' });
+  }
   writeEvent(response, {
     type: failed.length === 0 ? 'success' : 'failure',
     repositoryPath: resolvedPath,
@@ -558,4 +568,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 }
 
-export { summarizeSnapshot, understandingSummary, recommendationDetails, validationState, productThesisState };
+export { summarizeSnapshot, understandingSummary, recommendationDetails, validationState, productThesisState, readControlPlane, persistControlPlane };

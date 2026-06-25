@@ -31,6 +31,10 @@ type ControlPlaneRecommendation = {
   prompt: string;
 };
 
+type VerificationArtifact = { artifact: string; generatedAt: string | null; generatedHash: string | null; displayedHash: string | null; status: 'Verified' | 'Failed'; failures: string[] };
+
+type VerificationSnapshot = { status: 'Verified' | 'Failed'; score: number; summary: string; failures: string[]; artifacts: VerificationArtifact[] };
+
 type QualitySnapshot = {
   overallScore: number;
   trend: 'Improving' | 'Stable' | 'Needs Attention';
@@ -40,6 +44,7 @@ type QualitySnapshot = {
   consistency: { score: number; contradictions: string[]; duplicatedSections: string[] };
   freshness: { score: number; staleDocuments: string[]; filesChanged: number; manualNotesPreserved: boolean };
   confidence: { score: number; overallRepositoryConfidence: string };
+  verification?: { score: number; status: string; failures: string[] };
   drift: { newRisks: string[]; removedRisks: string[] };
   recentRegressions: string[];
   recentImprovements: string[];
@@ -54,6 +59,7 @@ type ControlPlane = {
   diff: Record<string, string | string[]>;
   quality: QualitySnapshot | null;
   qualityHistory: Array<Record<string, unknown>>;
+  verification: VerificationSnapshot | null;
   evidence: Array<{ file: string; section: string; line: number; evidence: string; confidence: string }>;
   packages: Record<string, string>;
   timeline: Array<{ timestamp: string; repositoryHealth: string; strategyQuality: string; confidence: string; recommendation: string }>;
@@ -350,6 +356,25 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         </div>
       </section>
 
+
+      {data.verification && data.verification.status !== 'Verified' && (
+        <section className="controlCard warningCard" aria-label="Repository intelligence verification warning">
+          <h2>Repository Intelligence Verification</h2>
+          <p>⚠ Displayed intelligence does not match the latest generated intelligence.</p>
+          <p><b>Recommended action:</b> Refresh Repository Intelligence.</p>
+        </section>
+      )}
+
+      {data.verification && (
+        <section className="controlCard qualityCard" aria-label="Repository intelligence verification">
+          <div className="qualityHeader"><div><small>Repository Intelligence Verification</small><strong>{data.verification.score}%</strong></div><span className={stateClass(data.verification.status === 'Verified' ? 'Present' : 'Needs Attention')}>{data.verification.status}</span></div>
+          <p>{data.verification.summary}</p>
+          <div className="understandingGrid">
+            {data.verification.artifacts.map((artifact) => <div className="understandingItem" key={artifact.artifact}><span>{artifact.artifact}</span><strong className={stateClass(artifact.status === 'Verified' ? 'Present' : 'Needs Attention')}>{artifact.status === 'Verified' ? '✓ Verified' : '⚠ Stale'}</strong>{artifact.failures.length > 0 && <small>{artifact.failures.join(' ')}</small>}</div>)}
+          </div>
+        </section>
+      )}
+
       {data.quality && (
         <section className="controlCard qualityCard" aria-label="Intelligence quality">
           <div className="qualityHeader"><div><small>Overall Quality</small><strong>{data.quality.overallScore}/100</strong></div><span className={stateClass(data.quality.trend === 'Needs Attention' ? 'Needs Attention' : 'Present')}>Trend: {data.quality.trend}</span></div>
@@ -359,6 +384,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
             <div><small>Consistency</small><strong>{data.quality.consistency.score}%</strong></div>
             <div><small>Freshness</small><strong>{data.quality.freshness.score}%</strong></div>
             <div><small>Confidence</small><strong>{data.quality.confidence.score}%</strong></div>
+            <div><small>Verification</small><strong>{data.quality.verification?.score ?? data.verification?.score ?? 0}%</strong></div>
           </div>
           <div className="answerGrid">
             <div><h2>Recent regressions</h2>{data.quality.recentRegressions.length ? <ul>{data.quality.recentRegressions.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No recent regressions detected.</p>}</div>

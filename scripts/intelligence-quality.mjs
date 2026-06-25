@@ -2,7 +2,7 @@ import { readFile, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
 export const canonicalIntelligenceFiles = ['goals.md'];
-export const generatedIntelligenceFiles = ['strategy.md','architecture.md','repository-health.md','context-package.md','intelligence-quality.json','intelligence-history.json','intelligence-snapshot.json','intelligence-diff.json','next-improvement-prompt.md','prompts/architect.md','prompts/builder.md','prompts/reviewer.md','prompts/debugger.md'];
+export const generatedIntelligenceFiles = ['strategy.md','architecture.md','repository-health.md','context-package.md','intelligence-quality.json','intelligence-history.json','intelligence-snapshot.json','intelligence-diff.json','intelligence-verification.json','next-improvement-prompt.md','prompts/architect.md','prompts/builder.md','prompts/reviewer.md','prompts/debugger.md'];
 export const supportingIntelligenceFiles = ['decisions.md','validation.md','backlog.md','agents.md','code.md','intelligence-audit.md'];
 export const derivedArtifactFiles = [...generatedIntelligenceFiles, ...supportingIntelligenceFiles];
 export const qualityFiles = [...canonicalIntelligenceFiles, ...derivedArtifactFiles];
@@ -145,6 +145,9 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const validationConfidence = firstLine(mdSection(docs['validation.md'] ?? '', 'Confidence'), 'Unknown');
   const existingConfidence = (docs['repository-health.md'] ?? '').match(/^Confidence:\s*(.+)$/im)?.[1]?.trim() ?? 'Unknown';
   const confidenceScore = Math.round((confidenceValue(existingConfidence) + confidenceValue(strategyConfidence) + confidenceValue(validationConfidence)) / 3);
+  const verification = JSON.parse(docs['intelligence-verification.json'] || 'null');
+  const verificationScore = typeof verification?.score === 'number' ? verification.score : 100;
+  const verificationFailures = Array.isArray(verification?.failures) ? verification.failures : [];
   const risks = extractRisks(docs, Object.keys(consistencyDocs));
   const backlogCount = backlogItems(docs['backlog.md'] ?? '').length;
   const current = { fingerprints: { productThesis: normalized(thesisValues[0] ?? ''), strategy: normalized(mdSection(docs['strategy.md'] ?? '', 'Current Product Bet') || docs['strategy.md'] || ''), architecture: normalized(mdSection(docs['architecture.md'] ?? '', 'Core Systems') || docs['architecture.md'] || '') }, risks, backlogCount };
@@ -154,8 +157,8 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const riskScore = Math.max(0, 100 - risks.length * 8);
   const canonicalIntelligenceQualityScore = Math.round(canonicalCoverageScore * 0.35 + consistencyScore * 0.25 + canonicalFreshnessScore * 0.15 + confidenceScore * 0.2 + riskScore * 0.05);
   const generatedExportQualityScore = Math.round(exportCoverageScore * 0.55 + exportFreshnessScore * 0.35 + (promptsPresent && docs['context-package.md']?.trim() ? 100 : 50) * 0.1);
-  const overallScore = Math.round(canonicalIntelligenceQualityScore * 0.85 + generatedExportQualityScore * 0.15);
-  const snapshot = { timestamp: now.toISOString(), overallScore, canonicalIntelligenceQuality: { score: canonicalIntelligenceQualityScore, coverageScore: canonicalCoverageScore, consistencyScore, freshnessScore: canonicalFreshnessScore, sourceOfTruth: 'goals.md' }, generatedExportQuality: { score: generatedExportQualityScore, coverageScore: exportCoverageScore, freshnessScore: exportFreshnessScore, promptsFreshnessOnly: true }, coverage: { score: coverageScore, ...coverageItems }, consistency: { score: consistencyScore, productThesisConsistent: !thesisContradictory, currentFocusConsistent: !focusContradictory, northStarConsistent: !northStarContradictory, validationConsistent, strategyConsistent, strategyReferencesSupportedByEvidence: strategyEvidence, duplicatedSections: duplicates, contradictions }, freshness: { score: freshnessScore, lastRefresh: now.toISOString(), filesChanged: previousQuality ? Number(drift.productThesisChanged) + Number(drift.strategyChanged) + Number(drift.architectureChanged) + Number(drift.backlogGrew || drift.backlogShrank) + drift.newRisks.length + drift.removedRisks.length : 0, staleDocuments, canonicalStaleDocuments, derivedStaleDocuments, manualNotesPreserved }, confidence: { score: confidenceScore, existingConfidence, strategyConfidence, validationConfidence, overallRepositoryConfidence: confidenceScore >= 80 ? 'High' : confidenceScore >= 55 ? 'Medium' : 'Low' }, drift, risks, backlogCount, fingerprints: current.fingerprints, recentRegressions, recentImprovements };
+  const overallScore = Math.round(canonicalIntelligenceQualityScore * 0.75 + generatedExportQualityScore * 0.1 + verificationScore * 0.15);
+  const snapshot = { timestamp: now.toISOString(), overallScore, canonicalIntelligenceQuality: { score: canonicalIntelligenceQualityScore, coverageScore: canonicalCoverageScore, consistencyScore, freshnessScore: canonicalFreshnessScore, sourceOfTruth: 'goals.md' }, generatedExportQuality: { score: generatedExportQualityScore, coverageScore: exportCoverageScore, freshnessScore: exportFreshnessScore, promptsFreshnessOnly: true }, coverage: { score: coverageScore, ...coverageItems }, consistency: { score: consistencyScore, productThesisConsistent: !thesisContradictory, currentFocusConsistent: !focusContradictory, northStarConsistent: !northStarContradictory, validationConsistent, strategyConsistent, strategyReferencesSupportedByEvidence: strategyEvidence, duplicatedSections: duplicates, contradictions }, freshness: { score: freshnessScore, lastRefresh: now.toISOString(), filesChanged: previousQuality ? Number(drift.productThesisChanged) + Number(drift.strategyChanged) + Number(drift.architectureChanged) + Number(drift.backlogGrew || drift.backlogShrank) + drift.newRisks.length + drift.removedRisks.length : 0, staleDocuments, canonicalStaleDocuments, derivedStaleDocuments, manualNotesPreserved }, confidence: { score: confidenceScore, existingConfidence, strategyConfidence, validationConfidence, overallRepositoryConfidence: confidenceScore >= 80 ? 'High' : confidenceScore >= 55 ? 'Medium' : 'Low' }, verification: { score: verificationScore, status: verification?.status ?? 'Missing', failures: verificationFailures }, drift, risks, backlogCount, fingerprints: current.fingerprints, recentRegressions, recentImprovements };
   return { ...snapshot, trend: computeTrend(previousHistory, snapshot), recommendedAction: recommendQualityAction(snapshot) };
 }
 
@@ -164,6 +167,7 @@ export function recommendQualityAction(snapshot) {
   if (missing) return `Generate missing intelligence: ${missing.replace(/\.md$/, '')}.`;
   if (snapshot.consistency.contradictions.length) return `Resolve contradiction: ${snapshot.consistency.contradictions[0]}`;
   if (snapshot.confidence.score < 55) return 'Improve weak confidence by adding deterministic validation or evidence.';
+  if (snapshot.verification?.failures?.length) return `Refresh Repository Intelligence: ${snapshot.verification.failures[0]}`;
   if (snapshot.freshness.canonicalStaleDocuments.length) return `Refresh stale intelligence: ${snapshot.freshness.canonicalStaleDocuments[0]}.`;
   if (snapshot.backlogCount === 0) return 'Add a prioritized backlog item tied to repository intelligence.';
   return 'Keep refreshing intelligence after meaningful repository changes.';

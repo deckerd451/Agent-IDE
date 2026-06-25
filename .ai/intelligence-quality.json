@@ -1,11 +1,12 @@
 {
-  "timestamp": "2026-06-25T17:48:22.812Z",
+  "timestamp": "2026-06-25T20:51:03.521Z",
   "overallScore": 97,
   "canonicalIntelligenceQuality": {
     "score": 96,
     "coverageScore": 100,
     "consistencyScore": 100,
-    "freshnessScore": 100
+    "freshnessScore": 100,
+    "sourceOfTruth": "goals.md"
   },
   "generatedExportQuality": {
     "score": 100,
@@ -40,12 +41,12 @@
   },
   "freshness": {
     "score": 100,
-    "lastRefresh": "2026-06-25T17:48:22.812Z",
-    "filesChanged": 1,
+    "lastRefresh": "2026-06-25T20:51:03.521Z",
+    "filesChanged": 0,
     "staleDocuments": [],
     "canonicalStaleDocuments": [],
     "derivedStaleDocuments": [],
-    "manualNotesPreserved": true
+    "manualNotesPreserved": false
   },
   "confidence": {
     "score": 82,
@@ -54,6 +55,11 @@
     "validationConfidence": "Medium",
     "overallRepositoryConfidence": "High"
   },
+  "verification": {
+    "score": 100,
+    "status": "Verified",
+    "failures": []
+  },
   "drift": {
     "productThesisChanged": false,
     "strategyChanged": false,
@@ -61,23 +67,19 @@
     "backlogGrew": false,
     "backlogShrank": false,
     "newRisks": [],
-    "removedRisks": [
-      "Backlog contains possible noise"
-    ]
+    "removedRisks": []
   },
   "risks": [
     "Missing manual goals"
   ],
-  "backlogCount": 18,
+  "backlogCount": 22,
   "fingerprints": {
     "productThesis": "agent ide makes repository understanding the primary developer interface for ai ready developer handoffs.",
     "strategy": "the repository is currently focused on making repository understanding the primary surface of agent ide.",
     "architecture": "dashboard ui: inferred from target repository structure and naming. repository intelligence contract: inferred from target repository structure and naming. local audit engine: inferred from target repository structure and naming."
   },
   "recentRegressions": [],
-  "recentImprovements": [
-    "Removed risk: Backlog contains possible noise"
-  ],
+  "recentImprovements": [],
   "trend": "Stable",
   "recommendedAction": "Keep refreshing intelligence after meaningful repository changes."
 }
