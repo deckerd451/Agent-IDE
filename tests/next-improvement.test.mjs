@@ -15,22 +15,88 @@ function choice(overrides = {}) {
   return chooseNextImprovement({ health: '# Repository Health\n\n## Risks\n- No repository health risks detected.\n', quality: healthyQuality, backlog: '# Backlog\n\n## Prioritized Backlog\n- Useful work.\n', strategy: '# Strategy\n\n## Strategy Confidence\nHigh\n', contextPackage: '# Context Package\nReady.\n', audit: '', ...overrides });
 }
 
-test('contradiction risk produces a consistency cleanup prompt', () => {
-  const selected = choice({ quality: { ...healthyQuality, consistency: { contradictions: ['Product Thesis differs across Goals, Strategy, and Architecture.'], duplicatedSections: [] } } });
-  assert.equal(selected.kind, 'consistency-cleanup');
-  assert.match(renderPrompt(selected), /contradictory or duplicate canonical intelligence/i);
+function assertCoherent(selected, expected) {
+  const prompt = renderPrompt(selected);
+  assert.equal(selected.id, expected.id);
+  assert.equal(selected.title, expected.title);
+  assert.match(prompt, new RegExp(`# ${expected.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  assert.match(prompt, new RegExp(`ID: ${expected.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  assert.match(prompt, new RegExp(`Category: ${expected.category.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'));
+  assert.match(prompt, expected.evidencePattern);
+  assert.match(prompt, expected.problemPattern);
+  assert.match(prompt, expected.acceptancePattern);
+  return prompt;
+}
+
+test('missing manual goals produces coherent manual-goals prompt', () => {
+  const selected = choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } });
+  const prompt = assertCoherent(selected, {
+    id: 'missing-manual-goals',
+    title: 'Fill Manual Goals',
+    category: 'missing manual goals',
+    evidencePattern: /Manual Goals are missing/i,
+    problemPattern: /missing populated Manual Goals/i,
+    acceptancePattern: /Manual Goals are populated/i,
+  });
+  assert.doesNotMatch(prompt, /severe backlog noise/i);
 });
 
-test('weak validation produces validation prompt', () => {
-  const selected = choice({ quality: { ...healthyQuality, confidence: { score: 40, validationConfidence: 'Low' } } });
-  assert.equal(selected.kind, 'validation');
-  assert.match(selected.title, /validation confidence/i);
+test('backlog noise produces coherent backlog prompt', () => {
+  const manyItems = Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n');
+  const selected = choice({ backlog: `# Backlog\n\n## Prioritized Backlog\n${manyItems}\n` });
+  const prompt = assertCoherent(selected, {
+    id: 'backlog-noise',
+    title: 'Reduce Backlog Noise',
+    category: 'backlog noise',
+    evidencePattern: /Backlog contains 26 items/i,
+    problemPattern: /backlog contains severe noise/i,
+    acceptancePattern: /Backlog noise is removed, merged, or downgraded/i,
+  });
+  assert.doesNotMatch(prompt, /Fill in `\.ai\/goals\.md`/i);
+});
+
+test('strategy gap produces coherent strategy prompt', () => {
+  const selected = choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' });
+  assertCoherent(selected, {
+    id: 'strategy-quality',
+    title: 'Strengthen Strategy Quality',
+    category: 'strategy gap',
+    evidencePattern: /Strategy Confidence: Low/i,
+    problemPattern: /Strategy quality is weak or under-evidenced/i,
+    acceptancePattern: /Strategy intelligence describes repository intent/i,
+  });
 });
 
 test('no serious issue produces AI handoff validation prompt', () => {
   const selected = choice();
-  assert.equal(selected.kind, 'ai-handoff-validation');
-  assert.equal(selected.title, 'Run AI handoff validation for this repository.');
+  const prompt = assertCoherent(selected, {
+    id: 'ai-handoff-validation',
+    title: 'Run AI Handoff Validation',
+    category: 'AI handoff validation',
+    evidencePattern: /No serious repository intelligence issue detected/i,
+    problemPattern: /No serious repository intelligence issue is detected/i,
+    acceptancePattern: /AI handoff validation is documented/i,
+  });
+  assert.doesNotMatch(prompt, /unless adding or documenting a validation workflow[\s\S]*Update the smallest set of source files/i);
+});
+
+test('no prompt contains title/evidence/category mismatch', () => {
+  const scenarios = [
+    choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } }),
+    choice({ backlog: `# Backlog\n\n## Prioritized Backlog\n${Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n')}\n` }),
+    choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }),
+    choice(),
+  ];
+
+  for (const selected of scenarios) {
+    const prompt = renderPrompt(selected);
+    assert.match(prompt, new RegExp(`# ${selected.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    assert.match(prompt, new RegExp(`Category: ${selected.category.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'));
+    assert.match(prompt, new RegExp(selected.evidence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    if (selected.id !== 'missing-manual-goals') assert.doesNotMatch(prompt, /Manual Goals are missing|Manual Goals are populated/i);
+    if (selected.id !== 'backlog-noise') assert.doesNotMatch(prompt, /Backlog contains \d+ items|Backlog noise is removed/i);
+    if (selected.id !== 'strategy-quality') assert.doesNotMatch(prompt, /Strategy Confidence: Low|Strategy intelligence describes/i);
+  }
 });
 
 test('prompt includes constraints', () => {
@@ -42,7 +108,7 @@ test('prompt includes constraints', () => {
 
 test('prompt preserves deterministic/no-cloud/no-LLM language', () => {
   const prompt = renderPrompt(choice());
-  assert.match(prompt, /deterministically from the Control Plane inputs/i);
+  assert.match(prompt, /deterministically from the selected issue/i);
   assert.match(prompt, /no cloud/i);
   assert.match(prompt, /no LLM calls/i);
 });
