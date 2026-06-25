@@ -19,8 +19,21 @@ type StepState = {
   output?: string;
 };
 
+type IntelligenceState = 'Present' | 'Missing' | 'Needs Attention';
+
+type ControlPlaneRecommendation = {
+  title: string;
+  explanation: string;
+  whyItMatters: string;
+  evidenceSource: string;
+  prompt: string;
+};
+
 type ControlPlane = {
   status: Record<string, string>;
+  understanding: Array<{ label: string; state: IntelligenceState; source: string }>;
+  unknowns: Array<{ label: string; source: string }>;
+  recommendation: ControlPlaneRecommendation;
   diff: Record<string, string | string[]>;
   evidence: Array<{ file: string; section: string; line: number; evidence: string; confidence: string }>;
   packages: Record<string, string>;
@@ -211,43 +224,104 @@ function PromptCenter({ connectedPath, documents, loadFile }: { connectedPath: s
 }
 
 
-function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
-  if (!data) return <div className="markdownPanel emptyState"><h2>Control plane not ready.</h2><p>Connect a repository and refresh intelligence to build the local deterministic dashboard.</p></div>;
-  const statusCards = [
-    ['Overall Repository Health', data.status.overallHealth],
-    ['Intelligence Completeness', data.status.intelligenceCompleteness],
-    ['Strategy Quality', data.status.strategyQuality],
-    ['Product Signal Quality', data.status.productSignalQuality],
-    ['Repository Handoff Readiness', data.status.repositoryHandoffReadiness],
-    ['Last Refresh', data.status.lastRefresh],
-    ['Current Confidence', data.status.currentConfidence],
+function WelcomeDashboard() {
+  const workflow = ['Connect Repository', 'Refresh Intelligence', 'Review Repository Status', 'Generate AI Handoff Package'];
+  return (
+    <div className="controlPlane welcomeDashboard">
+      <section className="heroCard" aria-label="Agent IDE workflow welcome">
+        <div>
+          <p className="kicker">Welcome to Agent IDE</p>
+          <h2>Repository understanding before code editing</h2>
+          <p>Connect any local repository and Agent IDE will build deterministic, version-controlled intelligence before anyone starts changing code.</p>
+        </div>
+        <div className="trustGrid" aria-label="Local-first guarantees">
+          {['Local-only', 'Deterministic', 'No LLM', 'No Cloud'].map((item) => <span key={item}>{item}</span>)}
+        </div>
+      </section>
+      <section className="workflowCard" aria-label="Four-step workflow">
+        {workflow.map((step, index) => (
+          <div className="workflowStep" key={step}>
+            <strong>{step}</strong>
+            {index < workflow.length - 1 && <span aria-hidden="true">↓</span>}
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+function stateClass(state: IntelligenceState) {
+  return state.toLowerCase().replace(/\s+/g, '-');
+}
+
+function meaningfulDiffEntries(diff: ControlPlane['diff']): Array<readonly [string, string[]]> {
+  const entries: Array<[string, string | string[]]> = [
+    ['Health score changes', diff.healthScoreChanges],
+    ['Strategy changes', diff.strategyChanges],
+    ['Backlog changes', [...(Array.isArray(diff.backlogAdditions) ? diff.backlogAdditions : []), ...(Array.isArray(diff.backlogRemovals) ? diff.backlogRemovals : [])]],
+    ['Validation changes', diff.validationChanges],
   ];
-  const diffEntries = [
-    ['Strategy changes', data.diff.strategyChanges],
-    ['Architecture changes', data.diff.architectureChanges],
-    ['Backlog additions', data.diff.backlogAdditions],
-    ['Backlog removals', data.diff.backlogRemovals],
-    ['Decision additions', data.diff.decisionAdditions],
-    ['Validation changes', data.diff.validationChanges],
-    ['Health score changes', data.diff.healthScoreChanges],
+  return entries.map(([label, value]) => [label, Array.isArray(value) ? value : []] as const).filter(([, items]) => items.length > 0);
+}
+
+function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
+  if (!data) return <WelcomeDashboard />;
+
+  const statusCards = [
+    ['Repository Name', data.status.repositoryName],
+    ['Overall Health', data.status.overallHealth],
+    ['Strategy Quality', data.status.strategyQuality],
+    ['Repository Handoff Readiness', data.status.repositoryHandoffReadiness],
+    ['Intelligence Completeness', data.status.intelligenceCompleteness],
+    ['Current Confidence', data.status.currentConfidence],
+    ['Last Refresh Time', data.status.lastRefresh],
   ];
   const packageLabels = [
     ['context', 'Copy Context Package'],
-    ['architect', 'Copy Architect Package'],
-    ['builder', 'Copy Builder Package'],
-    ['reviewer', 'Copy Reviewer Package'],
-    ['debugger', 'Copy Debugger Package'],
+    ['architect', 'Copy Architect Prompt'],
+    ['builder', 'Copy Builder Prompt'],
+    ['reviewer', 'Copy Reviewer Prompt'],
+    ['debugger', 'Copy Debugger Prompt'],
   ];
+  const diffEntries = meaningfulDiffEntries(data.diff);
+
   return (
-    <div className="controlPlane">
-      <section className="dashboardGrid" aria-label="Repository status">
+    <div className="controlPlane compactDashboard">
+      <section className="dashboardGrid statusGrid" aria-label="Repository status">
         {statusCards.map(([label, value]) => <article className="metricCard" key={String(label)}><small>{label}</small><strong>{value || 'Unknown'}</strong></article>)}
       </section>
-      <section className="controlCard recommended"><small>Recommended Next Step</small><strong>{data.status.recommendedNextStep}</strong></section>
-      <section className="controlCard"><h2>What Changed?</h2><p>{data.diff.summary}</p>{diffEntries.map(([label, value]) => { const items = Array.isArray(value) ? value : []; return <details key={String(label)}><summary>{label} <span>{items.length}</span></summary>{items.length ? <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No changes detected.</p>}</details>; })}</section>
-      <section className="controlCard"><h2>Evidence Explorer</h2>{data.evidence.length ? data.evidence.map((item) => <details key={`${item.file}-${item.line}`}><summary>{item.section} <button onClick={(event) => { event.preventDefault(); }} type="button">View Evidence</button></summary><p><strong>File:</strong> {item.file}:{item.line}</p><p><strong>Extracted evidence:</strong> {item.evidence}</p><p><strong>Confidence:</strong> {item.confidence}</p></details>) : <p>No generated evidence lines detected yet.</p>}</section>
-      <section className="controlCard"><h2>Repository Handoff</h2><div className="handoffGrid">{packageLabels.map(([key, label]) => <button disabled={!data.packages[key]} key={key} onClick={() => void copyText(data.packages[key] ?? '')} type="button">{label}</button>)}</div></section>
-      <section className="controlCard"><h2>Intelligence Timeline</h2>{data.timeline.length ? <ol className="timelineList">{data.timeline.slice().reverse().map((item) => <li key={item.timestamp}><strong>{item.timestamp}</strong><span>{item.repositoryHealth} · Strategy {item.strategyQuality} · Confidence {item.confidence}</span><small>{item.recommendation}</small></li>)}</ol> : <p>No refresh executions recorded yet.</p>}</section>
+
+      <section className="controlCard answerGrid" aria-label="Repository intelligence answers">
+        <div>
+          <h2>What do I know?</h2>
+          <div className="understandingGrid">
+            {data.understanding.map((item) => <div className="understandingItem" key={item.label}><span>{item.label}</span><strong className={stateClass(item.state)}>{item.state}</strong></div>)}
+          </div>
+        </div>
+        {data.unknowns.length > 0 && (
+          <div>
+            <h2>What don&apos;t I know?</h2>
+            <ul className="unknownList">{data.unknowns.map((item) => <li key={item.label}>{item.label}<small>{item.source}</small></li>)}</ul>
+          </div>
+        )}
+      </section>
+
+      <section className="controlCard recommended" aria-label="Single recommended next action">
+        <small>What should I do next?</small>
+        <strong>{data.recommendation.title}</strong>
+        <p>{data.recommendation.explanation}</p>
+        <p><b>Why it matters:</b> {data.recommendation.whyItMatters}</p>
+        <p><b>Evidence source:</b> {data.recommendation.evidenceSource}</p>
+        <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Generate Builder Prompt</button>
+      </section>
+
+      {diffEntries.length > 0 && <section className="controlCard"><h2>Recent Changes</h2>{diffEntries.map(([label, items]) => <details key={label}><summary>{label} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></details>)}</section>}
+
+      <section className="controlCard handoffCard"><h2>AI Handoff</h2><div className="handoffGrid">{packageLabels.map(([key, label]) => <button disabled={!data.packages[key]} key={key} onClick={() => void copyText(data.packages[key] ?? '')} type="button">{label}</button>)}</div></section>
+
+      <details className="controlCard disclosureCard"><summary>Evidence Explorer</summary>{data.evidence.length ? data.evidence.map((item) => <details key={`${item.file}-${item.line}`}><summary>{item.section}</summary><p><strong>File:</strong> {item.file}:{item.line}</p><p><strong>Extracted evidence:</strong> {item.evidence}</p><p><strong>Confidence:</strong> {item.confidence}</p></details>) : <p>No generated evidence lines detected yet.</p>}</details>
+      <details className="controlCard disclosureCard"><summary>Timeline</summary>{data.timeline.length ? <ol className="timelineList">{data.timeline.slice().reverse().map((item) => <li key={item.timestamp}><strong>{item.timestamp}</strong><span>{item.repositoryHealth} · Strategy {item.strategyQuality} · Confidence {item.confidence}</span><small>{item.recommendation}</small></li>)}</ol> : <p>No refresh executions recorded yet.</p>}</details>
+      <details className="controlCard disclosureCard"><summary>Raw intelligence / full markdown</summary><p>Use the sidebar to open the full version-controlled markdown documents when you need implementation detail.</p></details>
     </div>
   );
 }
