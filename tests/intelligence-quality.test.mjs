@@ -3,7 +3,7 @@ import test from 'node:test';
 import { mkdtemp, mkdir, writeFile, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { computeQualitySnapshot, computeTrend, detectContradictions, detectDuplicateSections } from '../scripts/intelligence-quality.mjs';
+import { classifyIntelligenceSource, computeQualitySnapshot, computeTrend, detectContradictions, detectDuplicateSections } from '../scripts/intelligence-quality.mjs';
 
 const baseDocs = {
   'goals.md': '# Goals\n\n## Product Thesis\nAgent IDE creates local repository intelligence.\n\n## North Star Metric\nUseful handoffs\n\n## Current Focus\nQuality loop\n\n## Manual Goals\nKeep note.\n',
@@ -12,6 +12,9 @@ const baseDocs = {
   'decisions.md': '# Decisions\n\n## Active Decisions\n- Deterministic only.\n',
   'validation.md': '# Validation\n\n## Confidence\nHigh\n\n## Commands Run\n- `npm run build`\n',
   'backlog.md': '# Backlog\n\n## Prioritized Backlog\n- Improve intelligence quality.\n',
+  'repository-health.md': '# Repository Health\nConfidence: High\n\n## Quality Signals\n- Evidence-backed strategy.\n',
+  'agents.md': '# Agents\n\n## Responsibilities\n- Local deterministic agents.\n',
+  'code.md': '# Code\n\n## Code Map\n- scripts/intelligence-quality.mjs computes quality.\n',
   'context-package.md': '# Context Package\n\nReady.\n',
   'prompts/architect.md': 'Architect prompt',
   'prompts/builder.md': 'Builder prompt',
@@ -30,6 +33,53 @@ test('consistency scoring rewards aligned intelligence', async () => {
   const snapshot = await computeQualitySnapshot(await repoWithDocs(), baseDocs);
   assert.equal(snapshot.consistency.score, 100);
   assert.equal(snapshot.consistency.productThesisConsistent, true);
+});
+
+test('classifies canonical intelligence and generated artifacts deterministically', () => {
+  assert.equal(classifyIntelligenceSource('goals.md'), 'canonical');
+  assert.equal(classifyIntelligenceSource('.ai/prompts/architect.md'), 'derived');
+  assert.equal(classifyIntelligenceSource('context-package.md'), 'derived');
+  assert.equal(classifyIntelligenceSource('exports/context.md'), 'derived');
+});
+
+test('prompt files containing repeated headings do not lower canonical consistency', async () => {
+  const docs = { ...baseDocs, 'prompts/architect.md': '# Architect\n\n## Product Thesis\nA\n\n## Product Thesis\nB\n' };
+  const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
+  assert.equal(snapshot.consistency.score, 100);
+  assert.deepEqual(snapshot.consistency.duplicatedSections, []);
+  assert.equal(snapshot.generatedExportQuality.promptsFreshnessOnly, true);
+});
+
+test('context-package duplication does not create contradiction warnings', async () => {
+  const docs = { ...baseDocs, 'context-package.md': '# Context Package\n\n## Product Thesis\nDifferent exported wording.\n\n## Product Thesis\nRepeated exported wording.\n' };
+  const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
+  assert.equal(snapshot.consistency.productThesisConsistent, true);
+  assert.deepEqual(snapshot.consistency.contradictions, []);
+  assert.deepEqual(snapshot.consistency.duplicatedSections, []);
+});
+
+test('Product Thesis comparison ignores generated exports', async () => {
+  const docs = { ...baseDocs, 'prompts/builder.md': '## Product Thesis\nCloud analytics dashboard\n', 'context-package.md': '## Product Thesis\nCloud analytics dashboard\n' };
+  const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
+  assert.equal(snapshot.consistency.productThesisConsistent, true);
+  assert.ok(!snapshot.recentRegressions.some((item) => /Product Thesis differs/.test(item)));
+});
+
+test('Nearify and Agent IDE retain expected quality scores after export generation', async () => {
+  const nearifyDocs = {
+    ...baseDocs,
+    'goals.md': '# Goals\n\n## Product Thesis\nNearify helps people maintain real-world relationships through timely follow-up workflows.\n\n## North Star Metric\nMeaningful follow-ups\n\n## Current Focus\nEvent-aware relationship workflows\n',
+    'strategy.md': '# Strategy\n\n## Product Thesis\nNearify helps people maintain real-world relationships through timely follow-up workflows.\n\n## North Star Metric\nMeaningful follow-ups\n\n## Current Product Bet\nEvent-aware relationship workflows\n\n## Strategy Confidence\nHigh\n\n## Evidence Sources\n- README.md\n',
+    'architecture.md': '# Architecture\n\n## Product Thesis\nNearify helps people maintain real-world relationships through timely follow-up workflows.\n\n## North Star Metric\nMeaningful follow-ups\n\n## Current Focus\nEvent-aware relationship workflows\n\n## Core Systems\nRelationship context engine.\n',
+    'context-package.md': '# Context Package\n\n## Product Thesis\nShort duplicated export.\n',
+    'prompts/reviewer.md': '# Reviewer\n\n## Product Thesis\nExported prompt copy.\n\n## Product Thesis\nRepeated prompt copy.\n',
+  };
+  const agentIde = await computeQualitySnapshot(await repoWithDocs(baseDocs), baseDocs);
+  const nearify = await computeQualitySnapshot(await repoWithDocs(nearifyDocs), nearifyDocs);
+  assert.ok(agentIde.canonicalIntelligenceQuality.score >= 95);
+  assert.ok(agentIde.overallScore >= 95);
+  assert.ok(nearify.canonicalIntelligenceQuality.score >= 95);
+  assert.ok(nearify.overallScore >= 95);
 });
 
 test('trend computation identifies improving, stable, and needs attention states', () => {

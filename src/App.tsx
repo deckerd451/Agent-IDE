@@ -32,6 +32,8 @@ type ControlPlaneRecommendation = {
 type QualitySnapshot = {
   overallScore: number;
   trend: 'Improving' | 'Stable' | 'Needs Attention';
+  canonicalIntelligenceQuality?: { score: number };
+  generatedExportQuality?: { score: number };
   coverage: Record<string, boolean | number>;
   consistency: { score: number; contradictions: string[]; duplicatedSections: string[] };
   freshness: { score: number; staleDocuments: string[]; filesChanged: number; manualNotesPreserved: boolean };
@@ -321,9 +323,10 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
 
       {data.quality && (
         <section className="controlCard qualityCard" aria-label="Intelligence quality">
-          <div className="qualityHeader"><div><small>Intelligence Quality</small><strong>{data.quality.overallScore}/100</strong></div><span className={stateClass(data.quality.trend === 'Needs Attention' ? 'Needs Attention' : 'Present')}>Trend: {data.quality.trend}</span></div>
+          <div className="qualityHeader"><div><small>Overall Quality</small><strong>{data.quality.overallScore}/100</strong></div><span className={stateClass(data.quality.trend === 'Needs Attention' ? 'Needs Attention' : 'Present')}>Trend: {data.quality.trend}</span></div>
           <div className="qualityGrid">
-            <div><small>Coverage</small><strong>{data.quality.coverage.score}%</strong></div>
+            <div><small>Canonical Intelligence</small><strong>{data.quality.canonicalIntelligenceQuality?.score ?? data.quality.overallScore}%</strong></div>
+            <div><small>Export Quality</small><strong>{data.quality.generatedExportQuality?.score ?? data.quality.coverage.score}%</strong></div>
             <div><small>Consistency</small><strong>{data.quality.consistency.score}%</strong></div>
             <div><small>Freshness</small><strong>{data.quality.freshness.score}%</strong></div>
             <div><small>Confidence</small><strong>{data.quality.confidence.score}%</strong></div>
