@@ -339,13 +339,20 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         </section>
       )}
 
-      <section className="controlCard recommended" aria-label="Single recommended next action">
-        <small>Recommended Next Step</small>
-        <strong>{data.quality?.recommendedAction || data.recommendation.title}</strong>
-        <p>{data.recommendation.explanation}</p>
-        <p><b>Why it matters:</b> {data.recommendation.whyItMatters}</p>
+      <section className="controlCard recommended" aria-label="Recommended implementation prompt">
+        <small>Recommended Implementation Prompt</small>
+        <strong>{data.recommendation.title}</strong>
+        <p><b>Source risk/recommendation:</b> {data.recommendation.explanation}</p>
+        <p><b>Reason:</b> {data.recommendation.whyItMatters}</p>
         <p><b>Evidence source:</b> {data.recommendation.evidenceSource}</p>
-        <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Generate Builder Prompt</button>
+        <div className="promptActions">
+          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Copy Builder Prompt</button>
+          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Generate Builder Prompt</button>
+        </div>
+        <details>
+          <summary>View Prompt</summary>
+          <pre>{data.recommendation.prompt}</pre>
+        </details>
       </section>
 
       <section className="controlCard"><h2>Trend</h2><p>{data.quality ? data.quality.trend : 'No intelligence quality trend available yet.'}</p></section>
