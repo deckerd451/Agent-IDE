@@ -24,8 +24,14 @@ function healthRecommendation(health) { return firstLine(mdSection(health, 'Reco
 function backlogCount(backlog) { return bullets(mdSection(backlog, 'Prioritized Backlog') || mdSection(backlog, 'Current Backlog') || mdSection(backlog, 'Manual Backlog') || backlog).length; }
 function score(value, fallback = 100) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 
+function packageTypeForActionability(actionability) {
+  if (actionability === 'manual') return 'product-decision';
+  if (actionability === 'validation-experiment') return 'validation-experiment';
+  return 'implementation';
+}
+
 function selectedIssue({ id, category, severity = 'high', actionability = issueActionability(id, source), source, title, evidence, reason, recommendedAction }) {
-  return { id, kind: id, category, severity, actionability, source, title, evidence: evidence || source, reason, recommendedAction };
+  return { id, kind: id, category, severity, actionability, packageType: packageTypeForActionability(actionability), source, title, evidence: evidence || source, reason, recommendedAction };
 }
 
 function issueActionability(id, source = '') {
@@ -74,7 +80,7 @@ const issueDetails = {
   'ai-handoff-validation': {
     problem: 'No serious repository intelligence issue is detected, so the safest next step is validating that the generated AI handoff package is usable as-is.',
     requirements: ['Run a local AI handoff dry run using the generated context package and prompts as static inputs.', 'Document whether the package contains enough context for an outside builder to choose safe first edits.', 'Do not request code changes unless adding or documenting a validation workflow.'],
-    acceptance: ['AI handoff validation is documented with deterministic local evidence.', 'Any missing context or acceptance-test gaps are recorded in the appropriate `.ai/` manual section.', 'No unrelated code changes are requested.'],
+    acceptance: ['AI handoff validation is documented with deterministic local evidence.', 'Any missing context or acceptance-test gaps are recorded in the appropriate \`.ai/\` manual section.', 'No unrelated code changes are requested.'],
   },
   'missing-canonical': {
     problem: 'Canonical repository intelligence is missing, preventing generated prompts and handoffs from relying on a complete source of truth.',
@@ -142,10 +148,59 @@ export function chooseNextImprovement({ health = '', quality = null, audit = '',
 }
 
 
+function suggestedManualUpdate(selected) {
+  if (selected.id === 'missing-manual-goals') {
+    return [
+      'Add text like the following under `.ai/goals.md` `## Manual Goals`:',
+      '',
+      '```md',
+      '- Product intent: [Repository owner: describe the product purpose this repository should serve.]',
+      '- Current focus: [Repository owner: describe the current product priority.]',
+      '- Success criteria: [Repository owner: describe how success should be judged.]',
+      '```',
+      '',
+      'Do not edit automatically. The repository owner should review, accept, or edit this text before saving it.',
+    ].join('\n');
+  }
+  if (selected.id === 'strategy-quality') {
+    return [
+      'Add text like the following under `.ai/strategy.md` `## Manual Strategy Notes`:',
+      '',
+      '```md',
+      '- Strategic bet: [Repository owner: describe the product strategy this repository should support.]',
+      '- Differentiator: [Repository owner: describe what this project should optimize for or avoid.]',
+      '- Evidence: [Repository owner: cite repository-local files, decisions, or docs that justify the strategy.]',
+      '```',
+      '',
+      'Do not edit automatically. The repository owner should review, accept, or edit this text before saving it.',
+    ].join('\n');
+  }
+  return 'Record the product-owner decision in the appropriate \`.ai/\` manual section. Do not edit automatically; the repository owner should review, accept, or edit the final text.';
+}
+
+function renderSelectedIssue(selected) {
+  return `- ID: ${selected.id}\n- Category: ${selected.category}\n- Severity: ${selected.severity}\n- Actionability: ${selected.actionability}\n- Package Type: ${selected.packageType ?? packageTypeForActionability(selected.actionability)}\n- Source: ${selected.source}\n- Title: ${selected.title}\n- Evidence: ${selected.evidence}\n- Reason: ${selected.reason}\n- Recommended Action: ${selected.recommendedAction}`;
+}
+
+function renderImplementationPackage(selected, details) {
+  return `# ${selected.title}\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written.\nUse the cited repository evidence to identify the root cause before making changes.\nKeep the implementation narrowly scoped.\nDo not broaden scope beyond the selected issue.\nPreserve deterministic, local-first behavior.\nPreserve manual intelligence sections.\nAvoid unrelated refactoring.\nUse only repository-local evidence.\nDo not make LLM calls, use cloud services, or add telemetry.\nEnsure execution and validation are fully reproducible.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n## Motivation\nAgent IDE should close the loop from repository intelligence to one safe next builder task. This Implementation Package was generated deterministically from the selected issue above.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Problem\n${details.problem}\n\n## Goal\n${selected.recommendedAction}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The final diff is small, deterministic, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## Expected Repository Improvement\n- Repository Health should improve.\n- Intelligence Quality should improve.\n- The selected issue should disappear or downgrade.\n- No new canonical contradictions should be introduced.\n\n## After Implementation\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected issue was resolved.\n- Summarize any newly discovered issues.\n- Generate the next Implementation Package.\n`;
+}
+
+function renderProductDecisionPackage(selected, details) {
+  return `# ${selected.title}\n\n## Decision Instructions\nThis is a product-owner decision task, not a Codex implementation task.\nUse repository-local evidence to decide or record the missing product, strategy, or manual-intelligence information.\nDo not send this package to Codex as implementation work.\nDo not edit files automatically; the repository owner should review, accept, or edit the suggested manual update.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct \`.ai/\` manual section.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
+}
+
+function renderValidationPackage(selected, details) {
+  return `# ${selected.title}\n\n## Validation Instructions\nRun this Validation Experiment as a deterministic local check.\nUse the cited repository evidence to validate handoff quality without broadening scope.\nDo not make product-owner decisions, LLM calls, cloud calls, or telemetry changes.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Experiment\n${details.problem}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The validation result is deterministic, local-first, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## After Validation\n- Refresh Repository Intelligence.\n- Record any gaps in the appropriate manual section.\n- Generate the next correctly typed package.\n`;
+}
+
 export function renderPrompt(choice) {
   const selected = choice.selectedIssue ?? choice;
+  selected.packageType ??= packageTypeForActionability(selected.actionability);
   const details = issueDetails[selected.id] ?? issueDetails[selected.kind] ?? issueDetails['missing-canonical'];
-  return `# ${selected.title}\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written.\nUse the cited repository evidence to identify the root cause before making changes.\nKeep the implementation narrowly scoped.\nDo not broaden scope beyond the selected issue.\nPreserve deterministic, local-first behavior.\nPreserve manual intelligence sections.\nAvoid unrelated refactoring.\nUse only repository-local evidence.\nDo not make LLM calls, use cloud services, or add telemetry.\nEnsure execution and validation are fully reproducible.\n\n## Selected Issue\n- ID: ${selected.id}\n- Category: ${selected.category}\n- Severity: ${selected.severity}\n- Actionability: ${selected.actionability}\n- Source: ${selected.source}\n- Title: ${selected.title}\n- Evidence: ${selected.evidence}\n- Reason: ${selected.reason}\n- Recommended Action: ${selected.recommendedAction}\n\n## Motivation\n${selected.actionability === 'manual' ? 'This is a manual product-owner task, not a Codex implementation task.\n\n' : ''}Agent IDE should close the loop from repository intelligence to one safe next builder task. This Implementation Package was generated deterministically from the selected issue above.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Problem\n${details.problem}\n\n## Goal\n${selected.recommendedAction}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The final diff is small, deterministic, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## Expected Repository Improvement\n- Repository Health should improve.\n- Intelligence Quality should improve.\n- The selected issue should disappear or downgrade.\n- No new canonical contradictions should be introduced.\n\n## After Implementation\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected issue was resolved.\n- Summarize any newly discovered issues.\n- Generate the next Implementation Package.\n`;
+  if (selected.packageType === 'product-decision') return renderProductDecisionPackage(selected, details);
+  if (selected.packageType === 'validation-experiment') return renderValidationPackage(selected, details);
+  return renderImplementationPackage(selected, details);
 }
 
 export async function generateNextImprovement(repositoryPath = process.cwd()) {

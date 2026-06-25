@@ -127,7 +127,7 @@ test('code-fixable contradiction is selected before manual strategy note', () =>
 
 test('manual issue prompt includes manual-task warning', () => {
   const selected = choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } });
-  assert.match(renderPrompt(selected), /This is a manual product-owner task, not a Codex implementation task\./);
+  assert.match(renderPrompt(selected), /This is a product-owner decision task, not a Codex implementation task\./);
 });
 
 test('no code-fixable issues produces AI handoff validation', () => {
@@ -144,15 +144,15 @@ test('prompt includes constraints', () => {
 });
 
 test('prompt preserves deterministic/no-cloud/no-LLM language', () => {
-  const prompt = renderPrompt(choice());
+  const prompt = renderPrompt(choice({ backlog: `# Backlog\n\n## Prioritized Backlog\n${Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n')}\n` }));
   assert.match(prompt, /deterministically from the selected issue/i);
   assert.match(prompt, /no cloud/i);
   assert.match(prompt, /no LLM calls/i);
 });
 
 test('implementation package includes complete deterministic lead-in', () => {
-  const prompt = renderPrompt(choice());
-  assert.match(prompt, /^# Run AI Handoff Validation\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written\./);
+  const prompt = renderPrompt(choice({ backlog: `# Backlog\n\n## Prioritized Backlog\n${Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n')}\n` }));
+  assert.match(prompt, /^# Reduce Backlog Noise\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written\./);
   for (const expected of [
     'Use the cited repository evidence to identify the root cause before making changes.',
     'Keep the implementation narrowly scoped.',
@@ -169,13 +169,13 @@ test('implementation package includes complete deterministic lead-in', () => {
 });
 
 test('implementation package includes expected improvement and after implementation sections', () => {
-  const prompt = renderPrompt(choice());
+  const prompt = renderPrompt(choice({ backlog: `# Backlog\n\n## Prioritized Backlog\n${Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n')}\n` }));
   assert.match(prompt, /## Expected Repository Improvement\n- Repository Health should improve\.\n- Intelligence Quality should improve\.\n- The selected issue should disappear or downgrade\.\n- No new canonical contradictions should be introduced\./);
   assert.match(prompt, /## After Implementation\n- Refresh Repository Intelligence\.\n- Compare Repository Health before and after\.\n- Compare Intelligence Quality before and after\.\n- Verify whether the selected issue was resolved\.\n- Summarize any newly discovered issues\.\n- Generate the next Implementation Package\./);
 });
 
 test('implementation package sections render in deterministic order', () => {
-  const prompt = renderPrompt(choice());
+  const prompt = renderPrompt(choice({ backlog: `# Backlog\n\n## Prioritized Backlog\n${Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n')}\n` }));
   const headings = [...prompt.matchAll(/^## .+$/gm)].map((match) => match[0]);
   assert.deepEqual(headings, [
     '## Implementation Instructions',
@@ -196,4 +196,41 @@ test('implementation package sections render in deterministic order', () => {
 test('generated implementation packages remain deterministic across repeated renders', () => {
   const selected = choice();
   assert.equal(renderPrompt(selected), renderPrompt(selected));
+});
+
+test('manual issue generates Product Decision Package', () => {
+  const selected = choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } });
+  const prompt = renderPrompt(selected);
+  assert.equal(selected.packageType, 'product-decision');
+  assert.match(prompt, /## Decision Instructions/);
+  assert.match(prompt, /This is a product-owner decision task, not a Codex implementation task\./);
+  assert.doesNotMatch(prompt, /Implement this exactly|Implement this Implementation Package exactly as written/);
+});
+
+test('missing manual goals package includes suggested Manual Goals text', () => {
+  const prompt = renderPrompt(choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } }));
+  assert.match(prompt, /`\.ai\/goals\.md` `## Manual Goals`/);
+  assert.match(prompt, /Product intent: \[Repository owner:/);
+  assert.match(prompt, /Do not edit automatically/);
+});
+
+test('strategy manual notes package includes suggested Manual Strategy Notes text', () => {
+  const prompt = renderPrompt(choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }));
+  assert.match(prompt, /`\.ai\/strategy\.md` `## Manual Strategy Notes`/);
+  assert.match(prompt, /Strategic bet: \[Repository owner:/);
+  assert.match(prompt, /review, accept, or edit/);
+});
+
+test('code-fixable issue still generates Implementation Package', () => {
+  const prompt = renderPrompt(choice({ backlog: `# Backlog\n\n## Prioritized Backlog\n${Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n')}\n` }));
+  assert.match(prompt, /## Implementation Instructions/);
+  assert.match(prompt, /Implement this Implementation Package exactly as written\./);
+});
+
+test('validation-experiment issue generates clearly labeled validation package', () => {
+  const selected = choice();
+  const prompt = renderPrompt(selected);
+  assert.equal(selected.packageType, 'validation-experiment');
+  assert.match(prompt, /## Validation Instructions/);
+  assert.match(prompt, /Run this Validation Experiment/);
 });

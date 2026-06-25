@@ -26,6 +26,7 @@ type ControlPlaneRecommendation = {
   explanation: string;
   whyItMatters: string;
   actionability?: string;
+  packageType?: 'implementation' | 'product-decision' | 'validation-experiment';
   evidenceSource: string;
   prompt: string;
 };
@@ -284,6 +285,33 @@ function meaningfulDiffEntries(diff: ControlPlane['diff']): Array<readonly [stri
 
 function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
   if (!data) return <WelcomeDashboard />;
+  const recommendedPackage = (() => {
+    if (data.recommendation.packageType === 'product-decision') {
+      return {
+        ariaLabel: 'Recommended product decision package',
+        heading: 'Recommended Product Decision Package',
+        copyLabel: 'Copy Product Decision Package',
+        generateLabel: 'Generate Product Decision Package',
+        viewLabel: 'View Product Decision Package',
+      };
+    }
+    if (data.recommendation.packageType === 'validation-experiment') {
+      return {
+        ariaLabel: 'Recommended validation experiment',
+        heading: 'Recommended Validation Experiment',
+        copyLabel: 'Copy Validation Package',
+        generateLabel: 'Generate Validation Package',
+        viewLabel: 'View Validation Package',
+      };
+    }
+    return {
+      ariaLabel: 'Recommended implementation package',
+      heading: 'Recommended Implementation Package',
+      copyLabel: 'Copy Implementation Package',
+      generateLabel: 'Generate Implementation Package',
+      viewLabel: 'View Implementation Package',
+    };
+  })();
 
   const statusCards = [
     ['Repository Name', data.status.repositoryName],
@@ -297,7 +325,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
   const packageLabels = [
     ['context', 'Copy Context Package'],
     ['architect', 'Copy Architect Prompt'],
-    ['builder', 'Copy Implementation Package'],
+    ['builder', recommendedPackage.copyLabel],
     ['reviewer', 'Copy Reviewer Prompt'],
     ['debugger', 'Copy Debugger Prompt'],
   ];
@@ -340,19 +368,20 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         </section>
       )}
 
-      <section className="controlCard recommended" aria-label="Recommended implementation package">
-        <small>Recommended Implementation Package</small>
+      <section className="controlCard recommended" aria-label={recommendedPackage.ariaLabel}>
+        <small>{recommendedPackage.heading}</small>
         <strong>{data.recommendation.title}</strong>
         {data.recommendation.actionability && <p><b>Actionability:</b> {data.recommendation.actionability}</p>}
+        {data.recommendation.packageType && <p><b>Package Type:</b> {data.recommendation.packageType}</p>}
         <p><b>Source risk/recommendation:</b> {data.recommendation.explanation}</p>
         <p><b>Reason:</b> {data.recommendation.whyItMatters}</p>
         <p><b>Evidence source:</b> {data.recommendation.evidenceSource}</p>
         <div className="promptActions">
-          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Copy Implementation Package</button>
-          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Generate Implementation Package</button>
+          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">{recommendedPackage.copyLabel}</button>
+          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">{recommendedPackage.generateLabel}</button>
         </div>
         <details>
-          <summary>View Implementation Package</summary>
+          <summary>{recommendedPackage.viewLabel}</summary>
           <pre>{data.recommendation.prompt}</pre>
         </details>
       </section>
