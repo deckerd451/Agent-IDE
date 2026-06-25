@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
-import { chooseNextImprovement, renderPrompt } from '../scripts/next-improvement.mjs';
+import { chooseNextImprovement, generateNextImprovement, renderPrompt } from '../scripts/next-improvement.mjs';
 
 const healthyQuality = {
   coverage: { goalsPresent: true, strategyPresent: true, architecturePresent: true, decisionsPresent: true, validationPresent: true, backlogPresent: true, repositoryHealthPresent: true, agentsPresent: true, codePresent: true },
@@ -233,6 +236,29 @@ test('product decision packages never recommend generated artifacts as manual ed
     assert.doesNotMatch(prompt, /Update \.ai\/(?:strategy|architecture|repository-health|context-package)\.md/i);
     assert.doesNotMatch(prompt, /edit(?:ing)?[^\n]*(?:`?\.ai\/(?:strategy|architecture|repository-health|context-package)\.md`?)/i);
   }
+});
+
+test('generated Product Decision Package keeps manual strategy edits on canonical goals', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'agent-ide-product-decision-'));
+  await mkdir(join(dir, '.ai'), { recursive: true });
+  await writeFile(join(dir, '.ai/goals.md'), '# Goals\n\n## Product Purpose\nRepository intelligence control plane.\n');
+  await writeFile(join(dir, '.ai/repository-health.md'), '# Repository Health\n\n## Risks\n- No repository health risks detected.\n');
+  await writeFile(join(dir, '.ai/intelligence-quality.json'), JSON.stringify({ ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, null, 2));
+  await writeFile(join(dir, '.ai/intelligence-audit.md'), '# Intelligence Audit\n');
+  await writeFile(join(dir, '.ai/backlog.md'), '# Backlog\n\n## Prioritized Backlog\n- Useful work.\n');
+  await writeFile(join(dir, '.ai/strategy.md'), '# Strategy\n\n## Strategy Confidence\nLow\n');
+  await writeFile(join(dir, '.ai/context-package.md'), '# Context Package\nReady.\n');
+
+  const result = await generateNextImprovement(dir);
+  const prompt = await readFile(join(dir, '.ai/next-improvement-prompt.md'), 'utf8');
+
+  assert.equal(result.selectedIssue.id, 'strategy-quality');
+  assert.equal(result.selectedIssue.packageType, 'product-decision');
+  assert.match(prompt, /Repository Owner edits:\n\n\.ai\/goals\.md\n\nEverything else will be regenerated/);
+  assert.match(prompt, /appropriate manual section of `\.ai\/goals\.md`/);
+  assert.match(prompt, /`## Manual Strategy Notes`/);
+  assert.doesNotMatch(prompt, /`\.ai\/strategy\.md` `## Manual Strategy Notes`/);
+  assert.doesNotMatch(prompt, /(?:Add text like the following under|Update|edit(?:ing)?)[^\n]*`?\.ai\/strategy\.md`?/i);
 });
 
 test('code-fixable issue still generates Implementation Package', () => {
