@@ -3,7 +3,7 @@ import test from 'node:test';
 import { mkdtemp, mkdir, writeFile, utimes } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { classifyIntelligenceSource, computeQualitySnapshot, computeTrend, detectContradictions, detectDuplicateSections } from '../scripts/intelligence-quality.mjs';
+import { classifyIntelligenceSource, computeQualitySnapshot, computeTrend, detectContradictions, detectDuplicateSections, normalizeConfidence } from '../scripts/intelligence-quality.mjs';
 
 const baseDocs = {
   'goals.md': '# Goals\n\n## Product Thesis\nAgent IDE creates local repository intelligence.\n\n## North Star Metric\nUseful handoffs\n\n## Current Focus\nQuality loop\n\n## Manual Goals\nKeep note.\n',
@@ -63,6 +63,56 @@ test('Product Thesis comparison ignores generated exports', async () => {
   const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
   assert.equal(snapshot.consistency.productThesisConsistent, true);
   assert.ok(!snapshot.recentRegressions.some((item) => /Product Thesis differs/.test(item)));
+});
+
+
+
+test('equivalent Product Thesis wording is not flagged as a contradiction', async () => {
+  const docs = {
+    ...baseDocs,
+    'goals.md': baseDocs['goals.md'].replace('Agent IDE creates local repository intelligence.', 'Agent IDE exists to make repository understanding the primary developer interface.'),
+    'strategy.md': baseDocs['strategy.md'].replace('Agent IDE creates local repository intelligence.', 'Agent IDE exists to make repository understanding the primary developer interface.'),
+    'architecture.md': baseDocs['architecture.md'].replace('Agent IDE creates local repository intelligence.', `Agent IDE exists to make repository understanding the primary developer interface.
+
+Product Thesis Evidence:
+README.md`),
+  };
+  const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
+  assert.equal(snapshot.consistency.productThesisConsistent, true);
+  assert.ok(!snapshot.recentRegressions.some((item) => /Product Thesis differs/.test(item)));
+});
+
+test('equivalent Current Focus wording is not flagged as a contradiction', async () => {
+  const docs = {
+    ...baseDocs,
+    'goals.md': baseDocs['goals.md'].replace('Quality loop', 'Repository quality loop'),
+    'strategy.md': baseDocs['strategy.md'].replace('Quality loop', 'Repository quality loop'),
+    'architecture.md': baseDocs['architecture.md'].replace('Quality loop', `Repository quality loop
+
+Current Focus Evidence:
+.ai/goals.md`),
+  };
+  const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
+  assert.equal(snapshot.consistency.currentFocusConsistent, true);
+  assert.ok(!snapshot.recentRegressions.some((item) => /Current Focus differs/.test(item)));
+});
+
+test('validation confidence normalization tolerates expected wording differences', async () => {
+  assert.equal(normalizeConfidence('- Medium'), 'medium');
+  assert.equal(normalizeConfidence('Mixed validation coverage'), 'medium');
+  const docs = { ...baseDocs, 'validation.md': `# Validation
+
+## Confidence
+- Mixed validation coverage
+`, 'repository-health.md': `# Repository Health
+Confidence: Medium
+
+## Quality Signals
+- Evidence-backed strategy.
+` };
+  const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
+  assert.equal(snapshot.consistency.validationConsistent, true);
+  assert.ok(!snapshot.recentRegressions.some((item) => /Validation confidence differs/.test(item)));
 });
 
 test('Nearify and Agent IDE retain expected quality scores after export generation', async () => {

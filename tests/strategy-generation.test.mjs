@@ -62,3 +62,33 @@ assert.equal(successResult.status, 0, successResult.stderr);
 const successStrategy = await readFile(join(successDir, '.ai/strategy.md'), 'utf8');
 assert.match(successStrategy, /## Success Definition\n- A fresh AI assistant can explain a repository\.\n- A user can copy useful AI context\./);
 assert.doesNotMatch(successStrategy, /## Success Definition\nSuccess Criteria\b/);
+
+const duplicateDir = await mkdtemp(join(tmpdir(), 'agent-ide-strategy-duplicate-'));
+await mkdir(join(duplicateDir, '.ai'), { recursive: true });
+await writeFile(join(duplicateDir, '.ai/goals.md'), `# Goals
+
+## Product Thesis
+Repository intelligence helps developers share AI-ready project context.
+
+## Current Focus
+Reusable AI context handoff
+
+## Success Criteria
+- A fresh AI assistant can explain a repository.
+`);
+await writeFile(join(duplicateDir, '.ai/strategy.md'), `# Strategy
+
+## Success Definition
+Old generated duplicate.
+
+## Manual Strategy Notes
+Human note.
+
+## Success Definition
+Nested manual heading should be demoted.
+`);
+const duplicateResult = spawnSync(process.execPath, [script], { cwd: duplicateDir, encoding: 'utf8' });
+assert.equal(duplicateResult.status, 0, duplicateResult.stderr);
+const duplicateStrategy = await readFile(join(duplicateDir, '.ai/strategy.md'), 'utf8');
+assert.equal([...duplicateStrategy.matchAll(/^## Success Definition$/gm)].length, 1);
+assert.match(duplicateStrategy, /### Success Definition\nNested manual heading should be demoted\./);

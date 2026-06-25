@@ -23,11 +23,19 @@ async function readIfExists(path) {
   return (await exists(path)) ? readFile(path, 'utf8') : '';
 }
 
+function sanitizeManualNotes(value) {
+  const lines = value.trimEnd().split('\n');
+  return lines.map((line, index) => {
+    if (index === 0) return manualHeader;
+    return line.replace(/^##(\s+)/, '###$1');
+  }).join('\n') + '\n';
+}
+
 async function readManualNotes() {
   if (!(await exists(outputPath))) return `${manualHeader}\n`;
   const current = await readFile(outputPath, 'utf8');
   const index = current.indexOf(manualHeader);
-  return index === -1 ? `${manualHeader}\n` : `${current.slice(index).trimEnd()}\n`;
+  return index === -1 ? `${manualHeader}\n` : sanitizeManualNotes(current.slice(index));
 }
 
 function compact(value) { return value.replace(/\s+/g, ' ').trim(); }
@@ -94,7 +102,7 @@ function explicitValue(sources, heading, options = {}) {
     : options;
   for (const source of sources) {
     const value = cleanSectionValue(section(source.text, heading), headingOptions);
-    if (value && !isHeadingOnly(value) && !containsImplementationDetail(value)) return { value, evidence: source.name };
+    if (value && !isHeadingOnly(value) && (options.allowImplementation || !containsImplementationDetail(value))) return { value, evidence: source.name };
   }
   return null;
 }
@@ -128,10 +136,9 @@ function beliefFromFocus(currentFocus, priorities) {
 function inferCurrentProductBet(sources) {
   const explicit = explicitValue(sources, 'Current Product Bet') ?? explicitValue(sources, 'Product Bet');
   if (explicit) return explicit;
-  const currentFocus = explicitValue(sources, 'Current Focus');
+  const currentFocus = explicitValue(sources, 'Current Focus', { allowImplementation: true });
   if (!currentFocus) return null;
-  const priorities = explicitValue(sources, 'Current Priorities') ?? explicitValue(sources, 'Priorities');
-  return beliefFromFocus(currentFocus, priorities);
+  return currentFocus;
 }
 
 function inferCurrentExperiment(sources) {
@@ -230,7 +237,7 @@ function inferField(field, sources) {
   }
 
   if (field === 'Strategic Differentiator') {
-    const productThesis = explicitValue(sources, 'Product Thesis') ?? explicitValue(sources, 'Product Purpose');
+    const productThesis = explicitValue(sources, 'Product Thesis', { allowImplementation: true }) ?? explicitValue(sources, 'Product Purpose', { allowImplementation: true });
     const differentiator = inferStrategicDifferentiator(sources, productThesis);
     if (differentiator) return differentiator;
   }
@@ -245,7 +252,7 @@ function inferField(field, sources) {
     if (experiment) return experiment;
   }
 
-  const explicit = explicitValue(sources, field);
+  const explicit = explicitValue(sources, field, { allowImplementation: field === 'Product Thesis' || field === 'What Not To Build' });
   if (explicit && (field !== 'Strategic Differentiator' || normalizeComparable(explicit.value) !== normalizeComparable(explicitValue(sources, 'Product Thesis')?.value ?? ''))) return explicit;
 
   const patterns = {
@@ -257,10 +264,10 @@ function inferField(field, sources) {
     'Success Definition': [/success definition/i, /success criteria/i, /reach out to today/i],
   };
   const matched = matchLine(sources, patterns[field] ?? []);
-  if (matched) return matched;
+  if (matched && !/^\*\*Strategy\*\* surfaces the product thesis/i.test(matched.value)) return matched;
 
   if (field === 'Product Thesis') {
-    const architectureThesis = explicitValue(sources, 'Product Thesis') ?? explicitValue(sources, 'Product Purpose');
+    const architectureThesis = explicitValue(sources, 'Product Thesis', { allowImplementation: true }) ?? explicitValue(sources, 'Product Purpose', { allowImplementation: true });
     if (architectureThesis) return architectureThesis;
     const readme = sources.find((source) => source.name === 'README.md');
     const sentence = readme ? firstSentence(readme.text) : '';

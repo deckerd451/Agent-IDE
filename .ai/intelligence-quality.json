@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-06-25T15:56:30.794Z",
+  "overallScore": 95,
+  "canonicalIntelligenceQuality": {
+    "score": 94,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100
+  },
+  "generatedExportQuality": {
+    "score": 100,
+    "coverageScore": 100,
+    "freshnessScore": 100,
+    "promptsFreshnessOnly": true
+  },
+  "coverage": {
+    "score": 100,
+    "goalsPresent": true,
+    "strategyPresent": true,
+    "architecturePresent": true,
+    "decisionsPresent": true,
+    "validationPresent": true,
+    "backlogPresent": true,
+    "repositoryHealthPresent": true,
+    "agentsPresent": true,
+    "codePresent": true,
+    "contextPackagePresent": true,
+    "promptsPresent": true
+  },
+  "consistency": {
+    "score": 100,
+    "productThesisConsistent": true,
+    "currentFocusConsistent": true,
+    "northStarConsistent": true,
+    "validationConsistent": true,
+    "strategyConsistent": true,
+    "strategyReferencesSupportedByEvidence": true,
+    "duplicatedSections": [],
+    "contradictions": []
+  },
+  "freshness": {
+    "score": 100,
+    "lastRefresh": "2026-06-25T15:56:30.794Z",
+    "filesChanged": 1,
+    "staleDocuments": [],
+    "canonicalStaleDocuments": [],
+    "derivedStaleDocuments": [],
+    "manualNotesPreserved": true
+  },
+  "confidence": {
+    "score": 73,
+    "existingConfidence": "Medium",
+    "strategyConfidence": "High",
+    "validationConfidence": "Medium",
+    "overallRepositoryConfidence": "Medium"
+  },
+  "drift": {
+    "productThesisChanged": false,
+    "strategyChanged": false,
+    "architectureChanged": false,
+    "backlogGrew": false,
+    "backlogShrank": false,
+    "newRisks": [],
+    "removedRisks": [
+      "Implementation Leakage Warning: strategy fields contain implementation-level details in What Not To Build"
+    ]
+  },
+  "risks": [
+    "Backlog contains possible noise",
+    "Missing manual goals"
+  ],
+  "backlogCount": 18,
+  "fingerprints": {
+    "productThesis": "agent ide makes repository understanding the primary developer interface for ai ready developer handoffs.",
+    "strategy": "the repository is currently focused on making repository understanding the primary surface of agent ide.",
+    "architecture": "dashboard ui: inferred from target repository structure and naming. repository intelligence contract: inferred from target repository structure and naming. local audit engine: inferred from target repository structure and naming."
+  },
+  "recentRegressions": [],
+  "recentImprovements": [
+    "Removed risk: Implementation Leakage Warning: strategy fields contain implementation-level details in What Not To Build"
+  ],
+  "trend": "Stable",
+  "recommendedAction": "Keep refreshing intelligence after meaningful repository changes."
+}
