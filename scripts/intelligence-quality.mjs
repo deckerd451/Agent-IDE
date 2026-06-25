@@ -130,11 +130,11 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
 }
 
 export function recommendQualityAction(snapshot) {
-  const missing = Object.entries(snapshot.coverage).find(([key, value]) => key.endsWith('Present') && value === false);
-  if (missing) return `Generate missing intelligence: ${missing[0].replace(/Present$/, '')}.`;
+  const missing = canonicalIntelligenceFiles.find((file) => !snapshot.coverage[`${file.replace(/\.md$/, '').replace(/-([a-z])/g, (_, char) => char.toUpperCase())}Present`]);
+  if (missing) return `Generate missing intelligence: ${missing.replace(/\.md$/, '')}.`;
   if (snapshot.consistency.contradictions.length) return `Resolve contradiction: ${snapshot.consistency.contradictions[0]}`;
   if (snapshot.confidence.score < 55) return 'Improve weak confidence by adding deterministic validation or evidence.';
-  if (snapshot.freshness.staleDocuments.length) return `Refresh stale intelligence: ${snapshot.freshness.staleDocuments[0]}.`;
+  if (snapshot.freshness.canonicalStaleDocuments.length) return `Refresh stale intelligence: ${snapshot.freshness.canonicalStaleDocuments[0]}.`;
   if (snapshot.backlogCount === 0) return 'Add a prioritized backlog item tied to repository intelligence.';
   return 'Keep refreshing intelligence after meaningful repository changes.';
 }

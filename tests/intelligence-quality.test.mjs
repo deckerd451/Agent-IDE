@@ -47,6 +47,8 @@ test('prompt files containing repeated headings do not lower canonical consisten
   const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
   assert.equal(snapshot.consistency.score, 100);
   assert.deepEqual(snapshot.consistency.duplicatedSections, []);
+  assert.ok(!snapshot.recentRegressions.some((item) => item.includes('prompts/architect.md') || item.includes('Product Thesis')));
+  assert.doesNotMatch(snapshot.recommendedAction, /prompt|duplicate|Product Thesis/i);
   assert.equal(snapshot.generatedExportQuality.promptsFreshnessOnly, true);
 });
 
@@ -56,6 +58,22 @@ test('context-package duplication does not create contradiction warnings', async
   assert.equal(snapshot.consistency.productThesisConsistent, true);
   assert.deepEqual(snapshot.consistency.contradictions, []);
   assert.deepEqual(snapshot.consistency.duplicatedSections, []);
+  assert.ok(!snapshot.recentRegressions.some((item) => item.includes('context-package.md') || item.includes('Product Thesis')));
+});
+
+test('derived duplicate headings stay out of regressions and recommendations', async () => {
+  const docs = {
+    ...baseDocs,
+    'context-package.md': '# Context Package\n\n## Product Thesis\nExport copy.\n\n## Product Thesis\nRepeated export copy.\n',
+    'prompts/architect.md': '# Architect\n\n## Product Thesis\nPrompt copy.\n\n## Product Thesis\nRepeated prompt copy.\n',
+    'prompts/builder.md': '# Builder\n\n## Product Thesis\nPrompt copy.\n\n## Product Thesis\nRepeated prompt copy.\n',
+    'prompts/reviewer.md': '# Reviewer\n\n## Product Thesis\nPrompt copy.\n\n## Product Thesis\nRepeated prompt copy.\n',
+    'prompts/debugger.md': '# Debugger\n\n## Product Thesis\nPrompt copy.\n\n## Product Thesis\nRepeated prompt copy.\n',
+  };
+  const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
+  assert.deepEqual(snapshot.consistency.duplicatedSections, []);
+  assert.ok(!snapshot.recentRegressions.some((item) => /prompts\/.*\.md|context-package\.md|Duplicate section: .*Product Thesis/.test(item)));
+  assert.doesNotMatch(snapshot.recommendedAction, /prompt|duplicate|Product Thesis/i);
 });
 
 test('Product Thesis comparison ignores generated exports', async () => {
@@ -119,7 +137,7 @@ test('freshness calculation marks stale documents', async () => {
 test('quality score combines coverage, consistency, freshness, and confidence', async () => {
   const snapshot = await computeQualitySnapshot(await repoWithDocs(), baseDocs);
   assert.ok(snapshot.overallScore >= 90);
-  const weakDocs = { ...baseDocs, 'context-package.md': '', 'validation.md': '# Validation\n\n## Confidence\nLow\n' };
+  const weakDocs = { ...baseDocs, 'agents.md': '', 'validation.md': '# Validation\n\n## Confidence\nLow\n' };
   const weak = await computeQualitySnapshot(await repoWithDocs(weakDocs), weakDocs);
   assert.ok(weak.overallScore < snapshot.overallScore);
   assert.match(weak.recommendedAction, /missing intelligence/i);
