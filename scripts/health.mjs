@@ -135,6 +135,11 @@ function isMissingStrategyValue(text, header) {
 }
 
 function detectsBacklogNoise(text) {
+  const backlogItems = (text.match(/^## (?:High|Medium|Low) Priority\s*([\s\S]*?)(?=^##\s+|(?![\s\S]))/gim) ?? [])
+    .join('\n')
+    .split('\n')
+    .filter((line) => /^-\s+(?!None detected\b)/i.test(line.trim()))
+    .join('\n');
   const noisePatterns = [
     /No validation gaps detected from package scripts\.?/i,
     /No deterministic validation commands were detected\.?/i,
@@ -142,7 +147,7 @@ function detectsBacklogNoise(text) {
     /Generated (?:summary|backlog|architecture|validation|decision)/i,
     /Validation (?:passed|succeeded|completed successfully)/i,
   ];
-  return noisePatterns.some((pattern) => pattern.test(text));
+  return noisePatterns.some((pattern) => pattern.test(backlogItems));
 }
 
 function detectsValidationCommands(text) {

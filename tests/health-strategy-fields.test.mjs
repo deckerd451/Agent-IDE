@@ -92,3 +92,58 @@ assert.equal(headingOnlyResult.status, 0, headingOnlyResult.stderr);
 const headingOnlyHealth = await readFile(join(headingOnlyDir, '.ai/repository-health.md'), 'utf8');
 assert.match(headingOnlyHealth, /- Success Definition missing/);
 assert.match(headingOnlyHealth, /Strategy missing Success Definition/);
+
+const backlogNoiseDir = await mkdtemp(join(tmpdir(), 'agent-ide-health-backlog-noise-'));
+await mkdir(join(backlogNoiseDir, '.ai/prompts'), { recursive: true });
+await writeFile(join(backlogNoiseDir, '.ai/goals.md'), '# Goals\n\n## Manual Goals\nPresent\n');
+await writeFile(join(backlogNoiseDir, '.ai/architecture.md'), '# Architecture\n\n## Product Thesis\nRepository intelligence.\n\n## Current Focus\nReusable AI context.\n\n## Core Systems\nContext packages.\n');
+await writeFile(join(backlogNoiseDir, '.ai/backlog.md'), `# Backlog
+
+Last Audit: 2026-06-24T01:30:47.539Z
+Confidence: 95%
+
+## High Priority
+- None detected
+
+## Medium Priority
+- **Add Backlog Quality Filtering**
+  - Source: README.md:189
+  - Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering.
+  - Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering.
+
+## Low Priority
+- None detected
+
+## Manual Backlog
+`);
+await writeFile(join(backlogNoiseDir, '.ai/strategy.md'), `# Strategy
+
+## Product Thesis
+Repository intelligence.
+
+## North Star Metric
+Reusable context adoption.
+
+## Strategic Differentiator
+Local deterministic repository intelligence.
+
+## Current Product Bet
+Reusable AI context.
+
+## Current Experiment
+Can repository understanding improve assistant handoffs?
+
+## What Not To Build
+Cloud-only repository indexing.
+
+## Success Definition
+Developers reuse repository context across assistants.
+`);
+for (const file of ['decisions.md', 'validation.md', 'agents.md', 'code.md']) await writeFile(join(backlogNoiseDir, '.ai', file), '# Notes\n');
+await writeFile(join(backlogNoiseDir, '.ai/validation.md'), '# Validation\n\n## Commands Run\n- `npm run build`\n');
+await writeFile(join(backlogNoiseDir, '.ai/prompts/architect.md'), '# Architect\n');
+const backlogNoiseResult = spawnSync(process.execPath, [resolve('scripts/health.mjs')], { cwd: backlogNoiseDir, encoding: 'utf8' });
+assert.equal(backlogNoiseResult.status, 0, backlogNoiseResult.stderr);
+const backlogNoiseHealth = await readFile(join(backlogNoiseDir, '.ai/repository-health.md'), 'utf8');
+assert.match(backlogNoiseHealth, /- Backlog noise not detected/);
+assert.doesNotMatch(backlogNoiseHealth, /Backlog contains possible noise/);
