@@ -19,6 +19,14 @@ type StepState = {
   output?: string;
 };
 
+type ControlPlane = {
+  status: Record<string, string>;
+  diff: Record<string, string | string[]>;
+  evidence: Array<{ file: string; section: string; line: number; evidence: string; confidence: string }>;
+  packages: Record<string, string>;
+  timeline: Array<{ timestamp: string; repositoryHealth: string; strategyQuality: string; confidence: string; recommendation: string }>;
+};
+
 type DocumentState = {
   content: string;
   exists: boolean;
@@ -202,9 +210,51 @@ function PromptCenter({ connectedPath, documents, loadFile }: { connectedPath: s
   );
 }
 
+
+function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
+  if (!data) return <div className="markdownPanel emptyState"><h2>Control plane not ready.</h2><p>Connect a repository and refresh intelligence to build the local deterministic dashboard.</p></div>;
+  const statusCards = [
+    ['Overall Repository Health', data.status.overallHealth],
+    ['Intelligence Completeness', data.status.intelligenceCompleteness],
+    ['Strategy Quality', data.status.strategyQuality],
+    ['Product Signal Quality', data.status.productSignalQuality],
+    ['Repository Handoff Readiness', data.status.repositoryHandoffReadiness],
+    ['Last Refresh', data.status.lastRefresh],
+    ['Current Confidence', data.status.currentConfidence],
+  ];
+  const diffEntries = [
+    ['Strategy changes', data.diff.strategyChanges],
+    ['Architecture changes', data.diff.architectureChanges],
+    ['Backlog additions', data.diff.backlogAdditions],
+    ['Backlog removals', data.diff.backlogRemovals],
+    ['Decision additions', data.diff.decisionAdditions],
+    ['Validation changes', data.diff.validationChanges],
+    ['Health score changes', data.diff.healthScoreChanges],
+  ];
+  const packageLabels = [
+    ['context', 'Copy Context Package'],
+    ['architect', 'Copy Architect Package'],
+    ['builder', 'Copy Builder Package'],
+    ['reviewer', 'Copy Reviewer Package'],
+    ['debugger', 'Copy Debugger Package'],
+  ];
+  return (
+    <div className="controlPlane">
+      <section className="dashboardGrid" aria-label="Repository status">
+        {statusCards.map(([label, value]) => <article className="metricCard" key={String(label)}><small>{label}</small><strong>{value || 'Unknown'}</strong></article>)}
+      </section>
+      <section className="controlCard recommended"><small>Recommended Next Step</small><strong>{data.status.recommendedNextStep}</strong></section>
+      <section className="controlCard"><h2>What Changed?</h2><p>{data.diff.summary}</p>{diffEntries.map(([label, value]) => { const items = Array.isArray(value) ? value : []; return <details key={String(label)}><summary>{label} <span>{items.length}</span></summary>{items.length ? <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No changes detected.</p>}</details>; })}</section>
+      <section className="controlCard"><h2>Evidence Explorer</h2>{data.evidence.length ? data.evidence.map((item) => <details key={`${item.file}-${item.line}`}><summary>{item.section} <button onClick={(event) => { event.preventDefault(); }} type="button">View Evidence</button></summary><p><strong>File:</strong> {item.file}:{item.line}</p><p><strong>Extracted evidence:</strong> {item.evidence}</p><p><strong>Confidence:</strong> {item.confidence}</p></details>) : <p>No generated evidence lines detected yet.</p>}</section>
+      <section className="controlCard"><h2>Repository Handoff</h2><div className="handoffGrid">{packageLabels.map(([key, label]) => <button disabled={!data.packages[key]} key={key} onClick={() => void copyText(data.packages[key] ?? '')} type="button">{label}</button>)}</div></section>
+      <section className="controlCard"><h2>Intelligence Timeline</h2>{data.timeline.length ? <ol className="timelineList">{data.timeline.slice().reverse().map((item) => <li key={item.timestamp}><strong>{item.timestamp}</strong><span>{item.repositoryHealth} · Strategy {item.strategyQuality} · Confidence {item.confidence}</span><small>{item.recommendation}</small></li>)}</ol> : <p>No refresh executions recorded yet.</p>}</section>
+    </div>
+  );
+}
+
 function getInitialSelectedId(): Section['id'] {
   const remembered = window.localStorage.getItem(selectedTabStorageKey);
-  return sections.some((section) => section.id === remembered) ? (remembered as Section['id']) : 'Goals';
+  return sections.some((section) => section.id === remembered) ? (remembered as Section['id']) : 'Control Plane';
 }
 
 export function App() {
@@ -216,12 +266,24 @@ export function App() {
   const [summary, setSummary] = useState('');
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [controlPlane, setControlPlane] = useState<ControlPlane | null>(null);
 
   const selected = useMemo(
     () => sections.find((section) => section.id === selectedId) ?? sections[0],
     [selectedId],
   );
   const document = documents[selected.markdownFile];
+
+
+  const loadControlPlane = useCallback(async (path: string) => {
+    if (!path) return;
+    const url = new URL('/api/repository/control-plane', serverBaseUrl);
+    url.searchParams.set('repositoryPath', path);
+    const response = await fetch(url);
+    const data = await response.json() as ControlPlane & { error?: string };
+    if (!response.ok) throw new Error(data.error ?? 'Unable to load control plane.');
+    setControlPlane(data);
+  }, []);
 
   const loadIntelligenceFile = useCallback(async (path: string, file: string) => {
     if (!path || !intelligenceFiles.has(file)) return;
@@ -269,11 +331,17 @@ export function App() {
     });
   }, [connectedPath, loadIntelligenceFile, selected.markdownFile]);
 
+  useEffect(() => {
+    if (!connectedPath) return;
+    void loadControlPlane(connectedPath).catch(() => undefined);
+  }, [connectedPath, loadControlPlane]);
+
   async function refreshIntelligence() {
     setError('');
     setSummary('');
     setSteps([]);
     setDocuments({});
+    setControlPlane(null);
     setIsRefreshing(true);
 
     try {
@@ -327,8 +395,9 @@ export function App() {
       }
 
       if (refreshedRepositoryPath) {
-        setSelectedId('Strategy');
-        await Promise.all(['goals.md', 'strategy.md', 'context-package.md', ...promptFiles].map((file) => loadIntelligenceFile(refreshedRepositoryPath, file)));
+        setSelectedId('Control Plane');
+        await Promise.all(['goals.md', 'strategy.md', 'repository-health.md', 'context-package.md', ...promptFiles].map((file) => loadIntelligenceFile(refreshedRepositoryPath, file)));
+        await loadControlPlane(refreshedRepositoryPath);
       }
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
@@ -398,16 +467,17 @@ export function App() {
           <small>{document?.sourcePath ?? (connectedPath ? `${connectedPath}/.ai/${selected.markdownFile}` : `.ai/${selected.markdownFile}`)}</small>
         </section>
 
+        {selected.id === 'Control Plane' && <ControlPlaneDashboard data={controlPlane} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}
         {selected.id === 'Context Package' && connectedPath && document && !document.isLoading && document.exists && (
           <DocumentActions content={document.content} copyLabel="Copy Context Package" downloadLabel="Download Context Package" downloadName="context-package.md" extraActions={<button onClick={() => void copyText(`${handoffWrapper}\n\n${document.content}`)} type="button">Copy for Claude/GPT</button>} />
         )}
-        {selected.id !== 'Prompt Center' && !connectedPath && <MissingDocument />}
-        {selected.id !== 'Prompt Center' && connectedPath && document?.isLoading && <div className="markdownPanel emptyState"><h2>Loading…</h2></div>}
-        {selected.id !== 'Prompt Center' && connectedPath && document && !document.isLoading && document.exists && <MarkdownLikeContent markdown={document.content} />}
-        {selected.id !== 'Prompt Center' && connectedPath && document && !document.isLoading && !document.exists && <MissingDocument />}
+        {selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && !connectedPath && <MissingDocument />}
+        {selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && connectedPath && document?.isLoading && <div className="markdownPanel emptyState"><h2>Loading…</h2></div>}
+        {selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && connectedPath && document && !document.isLoading && document.exists && <MarkdownLikeContent markdown={document.content} />}
+        {selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && connectedPath && document && !document.isLoading && !document.exists && <MissingDocument />}
       </main>
     </div>
   );

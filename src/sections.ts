@@ -1,4 +1,5 @@
 export type SectionId =
+  | 'Control Plane'
   | 'Goals'
   | 'Architecture'
   | 'Strategy'
@@ -19,6 +20,12 @@ export type Section = {
 };
 
 export const sections: Section[] = [
+  {
+    id: 'Control Plane',
+    eyebrow: 'Operational dashboard',
+    summary: 'Repository intelligence status, change history, evidence, timeline, and one-click AI handoff packages.',
+    markdownFile: 'repository-health.md',
+  },
   {
     id: 'Goals',
     eyebrow: 'Repository intent',
