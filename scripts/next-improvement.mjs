@@ -24,8 +24,30 @@ function healthRecommendation(health) { return firstLine(mdSection(health, 'Reco
 function backlogCount(backlog) { return bullets(mdSection(backlog, 'Prioritized Backlog') || mdSection(backlog, 'Current Backlog') || mdSection(backlog, 'Manual Backlog') || backlog).length; }
 function score(value, fallback = 100) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 
-function selectedIssue({ id, category, severity = 'high', source, title, evidence, reason, recommendedAction }) {
-  return { id, kind: id, category, severity, source, title, evidence: evidence || source, reason, recommendedAction };
+function selectedIssue({ id, category, severity = 'high', actionability = issueActionability(id, source), source, title, evidence, reason, recommendedAction }) {
+  return { id, kind: id, category, severity, actionability, source, title, evidence: evidence || source, reason, recommendedAction };
+}
+
+function issueActionability(id, source = '') {
+  if (id === 'missing-manual-goals' || id === 'strategy-quality') return 'manual';
+  if (id === 'ai-handoff-validation') return 'validation-experiment';
+  if (id === 'stale-intelligence' && /manual|product owner|repository intent notes/i.test(source)) return 'manual';
+  return 'code-fixable';
+}
+
+function actionabilityRank(issue) {
+  if (issue.severity === 'critical') return 0;
+  if (issue.actionability === 'code-fixable') return 1;
+  if (issue.actionability === 'manual') return 2;
+  return 3;
+}
+
+function severityRank(issue) {
+  return { critical: 0, high: 1, medium: 2, low: 3 }[issue.severity] ?? 4;
+}
+
+function selectBestIssue(issues) {
+  return issues.sort((a, b) => actionabilityRank(a) - actionabilityRank(b) || severityRank(a) - severityRank(b))[0];
 }
 
 const issueDetails = {
@@ -79,49 +101,51 @@ const issueDetails = {
 export function chooseNextImprovement({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '' }) {
   const risks = healthRisks(health);
   const coverage = quality?.coverage ?? {};
+  const issues = [];
   const missingCanonical = ['goalsPresent','strategyPresent','architecturePresent','decisionsPresent','validationPresent','backlogPresent','repositoryHealthPresent','agentsPresent','codePresent'].find((key) => coverage[key] === false);
   const manualGoalsRisk = risks.find((r) => /manual goals|product thesis|current product intent|success criteria|current focus/i.test(r));
   if (coverage.goalsPresent === false || manualGoalsRisk) {
     const evidence = manualGoalsRisk ?? 'Manual Goals are missing from `.ai/goals.md`.';
-    return selectedIssue({ id: 'missing-manual-goals', category: 'missing manual goals', severity: 'high', source: evidence, title: 'Fill Manual Goals', evidence, reason: 'Manual Goals are the source of truth for product intent and success criteria.', recommendedAction: 'Populate `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.' });
+    issues.push(selectedIssue({ id: 'missing-manual-goals', category: 'missing manual goals', severity: 'high', actionability: 'manual', source: evidence, title: 'Complete Manual Repository Intent Notes', evidence, reason: 'Manual Goals are the source of truth for product intent and success criteria.', recommendedAction: 'Populate `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.' }));
   }
   if (missingCanonical || risks.some((r) => /missing intelligence file|architecture has no/i.test(r))) {
     const risk = risks.find((r) => /missing intelligence file|architecture has no/i.test(r)) ?? `Missing canonical intelligence: ${missingCanonical?.replace(/Present$/, '')}`;
-    return selectedIssue({ id: 'missing-canonical', category: 'missing canonical intelligence', severity: 'high', source: risk, title: 'Restore Missing Canonical Intelligence', evidence: risk, reason: 'Canonical intelligence is the source of truth for every generated prompt and handoff.', recommendedAction: 'Restore the missing canonical intelligence named in Current Evidence.' });
+    if (missingCanonical !== 'goalsPresent') issues.push(selectedIssue({ id: 'missing-canonical', category: 'missing canonical intelligence', severity: 'high', source: risk, title: 'Restore Missing Canonical Intelligence', evidence: risk, reason: 'Canonical intelligence is the source of truth for every generated prompt and handoff.', recommendedAction: 'Restore the missing canonical intelligence named in Current Evidence.' }));
   }
   const contradictions = quality?.consistency?.contradictions ?? [];
   const duplicates = quality?.consistency?.duplicatedSections ?? [];
   if (contradictions.length || duplicates.length || /contradiction|duplicate canonical/i.test(audit)) {
     const source = contradictions[0] ?? duplicates[0] ?? firstLine(audit.match(/.*(?:contradiction|duplicate canonical).*/i)?.[0] ?? audit);
-    return selectedIssue({ id: 'consistency-cleanup', category: 'consistency cleanup', severity: 'high', source, title: 'Clean Up Canonical Contradictions', evidence: source, reason: 'Conflicting canonical intelligence makes the next builder prompt unsafe and ambiguous.', recommendedAction: 'Resolve only the contradiction or duplicate canonical section cited in Current Evidence.' });
+    issues.push(selectedIssue({ id: 'consistency-cleanup', category: contradictions.length || /contradiction/i.test(source) ? 'contradiction normalization' : 'duplicate generated sections', severity: 'high', actionability: 'code-fixable', source, title: 'Clean Up Canonical Contradictions', evidence: source, reason: 'Conflicting canonical intelligence makes the next builder prompt unsafe and ambiguous.', recommendedAction: 'Resolve only the contradiction or duplicate canonical section cited in Current Evidence.' }));
   }
   const strategyScore = score(quality?.canonicalIntelligenceQuality?.score);
   const strategyConfidence = firstLine(mdSection(strategy, 'Strategy Confidence'), 'Unknown');
   if (strategyScore < 70 || /low|weak|unknown|missing/i.test(strategyConfidence) || /strategy.*(?:weak|missing|warning|leakage)/i.test(risks.join('\n'))) {
     const evidence = /low|weak|unknown|missing/i.test(strategyConfidence) ? `Strategy Confidence: ${strategyConfidence}` : healthRecommendation(health);
-    return selectedIssue({ id: 'strategy-quality', category: 'strategy gap', severity: 'medium', source: evidence, title: 'Strengthen Strategy Quality', evidence, reason: 'Weak strategy quality reduces confidence that generated implementation work matches product intent.', recommendedAction: 'Strengthen strategy intelligence with evidence-backed repository intent.' });
+    issues.push(selectedIssue({ id: 'strategy-quality', category: 'fill strategy manual notes', severity: 'medium', actionability: 'manual', source: evidence, title: 'Strengthen Strategy Quality', evidence, reason: 'Weak strategy quality reduces confidence that generated implementation work matches product intent.', recommendedAction: 'Strengthen strategy intelligence with evidence-backed repository intent.' }));
   }
   const validationConfidence = quality?.confidence?.validationConfidence ?? '';
   if (score(quality?.confidence?.score) < 55 || /low|weak|unknown|missing/i.test(validationConfidence) || risks.some((r) => /validation.*(?:low|weak|no deterministic|missing)/i.test(r))) {
     const evidence = validationConfidence || healthRecommendation(health);
-    return selectedIssue({ id: 'validation', category: 'validation gap', severity: 'medium', source: evidence, title: 'Improve Validation Confidence', evidence, reason: 'Builder prompts should be backed by known local checks that prove changes still work.', recommendedAction: 'Update validation intelligence with deterministic local checks and known gaps.' });
+    issues.push(selectedIssue({ id: 'validation', category: 'validation detector gaps', severity: 'medium', actionability: 'code-fixable', source: evidence, title: 'Improve Validation Confidence', evidence, reason: 'Builder prompts should be backed by known local checks that prove changes still work.', recommendedAction: 'Update validation intelligence with deterministic local checks and known gaps.' }));
   }
   const handoffReady = Boolean(contextPackage.trim()) && score(quality?.generatedExportQuality?.score) >= 70;
-  if (!handoffReady) return selectedIssue({ id: 'handoff-readiness', category: 'AI handoff readiness', severity: 'medium', source: '.ai/context-package.md or generated export quality is weak.', title: 'Improve AI Handoff Readiness', evidence: '.ai/context-package.md or generated export quality is weak.', reason: 'Assistant handoffs need complete generated context before implementation work begins.', recommendedAction: 'Improve the generated handoff package cited in Current Evidence.' });
+  if (!handoffReady) issues.push(selectedIssue({ id: 'handoff-readiness', category: 'AI handoff readiness', severity: 'medium', actionability: 'code-fixable', source: '.ai/context-package.md or generated export quality is weak.', title: 'Improve AI Handoff Readiness', evidence: '.ai/context-package.md or generated export quality is weak.', reason: 'Assistant handoffs need complete generated context before implementation work begins.', recommendedAction: 'Improve the generated handoff package cited in Current Evidence.' }));
   const stale = quality?.freshness?.canonicalStaleDocuments ?? [];
-  if (stale.length) return selectedIssue({ id: 'stale-intelligence', category: 'stale intelligence', severity: 'medium', source: stale[0], title: 'Refresh Stale Intelligence', evidence: stale[0], reason: 'Stale canonical files can point builders at outdated goals, risks, or validation.', recommendedAction: 'Refresh the stale canonical intelligence cited in Current Evidence.' });
+  if (stale.length) issues.push(selectedIssue({ id: 'stale-intelligence', category: 'stale intelligence', severity: 'medium', source: stale[0], title: 'Refresh Stale Intelligence', evidence: stale[0], reason: 'Stale canonical files can point builders at outdated goals, risks, or validation.', recommendedAction: 'Refresh the stale canonical intelligence cited in Current Evidence.' }));
   const backlogRisk = risks.find((r) => /backlog.*noise|severe backlog noise/i.test(r));
   if (backlogCount(backlog) > 25 || backlogRisk) {
     const evidence = backlogRisk ?? `Backlog contains ${backlogCount(backlog)} items, exceeding the noise threshold of 25.`;
-    return selectedIssue({ id: 'backlog-noise', category: 'backlog noise', severity: 'medium', source: evidence, title: 'Reduce Backlog Noise', evidence, reason: 'A noisy backlog hides the highest-leverage next implementation work.', recommendedAction: 'Remove, merge, or downgrade noisy backlog items.' });
+    issues.push(selectedIssue({ id: 'backlog-noise', category: 'backlog filtering bugs', severity: 'medium', actionability: 'code-fixable', source: evidence, title: 'Reduce Backlog Noise', evidence, reason: 'A noisy backlog hides the highest-leverage next implementation work.', recommendedAction: 'Remove, merge, or downgrade noisy backlog items.' }));
   }
-  return selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' });
+  return selectBestIssue(issues.length ? issues : [selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', actionability: 'validation-experiment', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' })]);
 }
+
 
 export function renderPrompt(choice) {
   const selected = choice.selectedIssue ?? choice;
   const details = issueDetails[selected.id] ?? issueDetails[selected.kind] ?? issueDetails['missing-canonical'];
-  return `# ${selected.title}\n\n## Selected Issue\n- ID: ${selected.id}\n- Category: ${selected.category}\n- Severity: ${selected.severity}\n- Source: ${selected.source}\n- Title: ${selected.title}\n- Evidence: ${selected.evidence}\n- Reason: ${selected.reason}\n- Recommended Action: ${selected.recommendedAction}\n\n## Motivation\nAgent IDE should close the loop from repository intelligence to one safe next builder task. This prompt was generated deterministically from the selected issue above.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Problem\n${details.problem}\n\n## Goal\n${selected.recommendedAction}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The final diff is small, deterministic, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
+  return `# ${selected.title}\n\n## Selected Issue\n- ID: ${selected.id}\n- Category: ${selected.category}\n- Severity: ${selected.severity}\n- Actionability: ${selected.actionability}\n- Source: ${selected.source}\n- Title: ${selected.title}\n- Evidence: ${selected.evidence}\n- Reason: ${selected.reason}\n- Recommended Action: ${selected.recommendedAction}\n\n## Motivation\n${selected.actionability === 'manual' ? 'This is a manual product-owner task, not a Codex implementation task.\n\n' : ''}Agent IDE should close the loop from repository intelligence to one safe next builder task. This prompt was generated deterministically from the selected issue above.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Problem\n${details.problem}\n\n## Goal\n${selected.recommendedAction}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The final diff is small, deterministic, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
 }
 
 export async function generateNextImprovement(repositoryPath = process.cwd()) {
