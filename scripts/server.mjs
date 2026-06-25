@@ -322,7 +322,8 @@ function promptEvidenceValue(prompt, label, fallback = '') {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp(`^-\\s*${escaped}:\\s*(.+)$`, 'im');
   const section = mdSection(prompt, 'Current Evidence');
-  const match = section.match(pattern) ?? prompt.match(pattern);
+  const selectedIssue = mdSection(prompt, 'Selected Issue');
+  const match = section.match(pattern) ?? selectedIssue.match(pattern) ?? prompt.match(pattern);
   return match?.[1]?.trim() ?? fallback;
 }
 
@@ -347,7 +348,7 @@ async function readControlPlane(repositoryPath) {
   const qualityHistory = JSON.parse(await readFile(join(aiDir, 'intelligence-history.json'), 'utf8').catch(() => '[]'));
   const timeline = JSON.parse(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => '[]'));
   const recommendation = docs['next-improvement-prompt.md']?.trim()
-    ? { title: firstLine(docs['next-improvement-prompt.md'].replace(/^#\s*/, ''), snapshot.recommendedNextStep), actionability: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Actionability', 'Not classified.'), explanation: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Source risk/recommendation', 'See generated prompt.'), whyItMatters: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Reason', 'Generated from Control Plane intelligence.'), evidenceSource: '.ai/next-improvement-prompt.md', prompt: docs['next-improvement-prompt.md'] }
+    ? { title: firstLine(docs['next-improvement-prompt.md'].replace(/^#\s*/, ''), snapshot.recommendedNextStep), actionability: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Actionability', 'Not classified.'), packageType: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Package Type', 'implementation'), explanation: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Source risk/recommendation', 'See generated prompt.'), whyItMatters: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Reason', 'Generated from Control Plane intelligence.'), evidenceSource: '.ai/next-improvement-prompt.md', prompt: docs['next-improvement-prompt.md'] }
     : recommendationDetails(docs);
   return { status: snapshot, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
 }
@@ -368,6 +369,7 @@ async function persistControlPlane(repositoryPath, previousSnapshot) {
   data.recommendation = {
     title: nextImprovement.choice.title,
     actionability: nextImprovement.choice.actionability,
+    packageType: nextImprovement.choice.packageType,
     explanation: `Source risk/recommendation: ${nextImprovement.choice.source}`,
     whyItMatters: nextImprovement.choice.reason,
     evidenceSource: '.ai/next-improvement-prompt.md',
