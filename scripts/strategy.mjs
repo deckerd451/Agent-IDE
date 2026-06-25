@@ -4,7 +4,6 @@ import { join, relative } from 'node:path';
 const root = process.cwd();
 const aiDir = join(root, '.ai');
 const outputPath = join(aiDir, 'strategy.md');
-const manualHeader = '## Manual Strategy Notes';
 const headings = [
   'Product Thesis',
   'North Star Metric',
@@ -21,21 +20,6 @@ async function exists(path) {
 
 async function readIfExists(path) {
   return (await exists(path)) ? readFile(path, 'utf8') : '';
-}
-
-function sanitizeManualNotes(value) {
-  const lines = value.trimEnd().split('\n');
-  return lines.map((line, index) => {
-    if (index === 0) return manualHeader;
-    return line.replace(/^##(\s+)/, '###$1');
-  }).join('\n') + '\n';
-}
-
-async function readManualNotes() {
-  if (!(await exists(outputPath))) return `${manualHeader}\n`;
-  const current = await readFile(outputPath, 'utf8');
-  const index = current.indexOf(manualHeader);
-  return index === -1 ? `${manualHeader}\n` : sanitizeManualNotes(current.slice(index));
 }
 
 function compact(value) { return value.replace(/\s+/g, ' ').trim(); }
@@ -286,7 +270,6 @@ const sources = [
   ...Object.entries(docs).map(([name, text]) => ({ name, text })),
 ].filter((source) => source.text.trim());
 
-const manualNotes = await readManualNotes();
 const inferredFields = headings.map((heading) => ({ heading, inferred: inferField(heading, sources) }));
 const strategyBody = inferredFields.flatMap(({ heading, inferred }) => [`## ${heading}`, inferred.value, inferred.evidence ? `\nEvidence: ${inferred.evidence}` : '']).join('\n');
 const leakage = detectStrategyLeakage(strategyBody, sources);
@@ -304,7 +287,7 @@ const sections = [
   implementationLeakage.length ? `- Implementation Leakage Warning: strategy fields contain implementation-level details in ${implementationLeakage.join(', ')}.` : '- No implementation leakage detected.',
 ];
 
-const content = ['# Strategy', '', ...sections, manualNotes].join('\n').replace(/\n{3,}/g, '\n\n');
+const content = ['# Strategy', '', ...sections].join('\n').replace(/\n{3,}/g, '\n\n');
 await mkdir(aiDir, { recursive: true });
 await writeFile(outputPath, content.endsWith('\n') ? content : `${content}\n`);
 console.log(`Wrote ${outputPath}`);

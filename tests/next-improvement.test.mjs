@@ -63,7 +63,7 @@ test('strategy gap produces coherent strategy prompt', () => {
     category: 'fill strategy manual notes',
     evidencePattern: /Strategy Confidence: Low/i,
     problemPattern: /Strategy quality is weak or under-evidenced/i,
-    acceptancePattern: /Strategy intelligence describes repository intent/i,
+    acceptancePattern: /Regenerated strategy no longer reports/i,
   });
 });
 
@@ -170,7 +170,7 @@ test('implementation package includes complete deterministic lead-in', () => {
 
 test('implementation package includes expected improvement and after implementation sections', () => {
   const prompt = renderPrompt(choice({ backlog: `# Backlog\n\n## Prioritized Backlog\n${Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n')}\n` }));
-  assert.match(prompt, /## Expected Repository Improvement\n- Repository Health should improve\.\n- Intelligence Quality should improve\.\n- The selected issue should disappear or downgrade\.\n- No new canonical contradictions should be introduced\./);
+  assert.match(prompt, new RegExp('## Expected Repository Improvement\\n- Repository Health should improve\\.\\n- Intelligence Quality should improve\\.\\n- The selected issue should disappear or downgrade\\.\\n- No new contradictions with `\\.ai/goals\\.md` should be introduced\\.'));
   assert.match(prompt, /## After Implementation\n- Refresh Repository Intelligence\.\n- Compare Repository Health before and after\.\n- Compare Intelligence Quality before and after\.\n- Verify whether the selected issue was resolved\.\n- Summarize any newly discovered issues\.\n- Generate the next Implementation Package\./);
 });
 
@@ -214,11 +214,25 @@ test('missing manual goals package includes suggested Manual Goals text', () => 
   assert.match(prompt, /Do not edit automatically/);
 });
 
-test('strategy manual notes package includes suggested Manual Strategy Notes text', () => {
+test('strategy manual notes package targets canonical goals sections', () => {
   const prompt = renderPrompt(choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }));
-  assert.match(prompt, /`\.ai\/strategy\.md` `## Manual Strategy Notes`/);
+  assert.match(prompt, /appropriate manual section of `\.ai\/goals\.md`/);
+  assert.match(prompt, /`## Manual Strategy Notes`/);
   assert.match(prompt, /Strategic bet: \[Repository owner:/);
-  assert.match(prompt, /review, accept, or edit/);
+  assert.doesNotMatch(prompt, /`\.ai\/strategy\.md` `## Manual Strategy Notes`/);
+});
+
+test('product decision packages never recommend generated artifacts as manual edit targets', () => {
+  for (const selected of [
+    choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } }),
+    choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }),
+  ]) {
+    const prompt = renderPrompt(selected);
+    assert.equal(selected.packageType, 'product-decision');
+    assert.match(prompt, /Repository Owner edits:\n\n\.ai\/goals\.md\n\nEverything else will be regenerated/);
+    assert.doesNotMatch(prompt, /Update \.ai\/(?:strategy|architecture|repository-health|context-package)\.md/i);
+    assert.doesNotMatch(prompt, /edit(?:ing)?[^\n]*(?:`?\.ai\/(?:strategy|architecture|repository-health|context-package)\.md`?)/i);
+  }
 });
 
 test('code-fixable issue still generates Implementation Package', () => {

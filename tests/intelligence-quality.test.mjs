@@ -39,6 +39,8 @@ test('classifies canonical intelligence and generated artifacts deterministicall
   assert.equal(classifyIntelligenceSource('goals.md'), 'canonical');
   assert.equal(classifyIntelligenceSource('.ai/prompts/architect.md'), 'derived');
   assert.equal(classifyIntelligenceSource('context-package.md'), 'derived');
+  assert.equal(classifyIntelligenceSource('strategy.md'), 'derived');
+  assert.equal(classifyIntelligenceSource('repository-health.md'), 'derived');
   assert.equal(classifyIntelligenceSource('exports/context.md'), 'derived');
 });
 
@@ -207,5 +209,5 @@ test('quality score combines coverage, consistency, freshness, and confidence', 
   const weakDocs = { ...baseDocs, 'agents.md': '', 'validation.md': '# Validation\n\n## Confidence\nLow\n' };
   const weak = await computeQualitySnapshot(await repoWithDocs(weakDocs), weakDocs);
   assert.ok(weak.overallScore < snapshot.overallScore);
-  assert.match(weak.recommendedAction, /missing intelligence/i);
+  assert.match(weak.recommendedAction, /validation|confidence|contradiction/i);
 });

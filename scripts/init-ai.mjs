@@ -4,9 +4,28 @@ import { join } from 'node:path';
 const starterFiles = {
   'goals.md': `# Goals
 
-- Define the product and engineering outcomes this repository is responsible for.
-- Keep intent visible before implementation details.
-- Connect future work to measurable repository success.
+## Product Purpose
+
+## Product Thesis
+
+## Current Focus
+
+## Current Product Bet
+
+## Strategic Bet
+
+## Product Differentiator
+
+## Long-Term Vision
+
+## Manual Goals
+
+## Manual Strategy Notes
+
+## Success Criteria
+
+## What Not To Build
+
 `,
   'strategy.md': `# Strategy
 
@@ -24,7 +43,6 @@ const starterFiles = {
 
 ## Success Definition
 
-## Manual Strategy Notes
 `,
   'architecture.md': `# Architecture
 

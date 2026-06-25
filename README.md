@@ -32,6 +32,37 @@ Agent IDE treats repository understanding as the primary surface:
 
 This prototype does not include authentication, a database, a code editor, real agents, CLI packaging, cloud services, or LLM integration. Repository scanning is limited to local deterministic commands such as `npm run audit` for `.ai/architecture.md`, `npm run backlog` for `.ai/backlog.md`, and `npm run decisions` for `.ai/decisions.md`, all without calling an LLM. The local Node server can also run those generators against any local repository path and write the generated intelligence into that repository, even when the target repository has never heard of Agent IDE.
 
+
+## Repository intelligence ownership
+
+Agent IDE separates human-owned canonical intelligence from machine-generated intelligence:
+
+```text
+Human-owned intelligence
+.ai/goals.md
+
+↓
+
+Generated intelligence
+.ai/strategy.md
+.ai/architecture.md
+.ai/repository-health.md
+.ai/context-package.md
+.ai/intelligence-quality.json
+.ai/intelligence-history.json
+.ai/intelligence-snapshot.json
+.ai/intelligence-diff.json
+.ai/prompts/*
+.ai/next-improvement-prompt.md
+
+↓
+
+Repository intelligence products
+Control Plane recommendations, implementation packages, product decision packages, validation packages, and assistant handoffs
+```
+
+Repository owners edit only `.ai/goals.md` for Product Purpose, Product Thesis, Current Focus, Current Product Bet, Strategic Bet, Product Differentiator, Long-Term Vision, Manual Goals, Manual Strategy Notes, Success Criteria, and What Not To Build. Generated artifacts are deterministic outputs and must not be used as manual editing surfaces; refresh intelligence to rebuild them from `.ai/goals.md` and repository-local evidence. This preserves local-first operation, reproducible outputs, no LLM dependency, no cloud services, and no telemetry.
+
 ## `.ai/` folder contract
 
 Agent IDE reads repository understanding from plain markdown files in `.ai/`:
@@ -58,7 +89,7 @@ Agent IDE reads repository understanding from plain markdown files in `.ai/`:
 
 Each sidebar tab maps directly to one file. If a file is missing, the app shows an empty state that names the missing file and suggests running the initializer.
 
-The contract is intentionally plain-text, reviewable, and version-controlled. It should help humans and future automation share the same repository context before any code changes happen.
+The contract is intentionally plain-text, reviewable, and version-controlled. Human-owned repository intent flows from `.ai/goals.md` into deterministic generated intelligence; generated files should be regenerated, not manually edited.
 
 
 ## Analyze any local repository
@@ -142,7 +173,7 @@ Generate or refresh `.ai/strategy.md` locally:
 npm run strategy
 ```
 
-The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, Success Definition, Strategy Confidence, Strategy Evidence Sources, and Strategy Warnings while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. Repository-specific strategy concepts are only emitted when supported by those evidence sources, Current Experiment is derived from Current Focus and Current Priorities, and unsupported relationship-product terms such as relationship memory, encounters, overlap, reconnect, or follow-ups produce a Strategy Leakage warning.
+The strategy generator deterministically reads canonical owner intent from `.ai/goals.md` first, then uses `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION as supporting evidence. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, Success Definition, Strategy Confidence, Strategy Evidence Sources, and Strategy Warnings without treating `.ai/strategy.md` as a manual editing surface. Explicit `.ai/goals.md` sections win over inferred documentation signals. Repository-specific strategy concepts are only emitted when supported by those evidence sources, Current Experiment is derived from Current Focus and Current Priorities, and unsupported relationship-product terms such as relationship memory, encounters, overlap, reconnect, or follow-ups produce a Strategy Leakage warning.
 
 Generate or refresh `.ai/backlog.md` locally:
 
@@ -204,7 +235,7 @@ Generate the next implementation prompt locally from Control Plane intelligence:
 npm run next:improvement
 ```
 
-The next-improvement generator reads repository health, intelligence quality, intelligence audit, backlog, strategy, and context package artifacts, then writes `.ai/next-improvement-prompt.md`. The generated prompt is local-first, deterministic, uses no LLM calls, no cloud services, and no telemetry, and always reminds builders to preserve manual sections while keeping changes small and reviewable.
+The next-improvement generator reads `.ai/goals.md` plus repository health, intelligence quality, intelligence audit, backlog, generated strategy, and context package artifacts, then writes `.ai/next-improvement-prompt.md`. The generated prompt is local-first, deterministic, uses no LLM calls, no cloud services, and no telemetry, and always reminds builders to preserve manual sections while keeping changes small and reviewable.
 
 Start the Vite development server only:
 

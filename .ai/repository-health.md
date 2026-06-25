@@ -1,6 +1,6 @@
 # Repository Health
 
-Last Audit: 2026-06-25T17:47:48.407Z
+Last Audit: 2026-06-25T18:49:58.231Z
 Overall Health: Needs Attention
 Confidence: High
 
@@ -36,7 +36,9 @@ Confidence: High
 - Validation commands detected
 - Validation confidence Medium
 - Xcode validation metadata not detected
-- Manual sections preserved
+- Canonical editing target .ai/goals.md
+- Manual sections not detected in canonical goals
+- Generated artifacts are regenerated, not manually edited.
 
 ## Risks
 - Missing manual goals

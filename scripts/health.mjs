@@ -185,7 +185,7 @@ function calculateConfidence(docs, signals, risks) {
 function recommendationFor(risks) {
   if (risks.includes('No deterministic validation commands detected')) return 'Add or expose a deterministic validation script such as `npm run build` or `npm test`, then run `npm run validate:intel` and `npm run health` again.';
   if (risks.includes('Validation has low confidence')) return 'Strengthen validation coverage with additional deterministic scripts, then refresh validation and repository health.';
-  if (risks.some((risk) => risk.startsWith('Strategy missing')) || risks.includes('Strategy missing')) return 'Run `npm run strategy`, then fill any missing strategic fields in `.ai/goals.md` or `.ai/strategy.md` manual notes.';
+  if (risks.some((risk) => risk.startsWith('Strategy missing')) || risks.includes('Strategy missing')) return 'Update the appropriate manual section of `.ai/goals.md`, then run `npm run strategy` and `npm run health` again.';
   if (risks.includes('Missing manual goals')) return 'Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.';
   if (risks.includes('Architecture has no product thesis')) return 'Run `npm run audit` after documenting repository purpose in README or `.ai/goals.md`.';
   if (risks.includes('Architecture has no current focus')) return 'Add a current focus to `.ai/goals.md`, then rerun architecture and health generation.';
@@ -221,7 +221,7 @@ const signals = {
   backlogNoise: detectsBacklogNoise(backlog),
   validationCommands: detectsValidationCommands(validation),
   xcodeValidationMetadata: detectsXcodeValidationMetadata(validation),
-  manualSections: [goals, architecture, backlog, docs['decisions.md'].text, validation, docs['agents.md'].text, docs['code.md'].text].some((text) => /^## Manual /im.test(text)),
+  manualSections: /^## Manual /im.test(goals),
 };
 
 const productThesisValue = strategyValue(strategy, 'Product Thesis') || sectionText(architecture, 'Product Thesis');
@@ -296,7 +296,9 @@ const content = [
   `- Validation commands ${signals.validationCommands ? 'detected' : 'not detected'}`,
   `- Validation confidence ${validationConfidence(validation)}`,
   `- Xcode validation metadata ${signals.xcodeValidationMetadata ? 'detected' : 'not detected'}`,
-  `- Manual sections ${signals.manualSections ? 'preserved' : 'not detected'}`,
+  `- Canonical editing target .ai/goals.md`,
+  `- Manual sections ${signals.manualSections ? 'preserved in canonical goals' : 'not detected in canonical goals'}`,
+  '- Generated artifacts are regenerated, not manually edited.',
   '',
   '## Risks',
   risks.length ? risks.map((risk) => `- ${risk}`).join('\n') : '- No repository health risks detected.',

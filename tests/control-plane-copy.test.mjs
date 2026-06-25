@@ -10,6 +10,9 @@ test('Control Plane renders package labels based on packageType', async () => {
     'Recommended Product Decision Package',
     'Copy Product Decision Package',
     'Recommended Validation Experiment',
+    'Repository Owner edits:',
+    '.ai/goals.md',
+    'Everything else will be regenerated.',
     'Copy Validation Package',
     "packageType?: 'implementation' | 'product-decision' | 'validation-experiment'",
   ]) {

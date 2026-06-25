@@ -1,6 +1,6 @@
 # Decisions
 
-Last Audit: 2026-06-23T21:34:57.307Z
+Last Audit: 2026-06-25T18:50:49.579Z
 Confidence: 95%
 
 ## Active Decisions
@@ -16,16 +16,16 @@ Starting from goals, architecture, backlog, decisions, validation, agents, and c
 Consequences:
 The UI and generation scripts should prioritize repository context surfaces, and feature work should preserve the dashboard-oriented understanding workflow.
 
-### .ai markdown is canonical repository memory
+### .ai/goals.md is canonical repository intent
 
 Context:
-The repository contract maps sidebar sections directly to version-controlled markdown files in `.ai/`.
+The repository intelligence contract separates human-owned `.ai/goals.md` from generated `.ai/` artifacts.
 
 Reason:
-Plain markdown keeps product, architecture, backlog, decisions, validation, agents, and code context local, reviewable, and shared by humans and future automation.
+Plain markdown keeps repository-owner intent local and reviewable while deterministic generators rebuild derived context for humans and future automation.
 
 Consequences:
-Repository intelligence should be generated into `.ai/*.md`, manual sections must be preserved, and changes to repository memory should remain diffable.
+Repository owners should edit `.ai/goals.md`; generated intelligence should be regenerated from that canonical source and remain diffable.
 
 ### Local-first before cloud
 

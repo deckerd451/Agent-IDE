@@ -40,7 +40,8 @@ assert.match(strategy, /## Strategic Differentiator\nRelationship memory from re
 assert.match(strategy, /## Current Product Bet\nBetween Events experience/);
 assert.match(strategy, /## What Not To Build\nDo not treat Nearify as primarily an event app/);
 assert.match(strategy, /## Success Definition\nUser knows who to reach out to today and completes more follow-ups/);
-assert.match(strategy, /## Manual Strategy Notes\nKeep this human note\./);
+assert.doesNotMatch(strategy, /## Manual Strategy Notes\nKeep this human note\./);
+assert.doesNotMatch(strategy, /## Manual Strategy Notes/);
 
 const successDir = await mkdtemp(join(tmpdir(), 'agent-ide-strategy-success-'));
 await mkdir(join(successDir, '.ai'), { recursive: true });
@@ -91,4 +92,5 @@ const duplicateResult = spawnSync(process.execPath, [script], { cwd: duplicateDi
 assert.equal(duplicateResult.status, 0, duplicateResult.stderr);
 const duplicateStrategy = await readFile(join(duplicateDir, '.ai/strategy.md'), 'utf8');
 assert.equal([...duplicateStrategy.matchAll(/^## Success Definition$/gm)].length, 1);
-assert.match(duplicateStrategy, /### Success Definition\nNested manual heading should be demoted\./);
+assert.doesNotMatch(duplicateStrategy, /Nested manual heading should be demoted\./);
+assert.doesNotMatch(duplicateStrategy, /## Manual Strategy Notes/);

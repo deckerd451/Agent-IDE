@@ -22,11 +22,11 @@ const candidateDecisions = [
     consequences: 'The UI and generation scripts should prioritize repository context surfaces, and feature work should preserve the dashboard-oriented understanding workflow.',
   },
   {
-    title: '.ai markdown is canonical repository memory',
+    title: '.ai/goals.md is canonical repository intent',
     keywords: [/\.ai\//i, /plain markdown/i, /version-controlled/i, /repository memory/i, /repository-understanding sections/i],
-    context: 'The repository contract maps sidebar sections directly to version-controlled markdown files in `.ai/`.',
-    reason: 'Plain markdown keeps product, architecture, backlog, decisions, validation, agents, and code context local, reviewable, and shared by humans and future automation.',
-    consequences: 'Repository intelligence should be generated into `.ai/*.md`, manual sections must be preserved, and changes to repository memory should remain diffable.',
+    context: 'The repository intelligence contract separates human-owned `.ai/goals.md` from generated `.ai/` artifacts.',
+    reason: 'Plain markdown keeps repository-owner intent local and reviewable while deterministic generators rebuild derived context for humans and future automation.',
+    consequences: 'Repository owners should edit `.ai/goals.md`; generated intelligence should be regenerated from that canonical source and remain diffable.',
   },
   {
     title: 'Local-first before cloud',
