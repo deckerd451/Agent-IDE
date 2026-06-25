@@ -14,17 +14,28 @@ const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strate
 
 const baselineFiles = {
   'goals.md': `# Goals
+
 ## Product Purpose
 
-## North Star Metric
+## Product Thesis
 
 ## Current Focus
 
-## Current Priorities
+## Current Product Bet
+
+## Strategic Bet
+
+## Product Differentiator
+
+## Long-Term Vision
+
+## Manual Goals
+
+## Manual Strategy Notes
 
 ## Success Criteria
 
-## Manual Goals
+## What Not To Build
 `,
   'strategy.md': `# Strategy
 
@@ -42,7 +53,6 @@ const baselineFiles = {
 
 ## Success Definition
 
-## Manual Strategy Notes
 `,
   'agents.md': `# Agents
 ## Current Status
@@ -161,7 +171,7 @@ function intelligenceState(markdown, heading) {
 }
 
 function productThesisState(docs) {
-  return ['strategy.md', 'architecture.md', 'goals.md'].some((file) => hasMeaningfulSection(docs[file] ?? '', 'Product Thesis') || hasMeaningfulSection(docs[file] ?? '', 'Product Purpose')) ? 'Present' : 'Needs Attention';
+  return ['goals.md', 'strategy.md', 'architecture.md'].some((file) => hasMeaningfulSection(docs[file] ?? '', 'Product Thesis') || hasMeaningfulSection(docs[file] ?? '', 'Product Purpose')) ? 'Present' : 'Needs Attention';
 }
 
 function validationState(docs) {
@@ -195,7 +205,7 @@ function understandingSummary(docs) {
   const validation = docs['validation.md'] ?? '';
   const decisions = docs['decisions.md'] ?? '';
   return [
-    { label: 'Product Thesis', state: productThesisState(docs), source: '.ai/strategy.md' },
+    { label: 'Product Thesis', state: productThesisState(docs), source: '.ai/goals.md' },
     { label: 'Current Focus', state: intelligenceState(docs['goals.md'] ?? '', 'Current Focus') === 'Present' ? 'Present' : intelligenceState(architecture, 'Current Focus'), source: '.ai/goals.md' },
     { label: 'Strategy', state: qualityState(health, 'Strategy quality score'), source: '.ai/repository-health.md' },
     { label: 'Architecture', state: qualityState(health, 'Core systems'), source: '.ai/architecture.md' },

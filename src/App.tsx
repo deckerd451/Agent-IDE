@@ -376,6 +376,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         <p><b>Source risk/recommendation:</b> {data.recommendation.explanation}</p>
         <p><b>Reason:</b> {data.recommendation.whyItMatters}</p>
         <p><b>Evidence source:</b> {data.recommendation.evidenceSource}</p>
+        {data.recommendation.packageType === 'product-decision' && <div className="canonicalEditNotice"><b>Repository Owner edits:</b><code>.ai/goals.md</code><span>Everything else will be regenerated.</span></div>}
         <div className="promptActions">
           <button onClick={() => void copyText(data.recommendation.prompt)} type="button">{recommendedPackage.copyLabel}</button>
           <button onClick={() => void copyText(data.recommendation.prompt)} type="button">{recommendedPackage.generateLabel}</button>

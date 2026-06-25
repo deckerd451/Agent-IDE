@@ -39,11 +39,3 @@ High
 ## Strategy Warnings
 - No strategy leakage detected.
 - No implementation leakage detected.
-## Manual Strategy Notes
-
-Evidence: README.md
-### Success Definition
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
-
-Evidence: README.md
-### Manual Strategy Notes

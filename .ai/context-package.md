@@ -1,18 +1,15 @@
 # Context Package
 
-Generated: 2026-06-25T15:56:30.591Z
+Generated: 2026-06-25T18:50:50.052Z
 
 ## Product Thesis
 Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
 
-Product Thesis Evidence:
-.ai/goals.md
-
 ## Current Focus
 The repository is currently focused on making repository understanding the primary surface of Agent IDE.
 
-Current Focus Evidence:
-.ai/goals.md
+## Canonical Intelligence Ownership
+Human-owned source of truth: `.ai/goals.md`. Generated artifacts are regenerated from canonical intelligence and are not manual editing targets.
 
 ## Strategy
 Repository handoff readiness is Ready with high canonical intelligence consistency.
@@ -64,16 +61,16 @@ Starting from goals, architecture, backlog, decisions, validation, agents, and c
 Consequences:
 The UI and generation scripts should prioritize repository context surfaces, and feature work should preserve the dashboard-oriented understanding workflow.
 
-### .ai markdown is canonical repository memory
+### .ai/goals.md is canonical repository intent
 
 Context:
-The repository contract maps sidebar sections directly to version-controlled markdown files in `.ai/`.
+The repository intelligence contract separates human-owned `.ai/goals.md` from generated `.ai/` artifacts.
 
 Reason:
-Plain markdown keeps product, architecture, backlog, decisions, validation, agents, and code context local, reviewable, and shared by humans and future automation.
+Plain markdown keeps repository-owner intent local and reviewable while deterministic generators rebuild derived context for humans and future automation.
 
 Consequences:
-Repository intelligence should be generated into `.ai/*.md`, manual sections must be preserved, and changes to repository memory should remain diffable.
+Repository owners should edit `.ai/goals.md`; generated intelligence should be regenerated from that canonical source and remain diffable.
 
 ### Local-first before cloud
 
@@ -155,12 +152,14 @@ Generated decision records should include context, reason, and consequences, and
 - Implementation Leakage Warning not detected
 - Strategy confidence High
 - Evidence lines present
-- Backlog noise detected
+- Backlog noise not detected
 - Validation commands detected
+- Validation confidence Medium
 - Xcode validation metadata not detected
-- Manual sections preserved
+- Canonical editing target .ai/goals.md
+- Manual sections not detected in canonical goals
+- Generated artifacts are regenerated, not manually edited.
 
-- Backlog contains possible noise
 - Missing manual goals
 
 Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
