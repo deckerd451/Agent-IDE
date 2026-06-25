@@ -1,6 +1,6 @@
 # Repository Health
 
-Last Audit: 2026-06-25T17:37:17.401Z
+Last Audit: 2026-06-25T17:47:48.407Z
 Overall Health: Needs Attention
 Confidence: High
 
@@ -34,6 +34,7 @@ Confidence: High
 - Evidence lines present
 - Backlog noise not detected
 - Validation commands detected
+- Validation confidence Medium
 - Xcode validation metadata not detected
 - Manual sections preserved
 

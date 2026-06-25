@@ -115,6 +115,23 @@ Current Focus Evidence:
   assert.ok(!snapshot.recentRegressions.some((item) => /Current Focus differs/.test(item)));
 });
 
+test('repository health validation confidence signal is compared before overall health confidence', async () => {
+  const docs = { ...baseDocs, 'validation.md': `# Validation
+
+## Confidence
+- Medium
+`, 'repository-health.md': `# Repository Health
+Confidence: High
+
+## Quality Signals
+- Evidence-backed strategy.
+- Validation confidence Medium
+` };
+  const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
+  assert.equal(snapshot.consistency.validationConsistent, true);
+  assert.ok(!snapshot.consistency.contradictions.some((item) => /Validation confidence differs/.test(item)));
+});
+
 test('validation confidence normalization tolerates expected wording differences', async () => {
   assert.equal(normalizeConfidence('- Medium'), 'medium');
   assert.equal(normalizeConfidence('Mixed validation coverage'), 'medium');

@@ -112,7 +112,8 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const thesisValues = [mdSection(docs['goals.md'] ?? '', 'Product Thesis') || mdSection(docs['goals.md'] ?? '', 'Product Purpose'), mdSection(docs['strategy.md'] ?? '', 'Product Thesis'), mdSection(docs['architecture.md'] ?? '', 'Product Thesis')].filter(present).map((v) => firstLine(v, ''));
   const focusValues = [mdSection(docs['goals.md'] ?? '', 'Current Focus'), mdSection(docs['strategy.md'] ?? '', 'Current Product Bet'), mdSection(docs['architecture.md'] ?? '', 'Current Focus')].filter(present).map((v) => firstLine(v, ''));
   const northStarValues = [mdSection(docs['goals.md'] ?? '', 'North Star Metric'), mdSection(docs['strategy.md'] ?? '', 'North Star Metric'), mdSection(docs['architecture.md'] ?? '', 'North Star Metric')].filter(present).map((v) => firstLine(v, ''));
-  const validationValues = [mdSection(docs['validation.md'] ?? '', 'Confidence'), (docs['repository-health.md'] ?? '').match(/^Confidence:\s*(.+)$/im)?.[1] ?? mdSection(docs['repository-health.md'] ?? '', 'Validation Summary')].filter(present).map((v) => firstLine(v, ''));
+  const healthValidationConfidence = (docs['repository-health.md'] ?? '').match(/^-\s*Validation confidence\s+(.+)$/im)?.[1] ?? (docs['repository-health.md'] ?? '').match(/^Confidence:\s*(.+)$/im)?.[1] ?? mdSection(docs['repository-health.md'] ?? '', 'Validation Summary');
+  const validationValues = [mdSection(docs['validation.md'] ?? '', 'Confidence'), healthValidationConfidence].filter(present).map((v) => firstLine(v, ''));
   const duplicates = Object.entries(canonicalDocs).flatMap(([file, markdown]) => detectDuplicateSections(markdown).map((heading) => `${file}: ${heading}`));
   const contradictions = [];
   const thesisContradictory = detectContradictions(thesisValues, canonicalComparable);
