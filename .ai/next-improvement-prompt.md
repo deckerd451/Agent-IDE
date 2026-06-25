@@ -14,23 +14,23 @@ Everything else will be regenerated.
 - Severity: high
 - Actionability: manual
 - Package Type: product-decision
-- Source: Missing manual goals
+- Source: Manual Goals Partial (75%). Missing: Long-term vision.
 - Title: Complete Manual Repository Intent Notes
-- Evidence: Missing manual goals
-- Reason: Manual Goals are the source of truth for product intent and success criteria.
-- Recommended Action: Populate `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
+- Evidence: Manual Goals Partial (75%). Missing: Long-term vision.
+- Reason: Manual Goals completeness is below the deterministic threshold. Missing: Long-term vision.
+- Recommended Action: Complete only the incomplete Manual Goals fields in `.ai/goals.md`. Missing: Long-term vision.
 
 ## Why Human Judgment Is Required
-The repository is missing populated Manual Goals, so generated intelligence cannot reliably identify current product intent, success criteria, or the safest next implementation target.
+The repository has missing populated Manual Goals or incomplete Manual Goals fields, so generated intelligence cannot reliably identify all required product intent fields or the safest next implementation target.
 
-Manual Goals are the source of truth for product intent and success criteria. This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.
+Manual Goals completeness is below the deterministic threshold. Missing: Long-term vision. This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.
 
 ## Current Evidence
-- Source risk/recommendation: Missing manual goals
-- Reason: Manual Goals are the source of truth for product intent and success criteria.
+- Source risk/recommendation: Manual Goals Partial (75%). Missing: Long-term vision.
+- Reason: Manual Goals completeness is below the deterministic threshold. Missing: Long-term vision.
 
 ## Decision Needed
-Populate `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
+Complete only the incomplete Manual Goals fields in `.ai/goals.md`. Missing: Long-term vision.
 
 ## Suggested Manual Update
 Add text like the following under `.ai/goals.md` `## Manual Goals`:

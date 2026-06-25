@@ -5,6 +5,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { persistQuality } from './intelligence-quality.mjs';
 import { verifyIntelligence } from './intelligence-verification.mjs';
 import { generateNextImprovement } from './next-improvement.mjs';
+import { evaluateCanonicalCompleteness } from './canonical-completeness.mjs';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -125,6 +126,8 @@ function qualitySignal(health, label) {
 }
 
 function completenessScore(health) {
+  const canonical = health.match(/^-\s*Overall:\s*(Missing|Partial|Complete|Strong)\s*\((\d+)%\)/im);
+  if (canonical) return `${canonical[1]} (${canonical[2]}%)`;
   const section = mdSection(health, 'Intelligence Completeness');
   const rows = [...section.matchAll(/^-\s+[^:]+:\s+(Present|Missing)/gim)];
   if (!rows.length) return 'Unknown';
@@ -201,11 +204,14 @@ function riskItems(health) {
 
 function understandingSummary(docs) {
   const health = docs['repository-health.md'] ?? '';
+  const canonical = evaluateCanonicalCompleteness(docs['goals.md'] ?? '');
   const strategy = docs['strategy.md'] ?? '';
   const architecture = docs['architecture.md'] ?? '';
   const validation = docs['validation.md'] ?? '';
   const decisions = docs['decisions.md'] ?? '';
   return [
+    { label: 'Canonical Intelligence', state: `${canonical.state} ${canonical.score}%`, source: '.ai/goals.md' },
+    { label: 'Manual Goals', state: `${canonical.fields.manualGoals.state} ${canonical.fields.manualGoals.percent}%`, source: '.ai/goals.md' },
     { label: 'Product Thesis', state: productThesisState(docs), source: '.ai/goals.md' },
     { label: 'Current Focus', state: intelligenceState(docs['goals.md'] ?? '', 'Current Focus') === 'Present' ? 'Present' : intelligenceState(architecture, 'Current Focus'), source: '.ai/goals.md' },
     { label: 'Strategy', state: qualityState(health, 'Strategy quality score'), source: '.ai/repository-health.md' },

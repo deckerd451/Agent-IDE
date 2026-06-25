@@ -152,5 +152,53 @@
     "trend": "Stable",
     "regressions": [],
     "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T23:44:22.886Z",
+    "overallScore": 90,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 82,
+    "trend": "Needs Attention",
+    "regressions": [
+      "New risk: Manual Goals Partial (75%). Missing: Long-term vision."
+    ],
+    "improvements": [
+      "Removed risk: Missing manual goals"
+    ]
+  },
+  {
+    "timestamp": "2026-06-25T23:44:57.081Z",
+    "overallScore": 90,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 82,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T23:45:35.725Z",
+    "overallScore": 90,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 82,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T23:45:56.432Z",
+    "overallScore": 90,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 82,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
   }
 ]
