@@ -32,7 +32,7 @@ test('missing manual goals produces coherent manual-goals prompt', () => {
   const selected = choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } });
   const prompt = assertCoherent(selected, {
     id: 'missing-manual-goals',
-    title: 'Fill Manual Goals',
+    title: 'Complete Manual Repository Intent Notes',
     category: 'missing manual goals',
     evidencePattern: /Manual Goals are missing/i,
     problemPattern: /missing populated Manual Goals/i,
@@ -47,7 +47,7 @@ test('backlog noise produces coherent backlog prompt', () => {
   const prompt = assertCoherent(selected, {
     id: 'backlog-noise',
     title: 'Reduce Backlog Noise',
-    category: 'backlog noise',
+    category: 'backlog filtering bugs',
     evidencePattern: /Backlog contains 26 items/i,
     problemPattern: /backlog contains severe noise/i,
     acceptancePattern: /Backlog noise is removed, merged, or downgraded/i,
@@ -60,7 +60,7 @@ test('strategy gap produces coherent strategy prompt', () => {
   assertCoherent(selected, {
     id: 'strategy-quality',
     title: 'Strengthen Strategy Quality',
-    category: 'strategy gap',
+    category: 'fill strategy manual notes',
     evidencePattern: /Strategy Confidence: Low/i,
     problemPattern: /Strategy quality is weak or under-evidenced/i,
     acceptancePattern: /Strategy intelligence describes repository intent/i,
@@ -97,6 +97,43 @@ test('no prompt contains title/evidence/category mismatch', () => {
     if (selected.id !== 'backlog-noise') assert.doesNotMatch(prompt, /Backlog contains \d+ items|Backlog noise is removed/i);
     if (selected.id !== 'strategy-quality') assert.doesNotMatch(prompt, /Strategy Confidence: Low|Strategy intelligence describes/i);
   }
+});
+
+
+test('strategy manual gap does not beat code-fixable backlog issue', () => {
+  const manyItems = Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n');
+  const selected = choice({
+    quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } },
+    strategy: '# Strategy\n\n## Strategy Confidence\nLow\n',
+    backlog: `# Backlog\n\n## Prioritized Backlog\n${manyItems}\n`,
+  });
+  assert.equal(selected.id, 'backlog-noise');
+  assert.equal(selected.actionability, 'code-fixable');
+});
+
+test('missing manual goals is marked manual', () => {
+  const selected = choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } });
+  assert.equal(selected.actionability, 'manual');
+});
+
+test('code-fixable contradiction is selected before manual strategy note', () => {
+  const selected = choice({
+    quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 }, consistency: { contradictions: ['Goals contradict strategy.'], duplicatedSections: [] } },
+    strategy: '# Strategy\n\n## Strategy Confidence\nLow\n',
+  });
+  assert.equal(selected.id, 'consistency-cleanup');
+  assert.equal(selected.actionability, 'code-fixable');
+});
+
+test('manual issue prompt includes manual-task warning', () => {
+  const selected = choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } });
+  assert.match(renderPrompt(selected), /This is a manual product-owner task, not a Codex implementation task\./);
+});
+
+test('no code-fixable issues produces AI handoff validation', () => {
+  const selected = choice();
+  assert.equal(selected.id, 'ai-handoff-validation');
+  assert.equal(selected.actionability, 'validation-experiment');
 });
 
 test('prompt includes constraints', () => {

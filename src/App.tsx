@@ -25,6 +25,7 @@ type ControlPlaneRecommendation = {
   title: string;
   explanation: string;
   whyItMatters: string;
+  actionability?: string;
   evidenceSource: string;
   prompt: string;
 };
@@ -342,6 +343,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
       <section className="controlCard recommended" aria-label="Recommended implementation prompt">
         <small>Recommended Implementation Prompt</small>
         <strong>{data.recommendation.title}</strong>
+        {data.recommendation.actionability && <p><b>Actionability:</b> {data.recommendation.actionability}</p>}
         <p><b>Source risk/recommendation:</b> {data.recommendation.explanation}</p>
         <p><b>Reason:</b> {data.recommendation.whyItMatters}</p>
         <p><b>Evidence source:</b> {data.recommendation.evidenceSource}</p>
