@@ -855,3 +855,19 @@ h1 {
   display: block;
   font-size: 1.1rem;
 }
+
+.promptActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.recommended pre {
+  background: #080d14;
+  border-radius: 10px;
+  color: #d7dde8;
+  max-height: 360px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+}

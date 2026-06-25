@@ -3,13 +3,14 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { persistQuality } from './intelligence-quality.mjs';
+import { generateNextImprovement } from './next-improvement.mjs';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
-const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'intelligence-quality.json', 'intelligence-history.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'intelligence-quality.json', 'intelligence-history.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
 
 const baselineFiles = {
   'goals.md': `# Goals
@@ -84,7 +85,7 @@ const generatorSteps = [
 ];
 
 
-const controlFiles = ['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'repository-health.md', 'context-package.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'];
+const controlFiles = ['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'];
 
 async function readAiText(repositoryPath, fileName) {
   return readFile(join(repositoryPath, '.ai', fileName), 'utf8').catch((error) => {
@@ -316,11 +317,20 @@ function evidenceItems(docs) {
   return items;
 }
 
+
+function promptEvidenceValue(prompt, label, fallback = '') {
+  const section = mdSection(prompt, 'Current Evidence');
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = section.match(new RegExp(`^-\\s*${escaped}:\\s*(.+)$`, 'im'));
+  return match?.[1]?.trim() ?? fallback;
+}
+
 function handoffPackages(docs) {
   return {
     context: docs['context-package.md'] ?? '',
     architect: docs['prompts/architect.md'] ?? '',
-    builder: docs['prompts/builder.md'] ?? '',
+    builder: docs['next-improvement-prompt.md'] ?? docs['prompts/builder.md'] ?? '',
+    roleBuilder: docs['prompts/builder.md'] ?? '',
     reviewer: docs['prompts/reviewer.md'] ?? '',
     debugger: docs['prompts/debugger.md'] ?? '',
   };
@@ -334,7 +344,10 @@ async function readControlPlane(repositoryPath) {
   const quality = JSON.parse(await readFile(join(aiDir, 'intelligence-quality.json'), 'utf8').catch(() => 'null'));
   const qualityHistory = JSON.parse(await readFile(join(aiDir, 'intelligence-history.json'), 'utf8').catch(() => '[]'));
   const timeline = JSON.parse(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => '[]'));
-  return { status: snapshot, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation: recommendationDetails(docs), diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
+  const recommendation = docs['next-improvement-prompt.md']?.trim()
+    ? { title: firstLine(docs['next-improvement-prompt.md'].replace(/^#\s*/, ''), snapshot.recommendedNextStep), explanation: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Source risk/recommendation', 'See generated prompt.'), whyItMatters: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Reason', 'Generated from Control Plane intelligence.'), evidenceSource: '.ai/next-improvement-prompt.md', prompt: docs['next-improvement-prompt.md'] }
+    : recommendationDetails(docs);
+  return { status: snapshot, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
 }
 
 async function persistControlPlane(repositoryPath, previousSnapshot) {
@@ -349,6 +362,15 @@ async function persistControlPlane(repositoryPath, previousSnapshot) {
   const qualityResult = await persistQuality(repositoryPath);
   data.quality = qualityResult.snapshot;
   data.qualityHistory = qualityResult.history;
+  const nextImprovement = await generateNextImprovement(repositoryPath);
+  data.recommendation = {
+    title: nextImprovement.choice.title,
+    explanation: `Source risk/recommendation: ${nextImprovement.choice.source}`,
+    whyItMatters: nextImprovement.choice.reason,
+    evidenceSource: '.ai/next-improvement-prompt.md',
+    prompt: nextImprovement.prompt,
+  };
+  data.packages.builder = nextImprovement.prompt;
   return data;
 }
 
