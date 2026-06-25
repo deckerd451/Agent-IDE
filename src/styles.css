@@ -810,3 +810,48 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+.qualityHeader {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.qualityHeader strong {
+  color: #f4f7fb;
+  display: block;
+  font-size: 2rem;
+}
+
+.qualityHeader span {
+  background: #0d141f;
+  border: 1px solid #273246;
+  border-radius: 999px;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.qualityHeader span.present { color: #a8efc9; }
+.qualityHeader span.needs-attention { color: #ffd38a; }
+
+.qualityGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  margin-bottom: 18px;
+}
+
+.qualityGrid div {
+  background: #0d141f;
+  border: 1px solid #273246;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.qualityGrid strong {
+  color: #f4f7fb;
+  display: block;
+  font-size: 1.1rem;
+}

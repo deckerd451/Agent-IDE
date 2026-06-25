@@ -29,12 +29,27 @@ type ControlPlaneRecommendation = {
   prompt: string;
 };
 
+type QualitySnapshot = {
+  overallScore: number;
+  trend: 'Improving' | 'Stable' | 'Needs Attention';
+  coverage: Record<string, boolean | number>;
+  consistency: { score: number; contradictions: string[]; duplicatedSections: string[] };
+  freshness: { score: number; staleDocuments: string[]; filesChanged: number; manualNotesPreserved: boolean };
+  confidence: { score: number; overallRepositoryConfidence: string };
+  drift: { newRisks: string[]; removedRisks: string[] };
+  recentRegressions: string[];
+  recentImprovements: string[];
+  recommendedAction: string;
+};
+
 type ControlPlane = {
   status: Record<string, string>;
   understanding: Array<{ label: string; state: IntelligenceState; source: string }>;
   unknowns: Array<{ label: string; source: string }>;
   recommendation: ControlPlaneRecommendation;
   diff: Record<string, string | string[]>;
+  quality: QualitySnapshot | null;
+  qualityHistory: Array<Record<string, unknown>>;
   evidence: Array<{ file: string; section: string; line: number; evidence: string; confidence: string }>;
   packages: Record<string, string>;
   timeline: Array<{ timestamp: string; repositoryHealth: string; strategyQuality: string; confidence: string; recommendation: string }>;
@@ -293,29 +308,45 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
 
       <section className="controlCard answerGrid" aria-label="Repository intelligence answers">
         <div>
-          <h2>What do I know?</h2>
+          <h2>Repository Understanding</h2>
           <div className="understandingGrid">
             {data.understanding.map((item) => <div className="understandingItem" key={item.label}><span>{item.label}</span><strong className={stateClass(item.state)}>{item.state}</strong></div>)}
           </div>
         </div>
-        {data.unknowns.length > 0 && (
-          <div>
-            <h2>What don&apos;t I know?</h2>
-            <ul className="unknownList">{data.unknowns.map((item) => <li key={item.label}>{item.label}<small>{item.source}</small></li>)}</ul>
-          </div>
-        )}
+        <div>
+          <h2>Current Risks</h2>
+          {data.unknowns.length > 0 ? <ul className="unknownList">{data.unknowns.map((item) => <li key={item.label}>{item.label}<small>{item.source}</small></li>)}</ul> : <p>No current intelligence risks detected.</p>}
+        </div>
       </section>
 
+      {data.quality && (
+        <section className="controlCard qualityCard" aria-label="Intelligence quality">
+          <div className="qualityHeader"><div><small>Intelligence Quality</small><strong>{data.quality.overallScore}/100</strong></div><span className={stateClass(data.quality.trend === 'Needs Attention' ? 'Needs Attention' : 'Present')}>Trend: {data.quality.trend}</span></div>
+          <div className="qualityGrid">
+            <div><small>Coverage</small><strong>{data.quality.coverage.score}%</strong></div>
+            <div><small>Consistency</small><strong>{data.quality.consistency.score}%</strong></div>
+            <div><small>Freshness</small><strong>{data.quality.freshness.score}%</strong></div>
+            <div><small>Confidence</small><strong>{data.quality.confidence.score}%</strong></div>
+          </div>
+          <div className="answerGrid">
+            <div><h2>Recent regressions</h2>{data.quality.recentRegressions.length ? <ul>{data.quality.recentRegressions.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No recent regressions detected.</p>}</div>
+            <div><h2>Recent improvements</h2>{data.quality.recentImprovements.length ? <ul>{data.quality.recentImprovements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No recent improvements detected.</p>}</div>
+          </div>
+          <p><b>Recommended action:</b> {data.quality.recommendedAction}</p>
+        </section>
+      )}
+
       <section className="controlCard recommended" aria-label="Single recommended next action">
-        <small>What should I do next?</small>
-        <strong>{data.recommendation.title}</strong>
+        <small>Recommended Next Step</small>
+        <strong>{data.quality?.recommendedAction || data.recommendation.title}</strong>
         <p>{data.recommendation.explanation}</p>
         <p><b>Why it matters:</b> {data.recommendation.whyItMatters}</p>
         <p><b>Evidence source:</b> {data.recommendation.evidenceSource}</p>
         <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Generate Builder Prompt</button>
       </section>
 
-      {diffEntries.length > 0 && <section className="controlCard"><h2>Recent Changes</h2>{diffEntries.map(([label, items]) => <details key={label}><summary>{label} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></details>)}</section>}
+      <section className="controlCard"><h2>Trend</h2><p>{data.quality ? data.quality.trend : 'No intelligence quality trend available yet.'}</p></section>
+      <section className="controlCard"><h2>Recent Changes</h2>{diffEntries.length > 0 ? diffEntries.map(([label, items]) => <details key={label}><summary>{label} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></details>) : <p>No material intelligence changes detected.</p>}</section>
 
       <section className="controlCard handoffCard"><h2>AI Handoff</h2><div className="handoffGrid">{packageLabels.map(([key, label]) => <button disabled={!data.packages[key]} key={key} onClick={() => void copyText(data.packages[key] ?? '')} type="button">{label}</button>)}</div></section>
 
