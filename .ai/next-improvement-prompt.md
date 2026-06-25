@@ -5,10 +5,7 @@ This is a product-owner decision task, not a Codex implementation task.
 Use repository-local evidence to decide or record the missing product, strategy, or manual-intelligence information.
 Do not send this package to Codex as implementation work.
 Do not edit files automatically; the repository owner should review, accept, or edit the suggested manual update in `.ai/goals.md`.
-Repository Owner edits:
-
-.ai/goals.md
-
+Repository owner edits: `.ai/goals.md`
 Everything else will be regenerated.
 
 ## Selected Issue

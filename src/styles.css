@@ -871,3 +871,14 @@ h1 {
   padding: 12px;
   white-space: pre-wrap;
 }
+
+.warningCard {
+  border-color: rgba(255, 211, 138, 0.55);
+  background: rgba(255, 211, 138, 0.08);
+}
+
+.understandingItem small {
+  color: #ffd38a;
+  display: block;
+  margin-top: 0.35rem;
+}

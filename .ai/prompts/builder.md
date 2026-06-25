@@ -10,9 +10,21 @@
 
 # Goals
 
-- Define the product and engineering outcomes this repository is responsible for.
-- Keep intent visible before implementation details.
-- Connect future work to measurable repository success.
+## Product Thesis
+Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
+
+## North Star Metric
+Repository handoff readiness is Ready with high canonical intelligence consistency.
+
+## Current Focus
+The repository is currently focused on making repository understanding the primary surface of Agent IDE.
+
+## What Not To Build
+Do not build broad automation before repository understanding is consistently reliable for handoffs.
+
+## Success Criteria
+- Control Plane reports repository handoff readiness as Ready.
+- Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections.
 
 ## Active
 
@@ -27,49 +39,57 @@
 # Strategy
 
 ## Product Thesis
-Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
-Product Thesis Evidence:
-README.md, .ai/goals.md, scripts/audit.mjs
+Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
 
-Evidence: .ai/architecture.md
+Evidence: .ai/goals.md
 ## North Star Metric
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+Repository handoff readiness is Ready with high canonical intelligence consistency.
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## Strategic Differentiator
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 
-Evidence: README.md
+Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md
 ## Current Product Bet
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+The repository is currently focused on making repository understanding the primary surface of Agent IDE.
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## Current Experiment
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+Can the system reliably deliver the current focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE?
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## What Not To Build
-The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, and Success Definition while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. For Nearify-style relationship products, it surfaces Follow-Ups Completed, relationship memory from real-world encounters, the Between Events experience, the warning not to treat the product as primarily an event app, and the success test that users know who to reach out to today and complete more follow-ups.
+Do not build broad automation before repository understanding is consistently reliable for handoffs.
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## Success Definition
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+- Control Plane reports repository handoff readiness as Ready.
+- Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections.
 
-Evidence: README.md
-## Manual Strategy Notes
+Evidence: .ai/goals.md
+## Strategy Confidence
+High
+## Strategy Evidence Sources
+- .ai/goals.md
+- .ai/architecture.md
+- .ai/decisions.md
+- README.md
+## Strategy Warnings
+- No strategy leakage detected.
+- No implementation leakage detected.
 
 ## Architecture Summary
 
 # Architecture
 
-Last Audit: 2026-06-24T00:16:59.907Z
+Last Audit: 2026-06-25T20:50:54.660Z
 Confidence: 95%
 
 ## Product Thesis
-Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
+Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
 
 Product Thesis Evidence:
-README.md, .ai/goals.md, scripts/audit.mjs
+.ai/goals.md
 
 ## Core Systems
 - Dashboard UI: Inferred from target repository structure and naming.
@@ -143,7 +163,7 @@ Current Focus Evidence:
 
 # Backlog
 
-Last Audit: 2026-06-24T01:30:47.539Z
+Last Audit: 2026-06-25T20:50:54.879Z
 Confidence: 95%
 
 ## High Priority
@@ -151,19 +171,23 @@ Confidence: 95%
 
 ## Medium Priority
 - **Add Backlog Quality Filtering**
-  - Source: README.md:189
+  - Source: README.md:292
   - Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering.
 - **Add Cross-links Between .ai Documents**
-  - Source: README.md:192
+  - Source: README.md:295
   - Reason: Repository documentation identifies actionable follow-up work from: Add cross-links between `.ai` documents.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add cross-links between `.ai` documents.
+- **Add Expand Repository Health Checks**
+  - Source: README.md:296
+  - Reason: Repository documentation identifies actionable follow-up work from: Expand repository health checks as more intelligence artifacts are added.
+  - Suggested Next Step: Define the smallest local, deterministic change needed to add expand repository health checks as more intelligence artifacts are added.
 - **Add Richer Validation Detection**
-  - Source: README.md:190
+  - Source: README.md:293
   - Reason: Repository documentation identifies actionable follow-up work from: Add richer validation detection for additional ecosystems.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add richer validation detection for additional ecosystems.
 - **Improve Markdown Rendering**
-  - Source: README.md:191
+  - Source: README.md:294
   - Reason: Repository documentation identifies actionable follow-up work from: Improve markdown rendering.
   - Suggested Next Step: Define the smallest local, deterministic change needed to improve markdown rendering.
 
@@ -177,7 +201,7 @@ Confidence: 95%
 # Validation
 
 ## Last Validation
-- 2026-06-23T21:07:04.973Z
+- 2026-06-25T20:51:02.194Z
 
 ## Confidence
 - Medium
@@ -186,29 +210,55 @@ Confidence: 95%
 
 ## Commands Run
 - `npm run build`
+- `npm run test`
 
 ## Results
 ### npm run build
 - Status: PASS
 - Exit code: 0
-- Duration: 3.3s
+- Duration: 4.0s
 - Output summary:
 ```text
   npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
   > agent-ide@0.1.0 build
   > tsc -b && vite build
   vite v8.1.0 building client environment for production...
-  transforming...✓ 24 modules transformed.
+  transforming...✓ 17 modules transformed.
   rendering chunks...
   computing gzip size...
   dist/index.html                   0.39 kB │ gzip:  0.26 kB
-  dist/assets/index-0vGsD0nx.css    3.11 kB │ gzip:  1.22 kB
-  dist/assets/index-CUIw0wFR.js   200.14 kB │ gzip: 63.43 kB
-  ✓ built in 317ms
+  dist/assets/index-C7_sdjre.css   11.47 kB │ gzip:  2.80 kB
+  dist/assets/index-ec-tdO1p.js   214.50 kB │ gzip: 66.38 kB
+  ✓ built in 356ms
 ```
 
+### npm run test
+- Status: PASS
+- Exit code: 0
+- Duration: 3.2s
+- Output summary:
+```text
+    ---
+    duration_ms: 176.792634
+    ...
+  1..55
+  # tests 55
+  # suites 0
+  # pass 55
+  # fail 0
+  # cancelled 0
+  # skipped 0
+  # todo 0
+  # duration_ms 2685.224
+```
+
+## Xcode Project Validation
+- No Xcode project or workspace metadata detected.
+
+## Xcode List Results
+- No `xcodebuild -list` commands were run.
+
 ## Known Gaps
-- No safe npm test script was detected; automated behavioral coverage is unknown.
 - No `npm run lint` script was detected; style/static lint coverage is unknown.
 - No standalone typecheck script was detected; type validation is covered only insofar as the build runs it.
 
@@ -218,9 +268,9 @@ Confidence: 95%
 
 # Repository Health
 
-Last Audit: 2026-06-24T16:35:15.860Z
+Last Audit: 2026-06-25T20:50:12.541Z
 Overall Health: Needs Attention
-Confidence: Medium
+Confidence: High
 
 ## Intelligence Completeness
 - Goals: Present
@@ -241,15 +291,24 @@ Confidence: Medium
 - North Star Metric present
 - Strategic Differentiator present
 - Current Product Bet present
+- Current Experiment present
 - What Not To Build present
+- Success Definition present
+- Strategy quality score 100/100
+- Product Signal Quality strong
+- Strategy leakage not detected
+- Implementation Leakage Warning not detected
+- Strategy confidence High
 - Evidence lines present
-- Backlog noise detected
+- Backlog noise not detected
 - Validation commands detected
+- Validation confidence Medium
 - Xcode validation metadata not detected
-- Manual sections preserved
+- Canonical editing target .ai/goals.md
+- Manual sections not detected in canonical goals
+- Generated artifacts are regenerated, not manually edited.
 
 ## Risks
-- Backlog contains possible noise
 - Missing manual goals
 
 ## Recommended Next Step
@@ -266,7 +325,7 @@ Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and s
 
 # Decisions
 
-Last Audit: 2026-06-23T21:34:57.307Z
+Last Audit: 2026-06-25T20:51:02.345Z
 Confidence: 95%
 
 ## Active Decisions
@@ -282,16 +341,16 @@ Starting from goals, architecture, backlog, decisions, validation, agents, and c
 Consequences:
 The UI and generation scripts should prioritize repository context surfaces, and feature work should preserve the dashboard-oriented understanding workflow.
 
-### .ai markdown is canonical repository memory
+### .ai/goals.md is canonical repository intent
 
 Context:
-The repository contract maps sidebar sections directly to version-controlled markdown files in `.ai/`.
+The repository intelligence contract separates human-owned `.ai/goals.md` from generated `.ai/` artifacts.
 
 Reason:
-Plain markdown keeps product, architecture, backlog, decisions, validation, agents, and code context local, reviewable, and shared by humans and future automation.
+Plain markdown keeps repository-owner intent local and reviewable while deterministic generators rebuild derived context for humans and future automation.
 
 Consequences:
-Repository intelligence should be generated into `.ai/*.md`, manual sections must be preserved, and changes to repository memory should remain diffable.
+Repository owners should edit `.ai/goals.md`; generated intelligence should be regenerated from that canonical source and remain diffable.
 
 ### Local-first before cloud
 
@@ -362,9 +421,21 @@ Generated decision records should include context, reason, and consequences, and
 ```markdown
 # Goals
 
-- Define the product and engineering outcomes this repository is responsible for.
-- Keep intent visible before implementation details.
-- Connect future work to measurable repository success.
+## Product Thesis
+Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
+
+## North Star Metric
+Repository handoff readiness is Ready with high canonical intelligence consistency.
+
+## Current Focus
+The repository is currently focused on making repository understanding the primary surface of Agent IDE.
+
+## What Not To Build
+Do not build broad automation before repository understanding is consistently reliable for handoffs.
+
+## Success Criteria
+- Control Plane reports repository handoff readiness as Ready.
+- Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections.
 
 ## Active
 
@@ -380,14 +451,14 @@ Generated decision records should include context, reason, and consequences, and
 ```markdown
 # Architecture
 
-Last Audit: 2026-06-24T00:16:59.907Z
+Last Audit: 2026-06-25T20:50:54.660Z
 Confidence: 95%
 
 ## Product Thesis
-Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
+Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
 
 Product Thesis Evidence:
-README.md, .ai/goals.md, scripts/audit.mjs
+.ai/goals.md
 
 ## Core Systems
 - Dashboard UI: Inferred from target repository structure and naming.
@@ -464,36 +535,44 @@ Current Focus Evidence:
 # Strategy
 
 ## Product Thesis
-Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
-Product Thesis Evidence:
-README.md, .ai/goals.md, scripts/audit.mjs
+Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
 
-Evidence: .ai/architecture.md
+Evidence: .ai/goals.md
 ## North Star Metric
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+Repository handoff readiness is Ready with high canonical intelligence consistency.
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## Strategic Differentiator
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 
-Evidence: README.md
+Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md
 ## Current Product Bet
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+The repository is currently focused on making repository understanding the primary surface of Agent IDE.
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## Current Experiment
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+Can the system reliably deliver the current focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE?
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## What Not To Build
-The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, and Success Definition while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. For Nearify-style relationship products, it surfaces Follow-Ups Completed, relationship memory from real-world encounters, the Between Events experience, the warning not to treat the product as primarily an event app, and the success test that users know who to reach out to today and complete more follow-ups.
+Do not build broad automation before repository understanding is consistently reliable for handoffs.
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## Success Definition
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+- Control Plane reports repository handoff readiness as Ready.
+- Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections.
 
-Evidence: README.md
-## Manual Strategy Notes
+Evidence: .ai/goals.md
+## Strategy Confidence
+High
+## Strategy Evidence Sources
+- .ai/goals.md
+- .ai/architecture.md
+- .ai/decisions.md
+- README.md
+## Strategy Warnings
+- No strategy leakage detected.
+- No implementation leakage detected.
 ```
 
 ### .ai/backlog.md
@@ -501,7 +580,7 @@ Evidence: README.md
 ```markdown
 # Backlog
 
-Last Audit: 2026-06-24T01:30:47.539Z
+Last Audit: 2026-06-25T20:50:54.879Z
 Confidence: 95%
 
 ## High Priority
@@ -509,19 +588,23 @@ Confidence: 95%
 
 ## Medium Priority
 - **Add Backlog Quality Filtering**
-  - Source: README.md:189
+  - Source: README.md:292
   - Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering.
 - **Add Cross-links Between .ai Documents**
-  - Source: README.md:192
+  - Source: README.md:295
   - Reason: Repository documentation identifies actionable follow-up work from: Add cross-links between `.ai` documents.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add cross-links between `.ai` documents.
+- **Add Expand Repository Health Checks**
+  - Source: README.md:296
+  - Reason: Repository documentation identifies actionable follow-up work from: Expand repository health checks as more intelligence artifacts are added.
+  - Suggested Next Step: Define the smallest local, deterministic change needed to add expand repository health checks as more intelligence artifacts are added.
 - **Add Richer Validation Detection**
-  - Source: README.md:190
+  - Source: README.md:293
   - Reason: Repository documentation identifies actionable follow-up work from: Add richer validation detection for additional ecosystems.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add richer validation detection for additional ecosystems.
 - **Improve Markdown Rendering**
-  - Source: README.md:191
+  - Source: README.md:294
   - Reason: Repository documentation identifies actionable follow-up work from: Improve markdown rendering.
   - Suggested Next Step: Define the smallest local, deterministic change needed to improve markdown rendering.
 
@@ -536,7 +619,7 @@ Confidence: 95%
 ```markdown
 # Decisions
 
-Last Audit: 2026-06-23T21:34:57.307Z
+Last Audit: 2026-06-25T20:51:02.345Z
 Confidence: 95%
 
 ## Active Decisions
@@ -552,16 +635,16 @@ Starting from goals, architecture, backlog, decisions, validation, agents, and c
 Consequences:
 The UI and generation scripts should prioritize repository context surfaces, and feature work should preserve the dashboard-oriented understanding workflow.
 
-### .ai markdown is canonical repository memory
+### .ai/goals.md is canonical repository intent
 
 Context:
-The repository contract maps sidebar sections directly to version-controlled markdown files in `.ai/`.
+The repository intelligence contract separates human-owned `.ai/goals.md` from generated `.ai/` artifacts.
 
 Reason:
-Plain markdown keeps product, architecture, backlog, decisions, validation, agents, and code context local, reviewable, and shared by humans and future automation.
+Plain markdown keeps repository-owner intent local and reviewable while deterministic generators rebuild derived context for humans and future automation.
 
 Consequences:
-Repository intelligence should be generated into `.ai/*.md`, manual sections must be preserved, and changes to repository memory should remain diffable.
+Repository owners should edit `.ai/goals.md`; generated intelligence should be regenerated from that canonical source and remain diffable.
 
 ### Local-first before cloud
 
@@ -616,7 +699,7 @@ Generated decision records should include context, reason, and consequences, and
 # Validation
 
 ## Last Validation
-- 2026-06-23T21:07:04.973Z
+- 2026-06-25T20:51:02.194Z
 
 ## Confidence
 - Medium
@@ -625,29 +708,55 @@ Generated decision records should include context, reason, and consequences, and
 
 ## Commands Run
 - `npm run build`
+- `npm run test`
 
 ## Results
 ### npm run build
 - Status: PASS
 - Exit code: 0
-- Duration: 3.3s
+- Duration: 4.0s
 - Output summary:
 ```text
   npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
   > agent-ide@0.1.0 build
   > tsc -b && vite build
   vite v8.1.0 building client environment for production...
-  transforming...✓ 24 modules transformed.
+  transforming...✓ 17 modules transformed.
   rendering chunks...
   computing gzip size...
   dist/index.html                   0.39 kB │ gzip:  0.26 kB
-  dist/assets/index-0vGsD0nx.css    3.11 kB │ gzip:  1.22 kB
-  dist/assets/index-CUIw0wFR.js   200.14 kB │ gzip: 63.43 kB
-  ✓ built in 317ms
+  dist/assets/index-C7_sdjre.css   11.47 kB │ gzip:  2.80 kB
+  dist/assets/index-ec-tdO1p.js   214.50 kB │ gzip: 66.38 kB
+  ✓ built in 356ms
 ```
 
+### npm run test
+- Status: PASS
+- Exit code: 0
+- Duration: 3.2s
+- Output summary:
+```text
+    ---
+    duration_ms: 176.792634
+    ...
+  1..55
+  # tests 55
+  # suites 0
+  # pass 55
+  # fail 0
+  # cancelled 0
+  # skipped 0
+  # todo 0
+  # duration_ms 2685.224
+```
+
+## Xcode Project Validation
+- No Xcode project or workspace metadata detected.
+
+## Xcode List Results
+- No `xcodebuild -list` commands were run.
+
 ## Known Gaps
-- No safe npm test script was detected; automated behavioral coverage is unknown.
 - No `npm run lint` script was detected; style/static lint coverage is unknown.
 - No standalone typecheck script was detected; type validation is covered only insofar as the build runs it.
 
@@ -687,9 +796,9 @@ Generated decision records should include context, reason, and consequences, and
 ```markdown
 # Repository Health
 
-Last Audit: 2026-06-24T16:35:15.860Z
+Last Audit: 2026-06-25T20:50:12.541Z
 Overall Health: Needs Attention
-Confidence: Medium
+Confidence: High
 
 ## Intelligence Completeness
 - Goals: Present
@@ -710,15 +819,24 @@ Confidence: Medium
 - North Star Metric present
 - Strategic Differentiator present
 - Current Product Bet present
+- Current Experiment present
 - What Not To Build present
+- Success Definition present
+- Strategy quality score 100/100
+- Product Signal Quality strong
+- Strategy leakage not detected
+- Implementation Leakage Warning not detected
+- Strategy confidence High
 - Evidence lines present
-- Backlog noise detected
+- Backlog noise not detected
 - Validation commands detected
+- Validation confidence Medium
 - Xcode validation metadata not detected
-- Manual sections preserved
+- Canonical editing target .ai/goals.md
+- Manual sections not detected in canonical goals
+- Generated artifacts are regenerated, not manually edited.
 
 ## Risks
-- Backlog contains possible noise
 - Missing manual goals
 
 ## Recommended Next Step
