@@ -359,6 +359,11 @@ function formatEvidence(sources) {
 }
 
 function inferProductThesis(readme, aiDocuments, packageJson, docs, files, coreSystems) {
+  const explicitGoalThesis = sectionUnderHeading(aiDocuments['goals.md'] ?? '', 'Product Thesis') || sectionUnderHeading(aiDocuments['goals.md'] ?? '', 'Product Purpose');
+  if (explicitGoalThesis) {
+    return { thesis: explicitGoalThesis, evidence: formatEvidence(['.ai/goals.md']) };
+  }
+
   if (isAgentIdeRepository({ packageJson, readme, files })) {
     return {
       thesis:

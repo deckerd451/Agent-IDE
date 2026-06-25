@@ -22,16 +22,37 @@ function firstLine(value, fallback = 'Unknown') {
   return value.split('\n').map((line) => line.replace(/^[-*]\s+/, '').trim()).find(Boolean) ?? fallback;
 }
 
-function normalized(value) { return value.toLowerCase().replace(/[`*_#>-]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function stripEvidenceLines(value) {
+  return value
+    .split('\n')
+    .filter((line) => !/^(?:evidence|product thesis evidence|current focus evidence):/i.test(line.trim()))
+    .join('\n');
+}
+function normalized(value) { return stripEvidenceLines(value).toLowerCase().replace(/[`*_#>-]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function canonicalComparable(value) {
+  return normalized(value)
+    .replace(/\b(agent ide|the repository|this repository) exists to\b/g, '$1')
+    .replace(/\bis currently focused on\b/g, 'focuses on')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 function present(value) { const v = firstLine(value, ''); return Boolean(v) && !/^(unknown|missing|not detected yet|none detected|tbd|todo|generated placeholder)$/i.test(v); }
 function percent(n, d) { return d ? Math.round((n / d) * 100) : 0; }
 function confidenceValue(value) { const v = normalized(value); if (/high|ready|pass/.test(v)) return 90; if (/medium|partial|mixed/.test(v)) return 65; if (/low|weak|fail|needs attention/.test(v)) return 35; if (/unknown|missing/.test(v)) return 20; return 55; }
 function extractRisks(docs, files = Object.keys(docs)) { return files.map((file) => docs[file] ?? '').flatMap((doc) => (mdSection(doc, 'Risks') || mdSection(doc, 'Known Risks')).split('\n')).filter((line) => /^[-*]\s+/.test(line.trim())).map((line) => line.trim().replace(/^[-*]\s+/, '')).filter((line) => !/no .*risks/i.test(line)); }
 function backlogItems(backlog) { return (mdSection(backlog, 'Prioritized Backlog') || mdSection(backlog, 'Current Backlog') || mdSection(backlog, 'Manual Backlog') || backlog).split('\n').filter((line) => /^[-*]\s+/.test(line.trim())).map((line) => line.trim()); }
 
-export function detectContradictions(values) {
-  const known = values.map(normalized).filter(Boolean).filter((v) => !/unknown|missing|not detected/.test(v));
+export function detectContradictions(values, normalize = normalized) {
+  const known = values.map(normalize).filter(Boolean).filter((v) => !/unknown|missing|not detected/.test(v));
   return [...new Set(known)].length > 1;
+}
+
+export function normalizeConfidence(value) {
+  const score = confidenceValue(value);
+  if (score >= 80) return 'high';
+  if (score >= 55) return 'medium';
+  if (score >= 30) return 'low';
+  return 'unknown';
 }
 
 export function detectDuplicateSections(markdown) {
@@ -94,13 +115,17 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const validationValues = [mdSection(docs['validation.md'] ?? '', 'Confidence'), (docs['repository-health.md'] ?? '').match(/^Confidence:\s*(.+)$/im)?.[1] ?? mdSection(docs['repository-health.md'] ?? '', 'Validation Summary')].filter(present).map((v) => firstLine(v, ''));
   const duplicates = Object.entries(canonicalDocs).flatMap(([file, markdown]) => detectDuplicateSections(markdown).map((heading) => `${file}: ${heading}`));
   const contradictions = [];
-  if (detectContradictions(thesisValues)) contradictions.push('Product Thesis differs across Goals, Strategy, and Architecture.');
-  if (detectContradictions(focusValues)) contradictions.push('Current Focus differs across Goals, Strategy, and Architecture.');
-  if (detectContradictions(northStarValues)) contradictions.push('North Star differs across Goals, Strategy, and Architecture.');
-  if (detectContradictions(validationValues)) contradictions.push('Validation confidence differs between Validation and Repository Health.');
+  const thesisContradictory = detectContradictions(thesisValues, canonicalComparable);
+  const focusContradictory = detectContradictions(focusValues, canonicalComparable);
+  const northStarContradictory = detectContradictions(northStarValues, canonicalComparable);
+  const validationContradictory = detectContradictions(validationValues, normalizeConfidence);
+  if (thesisContradictory) contradictions.push('Product Thesis differs across Goals, Strategy, and Architecture.');
+  if (focusContradictory) contradictions.push('Current Focus differs across Goals, Strategy, and Architecture.');
+  if (northStarContradictory) contradictions.push('North Star differs across Goals, Strategy, and Architecture.');
+  if (validationContradictory) contradictions.push('Validation confidence differs between Validation and Repository Health.');
   const strategyEvidence = /evidence/i.test(docs['strategy.md'] ?? '') || /Evidence-backed/i.test(docs['repository-health.md'] ?? '');
-  const strategyConsistent = !detectContradictions(thesisValues) && !detectContradictions(focusValues) && !detectContradictions(northStarValues);
-  const validationConsistent = !detectContradictions(validationValues);
+  const strategyConsistent = !thesisContradictory && !focusContradictory && !northStarContradictory;
+  const validationConsistent = !validationContradictory;
   const consistencyChecks = [strategyConsistent, validationConsistent, strategyEvidence, duplicates.length === 0, contradictions.length === 0];
   const consistencyScore = percent(consistencyChecks.filter(Boolean).length, consistencyChecks.length);
   const mtimes = await Promise.all(qualityFiles.map(async (file) => [file, await stat(join(repositoryPath, '.ai', file)).then((s) => s.mtime).catch(() => null)]));
@@ -125,7 +150,7 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const canonicalIntelligenceQualityScore = Math.round(canonicalCoverageScore * 0.25 + consistencyScore * 0.35 + canonicalFreshnessScore * 0.15 + confidenceScore * 0.2 + riskScore * 0.05);
   const generatedExportQualityScore = Math.round(exportCoverageScore * 0.55 + exportFreshnessScore * 0.35 + (promptsPresent && docs['context-package.md']?.trim() ? 100 : 50) * 0.1);
   const overallScore = Math.round(canonicalIntelligenceQualityScore * 0.85 + generatedExportQualityScore * 0.15);
-  const snapshot = { timestamp: now.toISOString(), overallScore, canonicalIntelligenceQuality: { score: canonicalIntelligenceQualityScore, coverageScore: canonicalCoverageScore, consistencyScore, freshnessScore: canonicalFreshnessScore }, generatedExportQuality: { score: generatedExportQualityScore, coverageScore: exportCoverageScore, freshnessScore: exportFreshnessScore, promptsFreshnessOnly: true }, coverage: { score: coverageScore, ...coverageItems }, consistency: { score: consistencyScore, productThesisConsistent: !detectContradictions(thesisValues), currentFocusConsistent: !detectContradictions(focusValues), northStarConsistent: !detectContradictions(northStarValues), validationConsistent, strategyConsistent, strategyReferencesSupportedByEvidence: strategyEvidence, duplicatedSections: duplicates, contradictions }, freshness: { score: freshnessScore, lastRefresh: now.toISOString(), filesChanged: previousQuality ? Number(drift.productThesisChanged) + Number(drift.strategyChanged) + Number(drift.architectureChanged) + Number(drift.backlogGrew || drift.backlogShrank) + drift.newRisks.length + drift.removedRisks.length : 0, staleDocuments, canonicalStaleDocuments, derivedStaleDocuments, manualNotesPreserved }, confidence: { score: confidenceScore, existingConfidence, strategyConfidence, validationConfidence, overallRepositoryConfidence: confidenceScore >= 80 ? 'High' : confidenceScore >= 55 ? 'Medium' : 'Low' }, drift, risks, backlogCount, fingerprints: current.fingerprints, recentRegressions, recentImprovements };
+  const snapshot = { timestamp: now.toISOString(), overallScore, canonicalIntelligenceQuality: { score: canonicalIntelligenceQualityScore, coverageScore: canonicalCoverageScore, consistencyScore, freshnessScore: canonicalFreshnessScore }, generatedExportQuality: { score: generatedExportQualityScore, coverageScore: exportCoverageScore, freshnessScore: exportFreshnessScore, promptsFreshnessOnly: true }, coverage: { score: coverageScore, ...coverageItems }, consistency: { score: consistencyScore, productThesisConsistent: !thesisContradictory, currentFocusConsistent: !focusContradictory, northStarConsistent: !northStarContradictory, validationConsistent, strategyConsistent, strategyReferencesSupportedByEvidence: strategyEvidence, duplicatedSections: duplicates, contradictions }, freshness: { score: freshnessScore, lastRefresh: now.toISOString(), filesChanged: previousQuality ? Number(drift.productThesisChanged) + Number(drift.strategyChanged) + Number(drift.architectureChanged) + Number(drift.backlogGrew || drift.backlogShrank) + drift.newRisks.length + drift.removedRisks.length : 0, staleDocuments, canonicalStaleDocuments, derivedStaleDocuments, manualNotesPreserved }, confidence: { score: confidenceScore, existingConfidence, strategyConfidence, validationConfidence, overallRepositoryConfidence: confidenceScore >= 80 ? 'High' : confidenceScore >= 55 ? 'Medium' : 'Low' }, drift, risks, backlogCount, fingerprints: current.fingerprints, recentRegressions, recentImprovements };
   return { ...snapshot, trend: computeTrend(previousHistory, snapshot), recommendedAction: recommendQualityAction(snapshot) };
 }
 

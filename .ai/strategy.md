@@ -1,33 +1,49 @@
 # Strategy
 
 ## Product Thesis
-Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
-Product Thesis Evidence:
-README.md, .ai/goals.md, scripts/audit.mjs
+Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
 
-Evidence: .ai/architecture.md
+Evidence: .ai/goals.md
 ## North Star Metric
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+Repository handoff readiness is Ready with high canonical intelligence consistency.
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## Strategic Differentiator
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 
-Evidence: README.md
+Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md
 ## Current Product Bet
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+The repository is currently focused on making repository understanding the primary surface of Agent IDE.
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## Current Experiment
-**Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
+Can the system reliably deliver the current focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE?
 
-Evidence: README.md
+Evidence: .ai/goals.md
 ## What Not To Build
-The strategy generator deterministically reads `.ai/goals.md`, `.ai/architecture.md`, `.ai/decisions.md`, `README.md`, and docs whose names include STRATEGY, PRODUCT, ROADMAP, or VISION. It writes Product Thesis, North Star Metric, Strategic Differentiator, Current Product Bet, Current Experiment, What Not To Build, and Success Definition while preserving everything under `## Manual Strategy Notes`. Explicit `.ai/goals.md` sections win over inferred documentation signals. For Nearify-style relationship products, it surfaces Follow-Ups Completed, relationship memory from real-world encounters, the Between Events experience, the warning not to treat the product as primarily an event app, and the success test that users know who to reach out to today and complete more follow-ups.
+Do not build broad automation before repository understanding is consistently reliable for handoffs.
+
+Evidence: .ai/goals.md
+## Success Definition
+- Control Plane reports repository handoff readiness as Ready.
+- Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections.
+
+Evidence: .ai/goals.md
+## Strategy Confidence
+High
+## Strategy Evidence Sources
+- .ai/goals.md
+- .ai/architecture.md
+- .ai/decisions.md
+- README.md
+## Strategy Warnings
+- No strategy leakage detected.
+- No implementation leakage detected.
+## Manual Strategy Notes
 
 Evidence: README.md
-## Success Definition
+### Success Definition
 **Strategy** surfaces the product thesis, North Star Metric, strategic differentiator, current product bet, current experiment, anti-goals, and success definition.
 
 Evidence: README.md
-## Manual Strategy Notes
+### Manual Strategy Notes

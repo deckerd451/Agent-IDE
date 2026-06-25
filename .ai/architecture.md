@@ -1,13 +1,13 @@
 # Architecture
 
-Last Audit: 2026-06-24T00:16:59.907Z
+Last Audit: 2026-06-25T15:55:44.180Z
 Confidence: 95%
 
 ## Product Thesis
-Agent IDE exists to make repository understanding the primary developer interface by reading local `.ai/` markdown, source structure, package scripts, and project notes into a dashboard-oriented workflow.
+Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
 
 Product Thesis Evidence:
-README.md, .ai/goals.md, scripts/audit.mjs
+.ai/goals.md
 
 ## Core Systems
 - Dashboard UI: Inferred from target repository structure and naming.

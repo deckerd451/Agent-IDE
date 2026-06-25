@@ -1,6 +1,6 @@
 # Repository Health
 
-Last Audit: 2026-06-24T16:35:15.860Z
+Last Audit: 2026-06-25T15:56:30.046Z
 Overall Health: Needs Attention
 Confidence: Medium
 
@@ -23,7 +23,14 @@ Confidence: Medium
 - North Star Metric present
 - Strategic Differentiator present
 - Current Product Bet present
+- Current Experiment present
 - What Not To Build present
+- Success Definition present
+- Strategy quality score 100/100
+- Product Signal Quality strong
+- Strategy leakage not detected
+- Implementation Leakage Warning not detected
+- Strategy confidence High
 - Evidence lines present
 - Backlog noise detected
 - Validation commands detected

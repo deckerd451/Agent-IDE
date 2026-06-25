@@ -1,0 +1,88 @@
+[
+  {
+    "timestamp": "2026-06-25T15:54:19.717Z",
+    "overallScore": 82,
+    "coverageScore": 100,
+    "consistencyScore": 60,
+    "freshnessScore": 100,
+    "confidenceScore": 73,
+    "trend": "Stable",
+    "regressions": [
+      "Product Thesis differs across Goals, Strategy, and Architecture.",
+      "Current Focus differs across Goals, Strategy, and Architecture.",
+      "New risk: Backlog contains possible noise",
+      "New risk: Missing manual goals",
+      "New risk: Strategy missing What Not To Build"
+    ],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T15:54:59.499Z",
+    "overallScore": 91,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 55,
+    "trend": "Needs Attention",
+    "regressions": [
+      "New risk: Strategy missing Success Definition",
+      "New risk: Implementation Leakage Warning: strategy fields contain implementation-level details in Product Thesis"
+    ],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T15:55:12.327Z",
+    "overallScore": 82,
+    "coverageScore": 100,
+    "consistencyScore": 60,
+    "freshnessScore": 100,
+    "confidenceScore": 73,
+    "trend": "Needs Attention",
+    "regressions": [
+      "Product Thesis differs across Goals, Strategy, and Architecture."
+    ],
+    "improvements": [
+      "Removed risk: Strategy missing Success Definition",
+      "Removed risk: Implementation Leakage Warning: strategy fields contain implementation-level details in Product Thesis"
+    ]
+  },
+  {
+    "timestamp": "2026-06-25T15:55:46.040Z",
+    "overallScore": 94,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 73,
+    "trend": "Improving",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T15:56:19.724Z",
+    "overallScore": 92,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 55,
+    "trend": "Needs Attention",
+    "regressions": [
+      "New risk: Implementation Leakage Warning: strategy fields contain implementation-level details in What Not To Build"
+    ],
+    "improvements": [
+      "Removed risk: Strategy missing What Not To Build"
+    ]
+  },
+  {
+    "timestamp": "2026-06-25T15:56:30.794Z",
+    "overallScore": 95,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 73,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": [
+      "Removed risk: Implementation Leakage Warning: strategy fields contain implementation-level details in What Not To Build"
+    ]
+  }
+]
