@@ -149,3 +149,51 @@ test('prompt preserves deterministic/no-cloud/no-LLM language', () => {
   assert.match(prompt, /no cloud/i);
   assert.match(prompt, /no LLM calls/i);
 });
+
+test('implementation package includes complete deterministic lead-in', () => {
+  const prompt = renderPrompt(choice());
+  assert.match(prompt, /^# Run AI Handoff Validation\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written\./);
+  for (const expected of [
+    'Use the cited repository evidence to identify the root cause before making changes.',
+    'Keep the implementation narrowly scoped.',
+    'Do not broaden scope beyond the selected issue.',
+    'Preserve deterministic, local-first behavior.',
+    'Preserve manual intelligence sections.',
+    'Avoid unrelated refactoring.',
+    'Use only repository-local evidence.',
+    'Do not make LLM calls, use cloud services, or add telemetry.',
+    'Ensure execution and validation are fully reproducible.',
+  ]) {
+    assert.match(prompt, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+});
+
+test('implementation package includes expected improvement and after implementation sections', () => {
+  const prompt = renderPrompt(choice());
+  assert.match(prompt, /## Expected Repository Improvement\n- Repository Health should improve\.\n- Intelligence Quality should improve\.\n- The selected issue should disappear or downgrade\.\n- No new canonical contradictions should be introduced\./);
+  assert.match(prompt, /## After Implementation\n- Refresh Repository Intelligence\.\n- Compare Repository Health before and after\.\n- Compare Intelligence Quality before and after\.\n- Verify whether the selected issue was resolved\.\n- Summarize any newly discovered issues\.\n- Generate the next Implementation Package\./);
+});
+
+test('implementation package sections render in deterministic order', () => {
+  const prompt = renderPrompt(choice());
+  const headings = [...prompt.matchAll(/^## .+$/gm)].map((match) => match[0]);
+  assert.deepEqual(headings, [
+    '## Implementation Instructions',
+    '## Selected Issue',
+    '## Motivation',
+    '## Current Evidence',
+    '## Problem',
+    '## Goal',
+    '## Requirements',
+    '## Acceptance Criteria',
+    '## Testing Commands',
+    '## Constraints',
+    '## Expected Repository Improvement',
+    '## After Implementation',
+  ]);
+});
+
+test('generated implementation packages remain deterministic across repeated renders', () => {
+  const selected = choice();
+  assert.equal(renderPrompt(selected), renderPrompt(selected));
+});
