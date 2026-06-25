@@ -1,7 +1,16 @@
 import { readFile, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export const qualityFiles = ['goals.md','strategy.md','architecture.md','decisions.md','validation.md','backlog.md','context-package.md','repository-health.md','prompts/architect.md','prompts/builder.md','prompts/reviewer.md','prompts/debugger.md'];
+export const canonicalIntelligenceFiles = ['goals.md','strategy.md','architecture.md','decisions.md','validation.md','backlog.md','repository-health.md','agents.md','code.md'];
+export const derivedArtifactFiles = ['context-package.md','intelligence-audit.md','intelligence-quality.json','intelligence-history.json','prompts/architect.md','prompts/builder.md','prompts/reviewer.md','prompts/debugger.md'];
+export const qualityFiles = [...canonicalIntelligenceFiles, ...derivedArtifactFiles];
+
+export function classifyIntelligenceSource(file) {
+  const normalizedFile = file.replace(/^\.ai\//, '').replace(/\\/g, '/');
+  if (canonicalIntelligenceFiles.includes(normalizedFile)) return 'canonical';
+  if (derivedArtifactFiles.includes(normalizedFile) || /^(prompts|exports|snapshots|timeline|diff)(?:\/|$)/.test(normalizedFile)) return 'derived';
+  return 'unknown';
+}
 
 export function mdSection(markdown, heading) {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -17,7 +26,7 @@ function normalized(value) { return value.toLowerCase().replace(/[`*_#>-]/g, ' '
 function present(value) { const v = firstLine(value, ''); return Boolean(v) && !/^(unknown|missing|not detected yet|none detected|tbd|todo|generated placeholder)$/i.test(v); }
 function percent(n, d) { return d ? Math.round((n / d) * 100) : 0; }
 function confidenceValue(value) { const v = normalized(value); if (/high|ready|pass/.test(v)) return 90; if (/medium|partial|mixed/.test(v)) return 65; if (/low|weak|fail|needs attention/.test(v)) return 35; if (/unknown|missing/.test(v)) return 20; return 55; }
-function extractRisks(docs) { return Object.values(docs).flatMap((doc) => (mdSection(doc, 'Risks') || mdSection(doc, 'Known Risks')).split('\n')).filter((line) => /^[-*]\s+/.test(line.trim())).map((line) => line.trim().replace(/^[-*]\s+/, '')).filter((line) => !/no .*risks/i.test(line)); }
+function extractRisks(docs, files = Object.keys(docs)) { return files.map((file) => docs[file] ?? '').flatMap((doc) => (mdSection(doc, 'Risks') || mdSection(doc, 'Known Risks')).split('\n')).filter((line) => /^[-*]\s+/.test(line.trim())).map((line) => line.trim().replace(/^[-*]\s+/, '')).filter((line) => !/no .*risks/i.test(line)); }
 function backlogItems(backlog) { return (mdSection(backlog, 'Prioritized Backlog') || mdSection(backlog, 'Current Backlog') || mdSection(backlog, 'Manual Backlog') || backlog).split('\n').filter((line) => /^[-*]\s+/.test(line.trim())).map((line) => line.trim()); }
 
 export function detectContradictions(values) {
@@ -68,38 +77,55 @@ export async function readQualityDocs(repositoryPath) {
 
 export async function computeQualitySnapshot(repositoryPath, docs, previousQuality = null, previousHistory = []) {
   const now = new Date();
-  const promptsPresent = ['prompts/architect.md','prompts/builder.md','prompts/reviewer.md','prompts/debugger.md'].every((file) => docs[file]?.trim());
-  const coverageItems = {
-    goalsPresent: Boolean(docs['goals.md']?.trim()), strategyPresent: Boolean(docs['strategy.md']?.trim()), architecturePresent: Boolean(docs['architecture.md']?.trim()), decisionsPresent: Boolean(docs['decisions.md']?.trim()), validationPresent: Boolean(docs['validation.md']?.trim()), backlogPresent: Boolean(docs['backlog.md']?.trim()), contextPackagePresent: Boolean(docs['context-package.md']?.trim()), promptsPresent,
+  const canonicalDocs = Object.fromEntries(Object.entries(docs).filter(([file]) => classifyIntelligenceSource(file) === 'canonical'));
+  const promptFiles = ['prompts/architect.md','prompts/builder.md','prompts/reviewer.md','prompts/debugger.md'];
+  const promptsPresent = promptFiles.every((file) => docs[file]?.trim());
+  const canonicalCoverageItems = {
+    goalsPresent: Boolean(docs['goals.md']?.trim()), strategyPresent: Boolean(docs['strategy.md']?.trim()), architecturePresent: Boolean(docs['architecture.md']?.trim()), decisionsPresent: Boolean(docs['decisions.md']?.trim()), validationPresent: Boolean(docs['validation.md']?.trim()), backlogPresent: Boolean(docs['backlog.md']?.trim()), repositoryHealthPresent: Boolean(docs['repository-health.md']?.trim()), agentsPresent: Boolean(docs['agents.md']?.trim()), codePresent: Boolean(docs['code.md']?.trim()),
   };
-  const coverageScore = percent(Object.values(coverageItems).filter(Boolean).length, Object.values(coverageItems).length);
+  const exportCoverageItems = { contextPackagePresent: Boolean(docs['context-package.md']?.trim()), promptsPresent };
+  const coverageItems = { ...canonicalCoverageItems, ...exportCoverageItems };
+  const canonicalCoverageScore = percent(Object.values(canonicalCoverageItems).filter(Boolean).length, Object.values(canonicalCoverageItems).length);
+  const exportCoverageScore = percent(Object.values(exportCoverageItems).filter(Boolean).length, Object.values(exportCoverageItems).length);
+  const coverageScore = Math.round(canonicalCoverageScore * 0.8 + exportCoverageScore * 0.2);
   const thesisValues = [mdSection(docs['goals.md'] ?? '', 'Product Thesis') || mdSection(docs['goals.md'] ?? '', 'Product Purpose'), mdSection(docs['strategy.md'] ?? '', 'Product Thesis'), mdSection(docs['architecture.md'] ?? '', 'Product Thesis')].filter(present).map((v) => firstLine(v, ''));
-  const focusValues = [mdSection(docs['goals.md'] ?? '', 'Current Focus'), mdSection(docs['architecture.md'] ?? '', 'Current Focus')].filter(present).map((v) => firstLine(v, ''));
+  const focusValues = [mdSection(docs['goals.md'] ?? '', 'Current Focus'), mdSection(docs['strategy.md'] ?? '', 'Current Product Bet'), mdSection(docs['architecture.md'] ?? '', 'Current Focus')].filter(present).map((v) => firstLine(v, ''));
   const northStarValues = [mdSection(docs['goals.md'] ?? '', 'North Star Metric'), mdSection(docs['strategy.md'] ?? '', 'North Star Metric'), mdSection(docs['architecture.md'] ?? '', 'North Star Metric')].filter(present).map((v) => firstLine(v, ''));
-  const duplicates = Object.entries(docs).flatMap(([file, markdown]) => detectDuplicateSections(markdown).map((heading) => `${file}: ${heading}`));
+  const validationValues = [mdSection(docs['validation.md'] ?? '', 'Confidence'), (docs['repository-health.md'] ?? '').match(/^Confidence:\s*(.+)$/im)?.[1] ?? mdSection(docs['repository-health.md'] ?? '', 'Validation Summary')].filter(present).map((v) => firstLine(v, ''));
+  const duplicates = Object.entries(canonicalDocs).flatMap(([file, markdown]) => detectDuplicateSections(markdown).map((heading) => `${file}: ${heading}`));
   const contradictions = [];
   if (detectContradictions(thesisValues)) contradictions.push('Product Thesis differs across Goals, Strategy, and Architecture.');
-  if (detectContradictions(focusValues)) contradictions.push('Current Focus differs across intelligence files.');
-  if (detectContradictions(northStarValues)) contradictions.push('North Star differs across intelligence files.');
+  if (detectContradictions(focusValues)) contradictions.push('Current Focus differs across Goals, Strategy, and Architecture.');
+  if (detectContradictions(northStarValues)) contradictions.push('North Star differs across Goals, Strategy, and Architecture.');
+  if (detectContradictions(validationValues)) contradictions.push('Validation confidence differs between Validation and Repository Health.');
   const strategyEvidence = /evidence/i.test(docs['strategy.md'] ?? '') || /Evidence-backed/i.test(docs['repository-health.md'] ?? '');
-  const consistencyChecks = [!detectContradictions(thesisValues), !detectContradictions(focusValues), !detectContradictions(northStarValues), strategyEvidence, duplicates.length === 0, contradictions.length === 0];
+  const strategyConsistent = !detectContradictions(thesisValues) && !detectContradictions(focusValues) && !detectContradictions(northStarValues);
+  const validationConsistent = !detectContradictions(validationValues);
+  const consistencyChecks = [strategyConsistent, validationConsistent, strategyEvidence, duplicates.length === 0, contradictions.length === 0];
   const consistencyScore = percent(consistencyChecks.filter(Boolean).length, consistencyChecks.length);
   const mtimes = await Promise.all(qualityFiles.map(async (file) => [file, await stat(join(repositoryPath, '.ai', file)).then((s) => s.mtime).catch(() => null)]));
   const staleDocuments = mtimes.filter(([, mtime]) => mtime && now - mtime > 14 * 86400000).map(([file]) => file);
+  const canonicalStaleDocuments = staleDocuments.filter((file) => classifyIntelligenceSource(file) === 'canonical');
+  const derivedStaleDocuments = staleDocuments.filter((file) => classifyIntelligenceSource(file) === 'derived');
   const freshnessScore = Math.max(0, 100 - staleDocuments.length * 10);
-  const manualNotesPreserved = Object.values(docs).some((doc) => /^##\s+Manual /im.test(doc));
+  const canonicalFreshnessScore = Math.max(0, 100 - canonicalStaleDocuments.length * 12);
+  const exportFreshnessScore = Math.max(0, 100 - derivedStaleDocuments.length * 12);
+  const manualNotesPreserved = Object.values(canonicalDocs).some((doc) => /^##\s+Manual /im.test(doc));
   const strategyConfidence = firstLine(mdSection(docs['strategy.md'] ?? '', 'Strategy Confidence'), 'Unknown');
   const validationConfidence = firstLine(mdSection(docs['validation.md'] ?? '', 'Confidence'), 'Unknown');
   const existingConfidence = (docs['repository-health.md'] ?? '').match(/^Confidence:\s*(.+)$/im)?.[1]?.trim() ?? 'Unknown';
   const confidenceScore = Math.round((confidenceValue(existingConfidence) + confidenceValue(strategyConfidence) + confidenceValue(validationConfidence)) / 3);
-  const risks = extractRisks(docs);
+  const risks = extractRisks(docs, Object.keys(canonicalDocs));
   const backlogCount = backlogItems(docs['backlog.md'] ?? '').length;
   const current = { fingerprints: { productThesis: normalized(thesisValues[0] ?? ''), strategy: normalized(mdSection(docs['strategy.md'] ?? '', 'Current Product Bet') || docs['strategy.md'] || ''), architecture: normalized(mdSection(docs['architecture.md'] ?? '', 'Core Systems') || docs['architecture.md'] || '') }, risks, backlogCount };
   const drift = computeDrift(previousQuality, current);
   const recentRegressions = [...contradictions, ...duplicates.map((d) => `Duplicate section: ${d}`), ...drift.newRisks.map((r) => `New risk: ${r}`)];
   const recentImprovements = [...drift.removedRisks.map((r) => `Removed risk: ${r}`)];
-  const overallScore = Math.round(coverageScore * 0.3 + consistencyScore * 0.3 + freshnessScore * 0.15 + confidenceScore * 0.2 + Math.max(0, 100 - risks.length * 8) * 0.05);
-  const snapshot = { timestamp: now.toISOString(), overallScore, coverage: { score: coverageScore, ...coverageItems }, consistency: { score: consistencyScore, productThesisConsistent: !detectContradictions(thesisValues), currentFocusConsistent: !detectContradictions(focusValues), northStarConsistent: !detectContradictions(northStarValues), strategyReferencesSupportedByEvidence: strategyEvidence, duplicatedSections: duplicates, contradictions }, freshness: { score: freshnessScore, lastRefresh: now.toISOString(), filesChanged: previousQuality ? Number(drift.productThesisChanged) + Number(drift.strategyChanged) + Number(drift.architectureChanged) + Number(drift.backlogGrew || drift.backlogShrank) + drift.newRisks.length + drift.removedRisks.length : 0, staleDocuments, manualNotesPreserved }, confidence: { score: confidenceScore, existingConfidence, strategyConfidence, validationConfidence, overallRepositoryConfidence: confidenceScore >= 80 ? 'High' : confidenceScore >= 55 ? 'Medium' : 'Low' }, drift, risks, backlogCount, fingerprints: current.fingerprints, recentRegressions, recentImprovements };
+  const riskScore = Math.max(0, 100 - risks.length * 8);
+  const canonicalIntelligenceQualityScore = Math.round(canonicalCoverageScore * 0.25 + consistencyScore * 0.35 + canonicalFreshnessScore * 0.15 + confidenceScore * 0.2 + riskScore * 0.05);
+  const generatedExportQualityScore = Math.round(exportCoverageScore * 0.55 + exportFreshnessScore * 0.35 + (promptsPresent && docs['context-package.md']?.trim() ? 100 : 50) * 0.1);
+  const overallScore = Math.round(canonicalIntelligenceQualityScore * 0.85 + generatedExportQualityScore * 0.15);
+  const snapshot = { timestamp: now.toISOString(), overallScore, canonicalIntelligenceQuality: { score: canonicalIntelligenceQualityScore, coverageScore: canonicalCoverageScore, consistencyScore, freshnessScore: canonicalFreshnessScore }, generatedExportQuality: { score: generatedExportQualityScore, coverageScore: exportCoverageScore, freshnessScore: exportFreshnessScore, promptsFreshnessOnly: true }, coverage: { score: coverageScore, ...coverageItems }, consistency: { score: consistencyScore, productThesisConsistent: !detectContradictions(thesisValues), currentFocusConsistent: !detectContradictions(focusValues), northStarConsistent: !detectContradictions(northStarValues), validationConsistent, strategyConsistent, strategyReferencesSupportedByEvidence: strategyEvidence, duplicatedSections: duplicates, contradictions }, freshness: { score: freshnessScore, lastRefresh: now.toISOString(), filesChanged: previousQuality ? Number(drift.productThesisChanged) + Number(drift.strategyChanged) + Number(drift.architectureChanged) + Number(drift.backlogGrew || drift.backlogShrank) + drift.newRisks.length + drift.removedRisks.length : 0, staleDocuments, canonicalStaleDocuments, derivedStaleDocuments, manualNotesPreserved }, confidence: { score: confidenceScore, existingConfidence, strategyConfidence, validationConfidence, overallRepositoryConfidence: confidenceScore >= 80 ? 'High' : confidenceScore >= 55 ? 'Medium' : 'Low' }, drift, risks, backlogCount, fingerprints: current.fingerprints, recentRegressions, recentImprovements };
   return { ...snapshot, trend: computeTrend(previousHistory, snapshot), recommendedAction: recommendQualityAction(snapshot) };
 }
 
