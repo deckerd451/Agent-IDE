@@ -164,7 +164,7 @@ function suggestedManualUpdate(selected) {
   }
   if (selected.id === 'strategy-quality') {
     return [
-      'Update the appropriate manual section of \`.ai/goals.md\`, such as `## Manual Strategy Notes`, `## Current Product Bet`, `## Strategic Bet`, `## Product Differentiator`, `## Long-Term Vision`, or `## Success Criteria`:',
+      'Add text under \`.ai/goals.md\` in `## Manual Strategy Notes` or another canonical goals section, such as `## Current Product Bet`, `## Strategic Bet`, `## Product Differentiator`, `## Long-Term Vision`, or `## Success Criteria`:',
       '',
       '```md',
       '- Strategic bet: [Repository owner: describe the product strategy this repository should support.]',
@@ -188,10 +188,7 @@ function renderImplementationPackage(selected, details) {
 
 function renderProductDecisionPackage(selected, details) {
   return `# ${selected.title}\n\n## Decision Instructions\nThis is a product-owner decision task, not a Codex implementation task.\nUse repository-local evidence to decide or record the missing product, strategy, or manual-intelligence information.\nDo not send this package to Codex as implementation work.\nDo not edit files automatically; the repository owner should review, accept, or edit the suggested manual update in \`.ai/goals.md\`.
-Repository Owner edits:
-
-.ai/goals.md
-
+Repository owner edits: \`.ai/goals.md\`
 Everything else will be regenerated.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct manual section of \`.ai/goals.md\`.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
 }
 

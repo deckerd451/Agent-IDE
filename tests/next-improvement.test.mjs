@@ -219,7 +219,7 @@ test('missing manual goals package includes suggested Manual Goals text', () => 
 
 test('strategy manual notes package targets canonical goals sections', () => {
   const prompt = renderPrompt(choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }));
-  assert.match(prompt, /appropriate manual section of `\.ai\/goals\.md`/);
+  assert.match(prompt, /Add text under `\.ai\/goals\.md` in `## Manual Strategy Notes` or another canonical goals section/);
   assert.match(prompt, /`## Manual Strategy Notes`/);
   assert.match(prompt, /Strategic bet: \[Repository owner:/);
   assert.doesNotMatch(prompt, /`\.ai\/strategy\.md` `## Manual Strategy Notes`/);
@@ -232,7 +232,7 @@ test('product decision packages never recommend generated artifacts as manual ed
   ]) {
     const prompt = renderPrompt(selected);
     assert.equal(selected.packageType, 'product-decision');
-    assert.match(prompt, /Repository Owner edits:\n\n\.ai\/goals\.md\n\nEverything else will be regenerated/);
+    assert.match(prompt, /Repository owner edits: `\.ai\/goals\.md`\nEverything else will be regenerated/);
     assert.doesNotMatch(prompt, /Update \.ai\/(?:strategy|architecture|repository-health|context-package)\.md/i);
     assert.doesNotMatch(prompt, /edit(?:ing)?[^\n]*(?:`?\.ai\/(?:strategy|architecture|repository-health|context-package)\.md`?)/i);
   }
@@ -254,11 +254,10 @@ test('generated Product Decision Package keeps manual strategy edits on canonica
 
   assert.equal(result.selectedIssue.id, 'strategy-quality');
   assert.equal(result.selectedIssue.packageType, 'product-decision');
-  assert.match(prompt, /Repository Owner edits:\n\n\.ai\/goals\.md\n\nEverything else will be regenerated/);
-  assert.match(prompt, /appropriate manual section of `\.ai\/goals\.md`/);
+  assert.match(prompt, /Repository owner edits: `\.ai\/goals\.md`\nEverything else will be regenerated/);
+  assert.match(prompt, /Add text under `\.ai\/goals\.md` in `## Manual Strategy Notes` or another canonical goals section/);
   assert.match(prompt, /`## Manual Strategy Notes`/);
-  assert.doesNotMatch(prompt, /`\.ai\/strategy\.md` `## Manual Strategy Notes`/);
-  assert.doesNotMatch(prompt, /(?:Add text like the following under|Update|edit(?:ing)?)[^\n]*`?\.ai\/strategy\.md`?/i);
+  assert.doesNotMatch(prompt, /\.ai\/strategy\.md/);
 });
 
 test('code-fixable issue still generates Implementation Package', () => {
