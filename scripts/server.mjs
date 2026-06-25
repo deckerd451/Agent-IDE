@@ -124,17 +124,54 @@ function topBacklogItem(backlog) {
   return prioritized.split('\n').map((line) => line.trim()).find((line) => /^[-*]\s+/.test(line))?.replace(/^[-*]\s+/, '').trim() ?? '';
 }
 
+
+function riskPriority(risk) {
+  if (/Missing intelligence file|Architecture has no product thesis|Architecture has no current focus|Strategy missing$/i.test(risk)) return 1;
+  if (/No deterministic validation commands|Validation has low confidence/i.test(risk)) return 2;
+  if (/Strategy missing|warning|leakage/i.test(risk)) return 3;
+  if (/Backlog contains possible noise/i.test(risk)) return 5;
+  return 4;
+}
+
+function criticalRisks(risks) {
+  return risks.filter((risk) => riskPriority(risk) <= 3);
+}
+
 function auditRecommendation(health) {
-  const risks = mdSection(health, 'Risks');
-  const firstRisk = risks.split('\n').map((line) => line.trim()).find((line) => /^[-*]\s+/.test(line) && !/No repository health risks/i.test(line));
-  return firstRisk ? `Resolve audit finding: ${firstRisk.replace(/^[-*]\s+/, '')}` : '';
+  const firstRisk = riskItems(health).sort((a, b) => riskPriority(a) - riskPriority(b))[0];
+  if (!firstRisk || riskPriority(firstRisk) >= 5) return '';
+  return `Resolve audit finding: ${firstRisk}`;
+}
+
+
+function hasMeaningfulSection(markdown, heading) {
+  const value = mdSection(markdown, heading);
+  const line = firstLine(value, '');
+  return Boolean(line) && !/^(?:not detected yet|missing|none detected|generated placeholder|tbd|todo)$/i.test(line) && !/low confidence/i.test(line);
 }
 
 function intelligenceState(markdown, heading) {
   const value = firstLine(mdSection(markdown, heading), '');
   if (!value || /Not detected yet|missing|low confidence|none detected/i.test(value)) return 'Missing';
-  if (/warning|needs attention|mixed|weak|low\b/i.test(value)) return 'Needs Attention';
+  if (/partial|metadata detected|not run by default/i.test(value)) return 'Partial';
+  if (/warning|needs attention|mixed|weak|low confidence/i.test(value)) return 'Needs Attention';
   return 'Present';
+}
+
+function productThesisState(docs) {
+  return ['strategy.md', 'architecture.md', 'goals.md'].some((file) => hasMeaningfulSection(docs[file] ?? '', 'Product Thesis') || hasMeaningfulSection(docs[file] ?? '', 'Product Purpose')) ? 'Present' : 'Needs Attention';
+}
+
+function validationState(docs) {
+  const validation = docs['validation.md'] ?? '';
+  if (!validation.trim()) return 'Missing';
+  const commandsRun = mdSection(validation, 'Commands Run');
+  const hasCommand = /`(?:npm run|npm test|pnpm|yarn|cargo|swift|xcodebuild)\b[^`]*`/i.test(commandsRun) && !/-\s+None\b/i.test(commandsRun);
+  if (hasCommand) return 'Present';
+  const hasXcodeMetadata = /Xcode project validation metadata detected/i.test(validation) || /`xcodebuild -list -(?:project|workspace) [^`]+`/i.test(validation);
+  const hasValidationMetadata = /##\s+(?:Xcode Project Validation|Results|Known Validation Gaps|Last Validation)\b/i.test(validation);
+  if (hasXcodeMetadata || hasValidationMetadata) return 'Partial';
+  return 'Missing';
 }
 
 function qualityState(health, signalLabel) {
@@ -156,11 +193,11 @@ function understandingSummary(docs) {
   const validation = docs['validation.md'] ?? '';
   const decisions = docs['decisions.md'] ?? '';
   return [
-    { label: 'Product Thesis', state: intelligenceState(strategy, 'Product Thesis') === 'Present' ? 'Present' : intelligenceState(architecture, 'Product Thesis'), source: '.ai/strategy.md' },
+    { label: 'Product Thesis', state: productThesisState(docs), source: '.ai/strategy.md' },
     { label: 'Current Focus', state: intelligenceState(docs['goals.md'] ?? '', 'Current Focus') === 'Present' ? 'Present' : intelligenceState(architecture, 'Current Focus'), source: '.ai/goals.md' },
     { label: 'Strategy', state: qualityState(health, 'Strategy quality score'), source: '.ai/repository-health.md' },
     { label: 'Architecture', state: qualityState(health, 'Core systems'), source: '.ai/architecture.md' },
-    { label: 'Validation', state: /Low/i.test(firstLine(mdSection(validation, 'Confidence'), '')) ? 'Needs Attention' : intelligenceState(validation, 'Overall Status'), source: '.ai/validation.md' },
+    { label: 'Validation', state: validationState(docs), source: '.ai/validation.md' },
     { label: 'Decisions', state: mdSection(decisions, 'Active Decisions') || decisions.trim().length > 20 ? 'Present' : 'Missing', source: '.ai/decisions.md' },
   ];
 }
@@ -181,7 +218,9 @@ function recommendationDetails(docs) {
   const backlog = docs['backlog.md'] ?? '';
   const healthRecommendation = firstLine(mdSection(health, 'Recommended Next Step'), '');
   const backlogItem = topBacklogItem(backlog);
-  const title = auditRecommendation(health) || healthRecommendation || backlogItem || 'Refresh repository intelligence';
+  const risks = riskItems(health);
+  const lowPriorityOnly = risks.length > 0 && criticalRisks(risks).length === 0;
+  const title = auditRecommendation(health) || (lowPriorityOnly ? 'Run an AI handoff test.' : healthRecommendation) || backlogItem || 'Refresh repository intelligence';
   const kind = recommendationKind(title, health);
   const evidenceSource = kind === 'Highest-priority Backlog item' ? '.ai/backlog.md' : '.ai/repository-health.md';
   const whyItMatters = kind === 'Intelligence Audit recommendation'
@@ -210,7 +249,9 @@ function summarizeSnapshot(docs, repositoryPath = process.cwd()) {
   const validation = docs['validation.md'] ?? '';
   const backlog = docs['backlog.md'] ?? '';
   const healthRecommendation = firstLine(mdSection(health, 'Recommended Next Step'), '');
-  const recommendedNextStep = auditRecommendation(health) || healthRecommendation || topBacklogItem(backlog) || 'Refresh repository intelligence to generate a recommended next step.';
+  const risks = riskItems(health);
+  const lowPriorityOnly = risks.length > 0 && criticalRisks(risks).length === 0;
+  const recommendedNextStep = auditRecommendation(health) || (lowPriorityOnly ? 'Run an AI handoff test.' : healthRecommendation) || topBacklogItem(backlog) || 'Refresh repository intelligence to generate a recommended next step.';
   return {
     timestamp: new Date().toISOString(),
     repositoryName: basename(repositoryPath),
@@ -218,7 +259,7 @@ function summarizeSnapshot(docs, repositoryPath = process.cwd()) {
     intelligenceCompleteness: completenessScore(health),
     strategyQuality: qualitySignal(health, 'Strategy quality score'),
     productSignalQuality: qualitySignal(health, 'Product Signal Quality'),
-    repositoryHandoffReadiness: docs['context-package.md'] && docs['prompts/architect.md'] && docs['prompts/builder.md'] && docs['prompts/reviewer.md'] && docs['prompts/debugger.md'] ? 'Ready' : 'Incomplete',
+    repositoryHandoffReadiness: productThesisState(docs) === 'Present' && hasMeaningfulSection(strategy, 'Current Product Bet') && hasMeaningfulSection(docs['architecture.md'] ?? '', 'Core Systems') && docs['context-package.md'] && criticalRisks(risks).length === 0 ? 'Ready' : 'Needs Attention',
     lastRefresh: metricFromHealth(health, 'Last Audit'),
     currentConfidence: metricFromHealth(health, 'Confidence'),
     strategyConfidence: qualitySignal(health, 'Strategy confidence') || firstLine(mdSection(strategy, 'Strategy Confidence'), 'Unknown'),
@@ -468,6 +509,10 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(port, () => {
-  console.log(`Agent IDE local server listening on http://localhost:${port}`);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  server.listen(port, () => {
+    console.log(`Agent IDE local server listening on http://localhost:${port}`);
+  });
+}
+
+export { summarizeSnapshot, understandingSummary, recommendationDetails, validationState, productThesisState };
