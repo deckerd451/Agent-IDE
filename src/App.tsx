@@ -19,7 +19,7 @@ type StepState = {
   output?: string;
 };
 
-type IntelligenceState = 'Present' | 'Missing' | 'Needs Attention';
+type IntelligenceState = string;
 
 type ControlPlaneRecommendation = {
   title: string;
@@ -38,7 +38,7 @@ type VerificationSnapshot = { status: 'Verified' | 'Failed'; score: number; summ
 type QualitySnapshot = {
   overallScore: number;
   trend: 'Improving' | 'Stable' | 'Needs Attention';
-  canonicalIntelligenceQuality?: { score: number };
+  canonicalIntelligenceQuality?: { score: number; completenessScore?: number; completenessState?: string; fields?: Record<string, { label: string; state: string; percent: number }> };
   generatedExportQuality?: { score: number };
   coverage: Record<string, boolean | number>;
   consistency: { score: number; contradictions: string[]; duplicatedSections: string[] };
@@ -276,7 +276,9 @@ function WelcomeDashboard() {
 }
 
 function stateClass(state: IntelligenceState) {
-  return state.toLowerCase().replace(/\s+/g, '-');
+  if (/missing/i.test(state)) return 'missing';
+  if (/partial|needs attention|warning|failed/i.test(state)) return 'needs-attention';
+  return 'present';
 }
 
 function meaningfulDiffEntries(diff: ControlPlane['diff']): Array<readonly [string, string[]]> {
@@ -379,7 +381,8 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         <section className="controlCard qualityCard" aria-label="Intelligence quality">
           <div className="qualityHeader"><div><small>Overall Quality</small><strong>{data.quality.overallScore}/100</strong></div><span className={stateClass(data.quality.trend === 'Needs Attention' ? 'Needs Attention' : 'Present')}>Trend: {data.quality.trend}</span></div>
           <div className="qualityGrid">
-            <div><small>Canonical Intelligence</small><strong>{data.quality.canonicalIntelligenceQuality?.score ?? data.quality.overallScore}%</strong></div>
+            <div><small>Canonical Intelligence</small><strong>{data.quality.canonicalIntelligenceQuality?.score ?? data.quality.overallScore}%</strong>{data.quality.canonicalIntelligenceQuality?.completenessState && <small>{data.quality.canonicalIntelligenceQuality.completenessState} {data.quality.canonicalIntelligenceQuality.completenessScore}% complete</small>}</div>
+            {Object.entries(data.quality.canonicalIntelligenceQuality?.fields ?? {}).map(([key, field]) => <div key={key}><small>{field.label}</small><strong>{field.percent}%</strong><small>{field.state}</small></div>)}
             <div><small>Export Quality</small><strong>{data.quality.generatedExportQuality?.score ?? data.quality.coverage.score}%</strong></div>
             <div><small>Consistency</small><strong>{data.quality.consistency.score}%</strong></div>
             <div><small>Freshness</small><strong>{data.quality.freshness.score}%</strong></div>

@@ -1,0 +1,69 @@
+export const completenessStates = ['Missing', 'Partial', 'Complete', 'Strong'];
+
+const missingPattern = /^(?:unknown|missing|not detected yet|none detected|generated placeholder|tbd|todo|n\/a|na)$/i;
+
+export const canonicalFields = [
+  { key: 'manualGoals', label: 'Manual Goals', heading: 'Manual Goals', required: [
+    { key: 'productIntent', label: 'Product intent', headings: ['Manual Goals', 'Product Purpose', 'Product Thesis'], patterns: [/product\s+(?:intent|purpose|thesis)\s*:/i] },
+    { key: 'currentFocus', label: 'Current focus', headings: ['Manual Goals', 'Current Focus'], patterns: [/current\s+focus\s*:/i] },
+    { key: 'successCriteria', label: 'Success criteria', headings: ['Manual Goals', 'Success Criteria', 'Success Definition'], patterns: [/success\s+(?:criteria|definition)\s*:/i] },
+    { key: 'longTermVision', label: 'Long-term vision', headings: ['Manual Goals', 'Long-Term Vision'], patterns: [/long[-\s]?term\s+vision\s*:/i] },
+  ] },
+  { key: 'productThesis', label: 'Product Thesis', headings: ['Product Thesis', 'Product Purpose'] },
+  { key: 'currentFocus', label: 'Current Focus', headings: ['Current Focus'] },
+  { key: 'successCriteria', label: 'Success Criteria', headings: ['Success Criteria', 'Success Definition'] },
+  { key: 'currentProductBet', label: 'Current Product Bet', headings: ['Current Product Bet', 'Strategic Bet'] },
+  { key: 'whatNotToBuild', label: 'What Not To Build', headings: ['What Not To Build'] },
+];
+
+export function mdSection(markdown, heading) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = markdown.match(new RegExp(`^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'));
+  return match?.[1]?.trim() ?? '';
+}
+
+function meaningfulLines(value) {
+  return value.split('\n').map((line) => line.replace(/^[-*]\s+/, '').trim()).filter((line) => line && !/^#+\s+/.test(line) && !missingPattern.test(line));
+}
+
+function fieldEvidence(markdown, headings, patterns = []) {
+  const sections = headings.map((heading) => ({ heading, text: mdSection(markdown, heading) })).filter((item) => item.text);
+  const direct = sections.filter((item) => !(item.heading === 'Manual Goals' && patterns.length)).flatMap((item) => meaningfulLines(item.text).map((line) => ({ heading: item.heading, line })));
+  const patternEvidence = patterns.flatMap((pattern) => meaningfulLines(mdSection(markdown, 'Manual Goals')).filter((line) => pattern.test(line)).map((line) => ({ heading: 'Manual Goals', line })));
+  return [...patternEvidence, ...direct].filter((item, index, all) => all.findIndex((other) => other.heading === item.heading && other.line === item.line) === index);
+}
+
+function stateFromEvidence(evidence) {
+  if (evidence.length === 0) return 'Missing';
+  if (evidence.length === 1) return 'Complete';
+  return 'Strong';
+}
+
+export function evaluateCanonicalCompleteness(goalsMarkdown = '') {
+  const fields = {};
+  for (const field of canonicalFields) {
+    if (field.required) {
+      const requirements = field.required.map((req) => {
+        const evidence = fieldEvidence(goalsMarkdown, req.headings, req.patterns);
+        return { key: req.key, label: req.label, state: stateFromEvidence(evidence), complete: evidence.length > 0, evidence: evidence.map((item) => `${item.heading}: ${item.line}`) };
+      });
+      const completeCount = requirements.filter((req) => req.complete).length;
+      const strongCount = requirements.filter((req) => req.state === 'Strong').length;
+      const percent = Math.round((completeCount / requirements.length) * 100);
+      const state = completeCount === 0 ? 'Missing' : completeCount < requirements.length ? 'Partial' : strongCount === requirements.length ? 'Strong' : 'Complete';
+      fields[field.key] = { key: field.key, label: field.label, state, percent, requirements, missing: requirements.filter((req) => !req.complete).map((req) => req.label) };
+    } else {
+      const evidence = fieldEvidence(goalsMarkdown, field.headings);
+      const state = stateFromEvidence(evidence);
+      fields[field.key] = { key: field.key, label: field.label, state, percent: evidence.length ? 100 : 0, evidence: evidence.map((item) => `${item.heading}: ${item.line}`), missing: evidence.length ? [] : [field.label] };
+    }
+  }
+  const values = Object.values(fields);
+  const score = Math.round(values.reduce((sum, item) => sum + item.percent, 0) / values.length);
+  const state = score === 0 ? 'Missing' : score < 100 ? 'Partial' : values.every((item) => item.state === 'Strong') ? 'Strong' : 'Complete';
+  return { score, state, fields };
+}
+
+export function formatCompletenessState(item) {
+  return `${item.state} (${item.percent ?? item.score}%)`;
+}

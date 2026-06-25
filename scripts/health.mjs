@@ -1,5 +1,6 @@
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { evaluateCanonicalCompleteness, formatCompletenessState } from './canonical-completeness.mjs';
 
 const root = process.cwd();
 const aiDir = join(root, '.ai');
@@ -165,8 +166,14 @@ function validationConfidence(text) {
   return match?.[1] ?? 'Unknown';
 }
 
-function formatCompleteness(docs) {
-  return requiredFiles.map(([label, fileName]) => `- ${label}: ${docs[fileName].exists ? 'Present' : 'Missing'}`).join('\n');
+function formatCompleteness(docs, canonicalCompleteness) {
+  const rows = requiredFiles.map(([label, fileName]) => `- ${label}: ${docs[fileName].exists ? 'Present' : 'Missing'}`);
+  rows.push('', '### Canonical Intelligence', `- Overall: ${formatCompletenessState(canonicalCompleteness)}`);
+  for (const item of Object.values(canonicalCompleteness.fields)) {
+    rows.push(`- ${item.label}: ${formatCompletenessState(item)}`);
+    if (item.missing?.length) rows.push(`  - Missing: ${item.missing.join(', ')}`);
+  }
+  return rows.join('\n');
 }
 
 function calculateOverallHealth(risks) {
@@ -186,7 +193,8 @@ function recommendationFor(risks) {
   if (risks.includes('No deterministic validation commands detected')) return 'Add or expose a deterministic validation script such as `npm run build` or `npm test`, then run `npm run validate:intel` and `npm run health` again.';
   if (risks.includes('Validation has low confidence')) return 'Strengthen validation coverage with additional deterministic scripts, then refresh validation and repository health.';
   if (risks.some((risk) => risk.startsWith('Strategy missing')) || risks.includes('Strategy missing')) return 'Update the appropriate manual section of `.ai/goals.md`, then run `npm run strategy` and `npm run health` again.';
-  if (risks.includes('Missing manual goals')) return 'Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.';
+  const manualRisk = risks.find((risk) => risk.startsWith('Manual Goals '));
+  if (manualRisk) return `${manualRisk} Update only the incomplete canonical fields in .ai/goals.md.`;
   if (risks.includes('Architecture has no product thesis')) return 'Run `npm run audit` after documenting repository purpose in README or `.ai/goals.md`.';
   if (risks.includes('Architecture has no current focus')) return 'Add a current focus to `.ai/goals.md`, then rerun architecture and health generation.';
   if (risks.includes('Backlog is empty')) return 'Add explicit future work or task-marker comments, then run `npm run backlog` and `npm run health` again.';
@@ -205,6 +213,9 @@ const goals = docs['goals.md'].text;
 const backlog = docs['backlog.md'].text;
 const validation = docs['validation.md'].text;
 const strategy = docs['strategy.md'].text;
+
+const canonicalCompleteness = evaluateCanonicalCompleteness(goals);
+const manualGoalsCompleteness = canonicalCompleteness.fields.manualGoals;
 
 const signals = {
   productThesis: /Product Thesis/i.test(architecture),
@@ -252,7 +263,10 @@ if (docs['backlog.md'].exists && !backlog.trim().replace(/^#.*$/m, '').trim()) r
 if (signals.backlogNoise) risks.push('Backlog contains possible noise');
 if (!signals.productThesis) risks.push('Architecture has no product thesis');
 if (!signals.currentFocus) risks.push('Architecture has no current focus');
-if (!hasSectionText(goals, 'Manual Goals')) risks.push('Missing manual goals');
+if (manualGoalsCompleteness.state !== 'Complete' && manualGoalsCompleteness.state !== 'Strong') {
+  const missing = manualGoalsCompleteness.missing.length ? ` Missing: ${manualGoalsCompleteness.missing.join(', ')}.` : '';
+  risks.push(`Manual Goals ${manualGoalsCompleteness.state} (${manualGoalsCompleteness.percent}%).${missing}`);
+}
 if (!signals.strategyPresent) risks.push('Strategy missing');
 if (signals.strategyPresent && !signals.northStarMetric) risks.push('Strategy missing North Star Metric');
 if (signals.strategyPresent && !signals.strategicDifferentiator) risks.push('Strategy missing Strategic Differentiator');
@@ -273,7 +287,7 @@ const content = [
   `Confidence: ${confidence}`,
   '',
   '## Intelligence Completeness',
-  formatCompleteness(docs),
+  formatCompleteness(docs, canonicalCompleteness),
   '',
   '## Quality Signals',
   `- Product thesis ${signals.productThesis ? 'present' : 'missing'}`,
@@ -298,6 +312,8 @@ const content = [
   `- Xcode validation metadata ${signals.xcodeValidationMetadata ? 'detected' : 'not detected'}`,
   `- Canonical editing target .ai/goals.md`,
   `- Manual sections ${signals.manualSections ? 'preserved in canonical goals' : 'not detected in canonical goals'}`,
+  `- Canonical Intelligence ${canonicalCompleteness.state} (${canonicalCompleteness.score}%)`,
+  `- Manual Goals ${manualGoalsCompleteness.state} (${manualGoalsCompleteness.percent}%)`,
   '- Generated artifacts are regenerated, not manually edited.',
   '',
   '## Risks',

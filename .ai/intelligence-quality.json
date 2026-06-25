@@ -1,9 +1,110 @@
 {
-  "timestamp": "2026-06-25T20:51:03.521Z",
-  "overallScore": 97,
+  "timestamp": "2026-06-25T23:45:56.432Z",
+  "overallScore": 90,
   "canonicalIntelligenceQuality": {
-    "score": 96,
-    "coverageScore": 100,
+    "score": 86,
+    "completenessScore": 79,
+    "completenessState": "Partial",
+    "fields": {
+      "manualGoals": {
+        "key": "manualGoals",
+        "label": "Manual Goals",
+        "state": "Partial",
+        "percent": 75,
+        "requirements": [
+          {
+            "key": "productIntent",
+            "label": "Product intent",
+            "state": "Complete",
+            "complete": true,
+            "evidence": [
+              "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs."
+            ]
+          },
+          {
+            "key": "currentFocus",
+            "label": "Current focus",
+            "state": "Complete",
+            "complete": true,
+            "evidence": [
+              "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            ]
+          },
+          {
+            "key": "successCriteria",
+            "label": "Success criteria",
+            "state": "Strong",
+            "complete": true,
+            "evidence": [
+              "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
+              "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections."
+            ]
+          },
+          {
+            "key": "longTermVision",
+            "label": "Long-term vision",
+            "state": "Missing",
+            "complete": false,
+            "evidence": []
+          }
+        ],
+        "missing": [
+          "Long-term vision"
+        ]
+      },
+      "productThesis": {
+        "key": "productThesis",
+        "label": "Product Thesis",
+        "state": "Complete",
+        "percent": 100,
+        "evidence": [
+          "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs."
+        ],
+        "missing": []
+      },
+      "currentFocus": {
+        "key": "currentFocus",
+        "label": "Current Focus",
+        "state": "Complete",
+        "percent": 100,
+        "evidence": [
+          "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+        ],
+        "missing": []
+      },
+      "successCriteria": {
+        "key": "successCriteria",
+        "label": "Success Criteria",
+        "state": "Strong",
+        "percent": 100,
+        "evidence": [
+          "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
+          "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections."
+        ],
+        "missing": []
+      },
+      "currentProductBet": {
+        "key": "currentProductBet",
+        "label": "Current Product Bet",
+        "state": "Missing",
+        "percent": 0,
+        "evidence": [],
+        "missing": [
+          "Current Product Bet"
+        ]
+      },
+      "whatNotToBuild": {
+        "key": "whatNotToBuild",
+        "label": "What Not To Build",
+        "state": "Complete",
+        "percent": 100,
+        "evidence": [
+          "What Not To Build: Do not build broad automation before repository understanding is consistently reliable for handoffs."
+        ],
+        "missing": []
+      }
+    },
+    "coverageScore": 79,
     "consistencyScore": 100,
     "freshnessScore": 100,
     "sourceOfTruth": "goals.md"
@@ -41,7 +142,7 @@
   },
   "freshness": {
     "score": 100,
-    "lastRefresh": "2026-06-25T20:51:03.521Z",
+    "lastRefresh": "2026-06-25T23:45:56.432Z",
     "filesChanged": 0,
     "staleDocuments": [],
     "canonicalStaleDocuments": [],
@@ -70,7 +171,7 @@
     "removedRisks": []
   },
   "risks": [
-    "Missing manual goals"
+    "Manual Goals Partial (75%). Missing: Long-term vision."
   ],
   "backlogCount": 22,
   "fingerprints": {
@@ -81,5 +182,5 @@
   "recentRegressions": [],
   "recentImprovements": [],
   "trend": "Stable",
-  "recommendedAction": "Keep refreshing intelligence after meaningful repository changes."
+  "recommendedAction": "Complete Manual Goals fields: Long-term vision."
 }

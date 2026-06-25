@@ -78,6 +78,21 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
   }
 
   const failures = artifacts.flatMap((item) => item.failures.map((failure) => `${item.artifact}: ${failure}`));
+
+  const [health, qualityText, packageText] = await Promise.all([
+    readFile(join(aiDir, 'repository-health.md'), 'utf8').catch(() => ''),
+    readFile(join(aiDir, 'intelligence-quality.json'), 'utf8').catch(() => ''),
+    readFile(join(aiDir, 'next-improvement-prompt.md'), 'utf8').catch(() => ''),
+  ]);
+  const quality = qualityText ? JSON.parse(qualityText) : null;
+  const healthManual = health.match(/^-\s*Manual Goals:\s*(Missing|Partial|Complete|Strong)\s*\((\d+)%\)/im);
+  const qualityManual = quality?.canonicalIntelligenceQuality?.fields?.manualGoals;
+  if (healthManual && qualityManual && (healthManual[1] !== qualityManual.state || Number(healthManual[2]) !== Number(qualityManual.percent))) {
+    failures.push(`Canonical completeness mismatch: Repository Health Manual Goals ${healthManual[1]} (${healthManual[2]}%) vs Intelligence Quality ${qualityManual.state} (${qualityManual.percent}%).`);
+  }
+  if (qualityManual && Number(qualityManual.percent) >= 100 && /Manual Goals.*(?:partially complete|incomplete|below the deterministic threshold|manual goals completeness)/i.test(packageText)) {
+    failures.push('Product Decision Package contradicts Manual Goals completeness threshold.');
+  }
   const verifiedCount = artifacts.filter((item) => item.status === 'Verified').length;
   const score = artifacts.length ? Math.round((verifiedCount / artifacts.length) * 100) : 100;
   const metadata = {

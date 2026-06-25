@@ -58,7 +58,7 @@ function selectBestIssue(issues) {
 
 const issueDetails = {
   'missing-manual-goals': {
-    problem: 'The repository is missing populated Manual Goals, so generated intelligence cannot reliably identify current product intent, success criteria, or the safest next implementation target.',
+    problem: 'The repository has missing populated Manual Goals or incomplete Manual Goals fields, so generated intelligence cannot reliably identify all required product intent fields or the safest next implementation target.',
     requirements: ['Update the appropriate manual section of \`.ai/goals.md\` with current product intent and success criteria.', 'Base the entry on repository-local evidence only.', 'Do not rewrite unrelated manual sections or generated intelligence artifacts.'],
     acceptance: ['Manual Goals are populated with current product intent and success criteria.', 'Generated intelligence can be refreshed from \`.ai/goals.md\` without mixing Manual Goals with backlog, strategy, validation, or handoff issues.', 'Manual sections in \`.ai/goals.md\` remain intact.'],
   },
@@ -109,10 +109,13 @@ export function chooseNextImprovement({ health = '', quality = null, audit = '',
   const coverage = quality?.coverage ?? {};
   const issues = [];
   const missingCanonical = ['goalsPresent','strategyPresent','architecturePresent','decisionsPresent','validationPresent','backlogPresent','repositoryHealthPresent','agentsPresent','codePresent'].find((key) => coverage[key] === false);
-  const manualGoalsRisk = risks.find((r) => /manual goals|product thesis|current product intent|success criteria|current focus/i.test(r));
-  if (coverage.goalsPresent === false || manualGoalsRisk) {
-    const evidence = manualGoalsRisk ?? 'Manual Goals are missing from \`.ai/goals.md\`.';
-    issues.push(selectedIssue({ id: 'missing-manual-goals', category: 'missing manual goals', severity: 'high', actionability: 'manual', source: evidence, title: 'Complete Manual Repository Intent Notes', evidence, reason: 'Manual Goals are the source of truth for product intent and success criteria.', recommendedAction: 'Populate \`.ai/goals.md\` under `## Manual Goals` with current product intent and success criteria.' }));
+  const manualCompleteness = quality?.canonicalIntelligenceQuality?.fields?.manualGoals;
+  const manualGoalsRisk = risks.find((r) => /manual goals.*(?:missing|partial|\d+%)/i.test(r));
+  const manualNeedsDecision = coverage.goalsPresent === false || (manualCompleteness && Number(manualCompleteness.percent) < 100) || manualGoalsRisk;
+  if (manualNeedsDecision) {
+    const missing = manualCompleteness?.missing?.length ? ` Missing: ${manualCompleteness.missing.join(', ')}.` : '';
+    const evidence = manualGoalsRisk ?? (manualCompleteness ? `Manual Goals are ${manualCompleteness.state} (${manualCompleteness.percent}%).${missing}` : 'Manual Goals are missing from \`.ai/goals.md\`.');
+    issues.push(selectedIssue({ id: 'missing-manual-goals', category: 'missing manual goals', severity: 'high', actionability: 'manual', source: evidence, title: 'Complete Manual Repository Intent Notes', evidence, reason: `Manual Goals completeness is below the deterministic threshold.${missing}`, recommendedAction: `Complete only the incomplete Manual Goals fields in \`.ai/goals.md\`.${missing}` }));
   }
   if (missingCanonical || risks.some((r) => /missing intelligence file|architecture has no/i.test(r))) {
     const risk = risks.find((r) => /missing intelligence file|architecture has no/i.test(r)) ?? `Missing repository intelligence: ${missingCanonical?.replace(/Present$/, '')}`;
