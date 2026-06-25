@@ -297,7 +297,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
   const packageLabels = [
     ['context', 'Copy Context Package'],
     ['architect', 'Copy Architect Prompt'],
-    ['builder', 'Copy Builder Prompt'],
+    ['builder', 'Copy Implementation Package'],
     ['reviewer', 'Copy Reviewer Prompt'],
     ['debugger', 'Copy Debugger Prompt'],
   ];
@@ -340,19 +340,19 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         </section>
       )}
 
-      <section className="controlCard recommended" aria-label="Recommended implementation prompt">
-        <small>Recommended Implementation Prompt</small>
+      <section className="controlCard recommended" aria-label="Recommended implementation package">
+        <small>Recommended Implementation Package</small>
         <strong>{data.recommendation.title}</strong>
         {data.recommendation.actionability && <p><b>Actionability:</b> {data.recommendation.actionability}</p>}
         <p><b>Source risk/recommendation:</b> {data.recommendation.explanation}</p>
         <p><b>Reason:</b> {data.recommendation.whyItMatters}</p>
         <p><b>Evidence source:</b> {data.recommendation.evidenceSource}</p>
         <div className="promptActions">
-          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Copy Builder Prompt</button>
-          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Generate Builder Prompt</button>
+          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Copy Implementation Package</button>
+          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Generate Implementation Package</button>
         </div>
         <details>
-          <summary>View Prompt</summary>
+          <summary>View Implementation Package</summary>
           <pre>{data.recommendation.prompt}</pre>
         </details>
       </section>
