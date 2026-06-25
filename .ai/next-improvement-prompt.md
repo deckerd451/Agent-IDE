@@ -1,26 +1,39 @@
-# Reduce severe backlog noise.
+# Complete Manual Repository Intent Notes
+
+## Selected Issue
+- ID: missing-manual-goals
+- Category: missing manual goals
+- Severity: high
+- Actionability: manual
+- Source: Missing manual goals
+- Title: Complete Manual Repository Intent Notes
+- Evidence: Missing manual goals
+- Reason: Manual Goals are the source of truth for product intent and success criteria.
+- Recommended Action: Populate `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
 
 ## Motivation
-Agent IDE should close the loop from repository intelligence to one safe next builder task. This prompt was generated deterministically from the Control Plane inputs.
+This is a manual product-owner task, not a Codex implementation task.
+
+Agent IDE should close the loop from repository intelligence to one safe next builder task. This prompt was generated deterministically from the selected issue above.
 
 ## Current Evidence
-- Source risk/recommendation: Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
-- Reason: A noisy backlog hides the highest-leverage next implementation work.
+- Source risk/recommendation: Missing manual goals
+- Reason: Manual Goals are the source of truth for product intent and success criteria.
 
 ## Problem
-The repository needs exactly one next improvement selected from current intelligence signals so implementation work starts from the highest-leverage issue instead of a generic request.
+The repository is missing populated Manual Goals, so generated intelligence cannot reliably identify current product intent, success criteria, or the safest next implementation target.
 
 ## Goal
-Reduce severe backlog noise.
+Populate `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
 
 ## Requirements
-- Address only the issue named in Current Evidence.
-- Update the smallest set of source files or `.ai/` intelligence files needed to resolve it.
-- Preserve existing manual sections and reviewability.
+- Populate `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
+- Base the entry on repository-local evidence only.
+- Do not rewrite unrelated manual or generated intelligence sections.
 
 ## Acceptance Criteria
-- The selected issue is resolved or explicitly documented with evidence.
-- Relevant generated intelligence can be refreshed without introducing contradictions.
+- Manual Goals are populated with current product intent and success criteria.
+- Generated intelligence can be refreshed without mixing Manual Goals with backlog, strategy, validation, or handoff issues.
 - Manual sections remain intact.
 - The final diff is small, deterministic, and reviewable.
 

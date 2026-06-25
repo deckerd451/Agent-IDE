@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-06-25T15:56:30.794Z",
-  "overallScore": 95,
+  "timestamp": "2026-06-25T17:48:22.812Z",
+  "overallScore": 97,
   "canonicalIntelligenceQuality": {
-    "score": 94,
+    "score": 96,
     "coverageScore": 100,
     "consistencyScore": 100,
     "freshnessScore": 100
@@ -40,7 +40,7 @@
   },
   "freshness": {
     "score": 100,
-    "lastRefresh": "2026-06-25T15:56:30.794Z",
+    "lastRefresh": "2026-06-25T17:48:22.812Z",
     "filesChanged": 1,
     "staleDocuments": [],
     "canonicalStaleDocuments": [],
@@ -48,11 +48,11 @@
     "manualNotesPreserved": true
   },
   "confidence": {
-    "score": 73,
-    "existingConfidence": "Medium",
+    "score": 82,
+    "existingConfidence": "High",
     "strategyConfidence": "High",
     "validationConfidence": "Medium",
-    "overallRepositoryConfidence": "Medium"
+    "overallRepositoryConfidence": "High"
   },
   "drift": {
     "productThesisChanged": false,
@@ -62,11 +62,10 @@
     "backlogShrank": false,
     "newRisks": [],
     "removedRisks": [
-      "Implementation Leakage Warning: strategy fields contain implementation-level details in What Not To Build"
+      "Backlog contains possible noise"
     ]
   },
   "risks": [
-    "Backlog contains possible noise",
     "Missing manual goals"
   ],
   "backlogCount": 18,
@@ -77,7 +76,7 @@
   },
   "recentRegressions": [],
   "recentImprovements": [
-    "Removed risk: Implementation Leakage Warning: strategy fields contain implementation-level details in What Not To Build"
+    "Removed risk: Backlog contains possible noise"
   ],
   "trend": "Stable",
   "recommendedAction": "Keep refreshing intelligence after meaningful repository changes."

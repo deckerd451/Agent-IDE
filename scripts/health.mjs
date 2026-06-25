@@ -294,6 +294,7 @@ const content = [
   `- Evidence lines ${signals.evidenceLines ? 'present' : 'missing'}`,
   `- Backlog noise ${signals.backlogNoise ? 'detected' : 'not detected'}`,
   `- Validation commands ${signals.validationCommands ? 'detected' : 'not detected'}`,
+  `- Validation confidence ${validationConfidence(validation)}`,
   `- Xcode validation metadata ${signals.xcodeValidationMetadata ? 'detected' : 'not detected'}`,
   `- Manual sections ${signals.manualSections ? 'preserved' : 'not detected'}`,
   '',
