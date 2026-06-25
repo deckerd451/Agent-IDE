@@ -2,13 +2,14 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
+import { persistQuality } from './intelligence-quality.mjs';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
-const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'intelligence-quality.json', 'intelligence-history.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
 
 const baselineFiles = {
   'goals.md': `# Goals
@@ -330,8 +331,10 @@ async function readControlPlane(repositoryPath) {
   const aiDir = join(repositoryPath, '.ai');
   const snapshot = summarizeSnapshot(docs, repositoryPath);
   const savedDiff = JSON.parse(await readFile(join(aiDir, 'intelligence-diff.json'), 'utf8').catch(() => 'null'));
+  const quality = JSON.parse(await readFile(join(aiDir, 'intelligence-quality.json'), 'utf8').catch(() => 'null'));
+  const qualityHistory = JSON.parse(await readFile(join(aiDir, 'intelligence-history.json'), 'utf8').catch(() => '[]'));
   const timeline = JSON.parse(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => '[]'));
-  return { status: snapshot, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation: recommendationDetails(docs), diff: savedDiff ?? diffSnapshots(null, snapshot), evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
+  return { status: snapshot, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation: recommendationDetails(docs), diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
 }
 
 async function persistControlPlane(repositoryPath, previousSnapshot) {
@@ -343,6 +346,9 @@ async function persistControlPlane(repositoryPath, previousSnapshot) {
   await writeFile(join(repositoryPath, '.ai', 'intelligence-snapshot.json'), JSON.stringify(data.status, null, 2));
   await writeFile(join(repositoryPath, '.ai', 'intelligence-diff.json'), JSON.stringify(data.diff, null, 2));
   await writeFile(timelinePath, JSON.stringify(timeline.slice(-100), null, 2));
+  const qualityResult = await persistQuality(repositoryPath);
+  data.quality = qualityResult.snapshot;
+  data.qualityHistory = qualityResult.history;
   return data;
 }
 
