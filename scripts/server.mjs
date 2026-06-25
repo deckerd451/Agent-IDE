@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -130,7 +130,81 @@ function auditRecommendation(health) {
   return firstRisk ? `Resolve audit finding: ${firstRisk.replace(/^[-*]\s+/, '')}` : '';
 }
 
-function summarizeSnapshot(docs) {
+function intelligenceState(markdown, heading) {
+  const value = firstLine(mdSection(markdown, heading), '');
+  if (!value || /Not detected yet|missing|low confidence|none detected/i.test(value)) return 'Missing';
+  if (/warning|needs attention|mixed|weak|low\b/i.test(value)) return 'Needs Attention';
+  return 'Present';
+}
+
+function qualityState(health, signalLabel) {
+  const signal = qualitySignal(health, signalLabel).toLowerCase();
+  if (!signal || signal === 'unknown' || /missing|not detected|weak|low/.test(signal)) return 'Missing';
+  if (/mixed|warning|detected/.test(signal)) return 'Needs Attention';
+  return 'Present';
+}
+
+function riskItems(health) {
+  const risks = mdSection(health, 'Risks');
+  return risks.split('\n').map((line) => line.trim()).filter((line) => /^[-*]\s+/.test(line) && !/No repository health risks/i.test(line)).map((line) => line.replace(/^[-*]\s+/, ''));
+}
+
+function understandingSummary(docs) {
+  const health = docs['repository-health.md'] ?? '';
+  const strategy = docs['strategy.md'] ?? '';
+  const architecture = docs['architecture.md'] ?? '';
+  const validation = docs['validation.md'] ?? '';
+  const decisions = docs['decisions.md'] ?? '';
+  return [
+    { label: 'Product Thesis', state: intelligenceState(strategy, 'Product Thesis') === 'Present' ? 'Present' : intelligenceState(architecture, 'Product Thesis'), source: '.ai/strategy.md' },
+    { label: 'Current Focus', state: intelligenceState(docs['goals.md'] ?? '', 'Current Focus') === 'Present' ? 'Present' : intelligenceState(architecture, 'Current Focus'), source: '.ai/goals.md' },
+    { label: 'Strategy', state: qualityState(health, 'Strategy quality score'), source: '.ai/repository-health.md' },
+    { label: 'Architecture', state: qualityState(health, 'Core systems'), source: '.ai/architecture.md' },
+    { label: 'Validation', state: /Low/i.test(firstLine(mdSection(validation, 'Confidence'), '')) ? 'Needs Attention' : intelligenceState(validation, 'Overall Status'), source: '.ai/validation.md' },
+    { label: 'Decisions', state: mdSection(decisions, 'Active Decisions') || decisions.trim().length > 20 ? 'Present' : 'Missing', source: '.ai/decisions.md' },
+  ];
+}
+
+function unknownSummary(docs) {
+  const health = docs['repository-health.md'] ?? '';
+  return riskItems(health).map((risk) => ({ label: risk, source: '.ai/repository-health.md#Risks' }));
+}
+
+function recommendationKind(recommendation, health) {
+  if (auditRecommendation(health)) return 'Intelligence Audit recommendation';
+  if (recommendation && recommendation !== 'Refresh repository intelligence to generate a recommended next step.') return 'Repository Health recommendation';
+  return 'Highest-priority Backlog item';
+}
+
+function recommendationDetails(docs) {
+  const health = docs['repository-health.md'] ?? '';
+  const backlog = docs['backlog.md'] ?? '';
+  const healthRecommendation = firstLine(mdSection(health, 'Recommended Next Step'), '');
+  const backlogItem = topBacklogItem(backlog);
+  const title = auditRecommendation(health) || healthRecommendation || backlogItem || 'Refresh repository intelligence';
+  const kind = recommendationKind(title, health);
+  const evidenceSource = kind === 'Highest-priority Backlog item' ? '.ai/backlog.md' : '.ai/repository-health.md';
+  const whyItMatters = kind === 'Intelligence Audit recommendation'
+    ? 'The intelligence layer has a known gap or weak signal; resolving it makes future handoffs safer.'
+    : kind === 'Repository Health recommendation'
+      ? 'Repository health is the deterministic summary of readiness, confidence, and known risks.'
+      : 'The backlog is the next deterministic source of implementation work when audit and health are clear.';
+  return {
+    title,
+    explanation: `${kind}: ${title}`,
+    whyItMatters,
+    evidenceSource,
+    prompt: [
+      'You are the Builder for this repository.',
+      `Implement the following recommendation: ${title}`,
+      `Why it matters: ${whyItMatters}`,
+      `Evidence source: ${evidenceSource}`,
+      'Use the repository intelligence files as source of truth. Preserve deterministic, local-first behavior. Do not call LLMs, cloud services, or telemetry.',
+    ].join('\n'),
+  };
+}
+
+function summarizeSnapshot(docs, repositoryPath = process.cwd()) {
   const health = docs['repository-health.md'] ?? '';
   const strategy = docs['strategy.md'] ?? '';
   const validation = docs['validation.md'] ?? '';
@@ -139,6 +213,7 @@ function summarizeSnapshot(docs) {
   const recommendedNextStep = auditRecommendation(health) || healthRecommendation || topBacklogItem(backlog) || 'Refresh repository intelligence to generate a recommended next step.';
   return {
     timestamp: new Date().toISOString(),
+    repositoryName: basename(repositoryPath),
     overallHealth: metricFromHealth(health, 'Overall Health'),
     intelligenceCompleteness: completenessScore(health),
     strategyQuality: qualitySignal(health, 'Strategy quality score'),
@@ -212,10 +287,10 @@ function handoffPackages(docs) {
 async function readControlPlane(repositoryPath) {
   const docs = Object.fromEntries(await Promise.all(controlFiles.map(async (file) => [file, await readAiText(repositoryPath, file)])));
   const aiDir = join(repositoryPath, '.ai');
-  const snapshot = summarizeSnapshot(docs);
+  const snapshot = summarizeSnapshot(docs, repositoryPath);
   const savedDiff = JSON.parse(await readFile(join(aiDir, 'intelligence-diff.json'), 'utf8').catch(() => 'null'));
   const timeline = JSON.parse(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => '[]'));
-  return { status: snapshot, diff: savedDiff ?? diffSnapshots(null, snapshot), evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
+  return { status: snapshot, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation: recommendationDetails(docs), diff: savedDiff ?? diffSnapshots(null, snapshot), evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
 }
 
 async function persistControlPlane(repositoryPath, previousSnapshot) {

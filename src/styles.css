@@ -648,3 +648,165 @@ h1 {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 0.82rem;
 }
+
+
+.heroCard,
+.workflowCard {
+  background: rgba(13, 19, 30, 0.74);
+  border: 1px solid #222c3d;
+  border-radius: 22px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  padding: 26px 28px;
+}
+
+.heroCard {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(0, 1fr) 260px;
+}
+
+.heroCard h2 {
+  color: #f7f9fc;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  letter-spacing: -0.06em;
+  line-height: 1;
+  margin: 0 0 14px;
+}
+
+.heroCard p {
+  color: #aeb8c9;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.trustGrid {
+  align-content: start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.trustGrid span {
+  background: #0d141f;
+  border: 1px solid #273246;
+  border-radius: 999px;
+  color: #f4f7fb;
+  font-size: 0.86rem;
+  font-weight: 800;
+  padding: 9px 12px;
+  text-align: center;
+}
+
+.workflowCard {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.workflowStep {
+  align-items: center;
+  background: #0d141f;
+  border: 1px solid #273246;
+  border-radius: 16px;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  min-height: 98px;
+  padding: 16px;
+  text-align: center;
+}
+
+.workflowStep strong {
+  color: #f4f7fb;
+}
+
+.workflowStep span {
+  color: #7f8ca3;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.statusGrid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.answerGrid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+}
+
+.understandingGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.understandingItem,
+.unknownList li {
+  background: #0d141f;
+  border: 1px solid #273246;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.understandingItem span,
+.unknownList small {
+  color: #7f8ca3;
+  display: block;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+}
+
+.understandingItem strong {
+  font-size: 0.92rem;
+}
+
+.understandingItem strong.present { color: #a8efc9; }
+.understandingItem strong.missing { color: #ffb7c0; }
+.understandingItem strong.needs-attention { color: #ffd38a; }
+
+.unknownList {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.unknownList li {
+  color: #f4f7fb;
+  font-weight: 700;
+}
+
+.recommended button {
+  background: #d7dde8;
+  border: 0;
+  border-radius: 12px;
+  color: #0b1018;
+  cursor: pointer;
+  font-weight: 800;
+  margin-top: 10px;
+  padding: 10px 14px;
+}
+
+.handoffCard .handoffGrid button {
+  padding: 13px 16px;
+}
+
+.disclosureCard > summary {
+  list-style: none;
+}
+
+.disclosureCard > summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .heroCard,
+  .answerGrid,
+  .workflowCard {
+    grid-template-columns: 1fr;
+  }
+}
