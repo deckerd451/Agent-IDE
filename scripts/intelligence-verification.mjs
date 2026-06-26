@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { canonicalManualGoalsSuggestedUpdate } from './canonical-completeness.mjs';
+import { canonicalManualGoalsUpdateLines, canonicalManualGoalsSuggestedUpdate } from './canonical-completeness.mjs';
 import { classifyEvidenceSource, confidenceFromEvidence } from './evidence-lineage.mjs';
 
 export const expectedVerifiedArtifacts = [
@@ -37,6 +37,42 @@ function mdSection(markdown, heading) {
 
 function statusFromFailures(failures) {
   return failures.length ? 'Failed' : 'Verified';
+}
+
+function normalizeManualUpdateLine(value) {
+  return value.replace(/^```(?:md)?\s*$/i, '').replace(/^```$/i, '').trim();
+}
+
+function suggestedManualUpdateLabels(suggestedManualUpdate, explanationManual) {
+  const canonicalLines = new Map((explanationManual?.requiredFields ?? [])
+    .filter((field) => field.label && field.manualUpdate)
+    .map((field) => [normalizeManualUpdateLine(field.manualUpdate), field.label]));
+  const labels = new Set();
+  for (const rawLine of suggestedManualUpdate.split('\n')) {
+    const line = normalizeManualUpdateLine(rawLine);
+    if (!line) continue;
+    const exactLabel = canonicalLines.get(line);
+    if (exactLabel) labels.add(exactLabel);
+  }
+  return labels;
+}
+
+function productDecisionManualUpdateMismatch(explanationManual, suggestedManualUpdate) {
+  const missingFields = explanationManual?.missing ?? [];
+  const missing = new Set(missingFields);
+  const expectedLines = canonicalManualGoalsUpdateLines(explanationManual).map(normalizeManualUpdateLine);
+  const suggested = suggestedManualUpdateLabels(suggestedManualUpdate, explanationManual);
+  const omitted = missingFields.filter((field) => !suggested.has(field));
+  const incorrectlySuggested = [...suggested].filter((field) => !missing.has(field));
+  const expectedNoUpdates = canonicalManualGoalsSuggestedUpdate(explanationManual);
+  const trimmed = suggestedManualUpdate.trim();
+  if (missing.size === 0 && trimmed === expectedNoUpdates) return null;
+  if (missing.size > 0 && expectedLines.length === missing.size && omitted.length === 0 && incorrectlySuggested.length === 0 && [...suggested].length === missing.size) return null;
+  return `Product Decision Package contradiction: Suggested Manual Update does not match canonical completeness evaluation. Canonical missing fields: ${missingFields.length ? missingFields.join(', ') : 'none'}. Suggested Manual Update fields: ${suggested.size ? [...suggested].join(', ') : 'none'}. Omitted missing fields: ${omitted.length ? omitted.join(', ') : 'none'}. Incorrectly suggested completed fields: ${incorrectlySuggested.length ? incorrectlySuggested.join(', ') : 'none'}.`;
+}
+
+function crossCheck(name, failures) {
+  return { check: name, status: statusFromFailures(failures), failures };
 }
 
 export async function readVerification(repositoryPath) {
@@ -87,6 +123,7 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
   }
 
   const failures = artifacts.flatMap((item) => item.failures.map((failure) => `${item.artifact}: ${failure}`));
+  const crossChecks = [];
 
   const [health, qualityText, packageText, explanationText, rankingText] = await Promise.all([
     readFile(join(aiDir, 'repository-health.md'), 'utf8').catch(() => ''),
@@ -179,21 +216,16 @@ ${field.label}
       for (const missing of explanationManual.missing ?? []) {
         if (!packageText.includes(missing)) failures.push(`Product Decision Package explanation mismatch: missing field not shown: ${missing}.`);
       }
-      const missing = new Set(explanationManual.missing ?? []);
       const suggestedManualUpdate = mdSection(packageText, 'Suggested Manual Update');
-      const expectedSuggested = canonicalManualGoalsSuggestedUpdate(explanationManual);
-      if (suggestedManualUpdate.includes('No Manual Goals fields require updates.') && missing.size > 0) failures.push('Product Decision Package contradiction: Suggested Manual Update does not match canonical completeness evaluation.');
-      if (missing.size === 0 && suggestedManualUpdate !== 'No Manual Goals fields require updates.') failures.push('Product Decision Package contradiction: Suggested Manual Update recommends fields even though canonical completeness has no missing Manual Goals fields.');
-      if (missing.size > 0 && !suggestedManualUpdate.includes(expectedSuggested)) failures.push('Product Decision Package contradiction: Suggested Manual Update does not match canonical completeness evaluation.');
-      const suggestedLabels = new Set([...suggestedManualUpdate.matchAll(/^-\s*([^:\n]+):/gm)].map((match) => match[1].trim()));
-      for (const field of explanationManual.requiredFields ?? []) {
-        if (suggestedLabels.has(field.label) && !missing.has(field.label)) failures.push(`Product Decision Package manual update mismatch: ${field.label} suggested but deterministic evaluation marks it complete.`);
-        if (missing.has(field.label) && field.manualUpdate && !suggestedManualUpdate.includes(field.manualUpdate)) failures.push(`Product Decision Package manual update mismatch: missing field not suggested: ${field.label}.`);
-      }
+      const mismatch = productDecisionManualUpdateMismatch(explanationManual, suggestedManualUpdate);
+      if (mismatch) failures.push(mismatch);
     }
   }
-  const verifiedCount = artifacts.filter((item) => item.status === 'Verified').length;
-  const score = artifacts.length ? Math.round((verifiedCount / artifacts.length) * 100) : 100;
+  const crossFailures = failures.filter((failure) => !artifacts.some((item) => failure.startsWith(`${item.artifact}: `)));
+  if (crossFailures.length) crossChecks.push(crossCheck('Cross-artifact consistency', crossFailures));
+  const verifiedCount = artifacts.filter((item) => item.status === 'Verified').length + crossChecks.filter((item) => item.status === 'Verified').length;
+  const verificationRows = artifacts.length + crossChecks.length;
+  const score = verificationRows ? Math.round((verifiedCount / verificationRows) * 100) : 100;
   const metadata = {
     schemaVersion: 1,
     verifiedAt: now.toISOString(),
@@ -205,6 +237,7 @@ ${field.label}
     summary: failures.length ? `${failures.length} verification failure${failures.length === 1 ? '' : 's'} detected.` : 'All displayed intelligence verified.',
     failures,
     artifacts,
+    crossChecks,
   };
 
   if (options.persist !== false) {
