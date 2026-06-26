@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { persistQuality } from './intelligence-quality.mjs';
+import { validateAIHandoff } from './ai-handoff-validation.mjs';
 import { verifyIntelligence } from './intelligence-verification.mjs';
 import { evaluateCanonicalCompleteness } from './canonical-completeness.mjs';
 import { generateNextImprovement } from './next-improvement.mjs';
@@ -13,7 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
-const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'intelligence-explanations.json', 'evidence-lineage.json', 'decision-ranking.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'intelligence-explanations.json', 'ai-handoff-validation.json', 'evidence-lineage.json', 'decision-ranking.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
 
 const baselineFiles = {
   'goals.md': `# Goals
@@ -95,10 +96,11 @@ const generatorSteps = [
   })),
   { id: 'repository-health', label: 'Repository Health', command: ['node', [join(appRoot, 'scripts/health.mjs')]] },
   { id: 'context-package', label: 'Context Package', command: ['node', [join(appRoot, 'scripts/context-package.mjs')]] },
+  { id: 'ai-handoff-validation', label: 'AI Handoff Validation', command: ['node', [join(appRoot, 'scripts/ai-handoff-validation.mjs')]] },
 ];
 
 
-const controlFiles = ['evidence-lineage.json', 'decision-ranking.json', 'goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'];
+const controlFiles = ['evidence-lineage.json', 'decision-ranking.json', 'ai-handoff-validation.json', 'goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'];
 
 async function readAiText(repositoryPath, fileName) {
   return readFile(join(repositoryPath, '.ai', fileName), 'utf8').catch((error) => {
@@ -369,10 +371,11 @@ async function readControlPlane(repositoryPath) {
   const decisionRanking = JSON.parse(await readFile(join(aiDir, 'decision-ranking.json'), 'utf8').catch(() => 'null'));
   const evidenceLineage = JSON.parse(await readFile(join(aiDir, 'evidence-lineage.json'), 'utf8').catch(() => 'null'));
   const timeline = JSON.parse(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => '[]'));
+  const aiHandoffValidation = JSON.parse(await readFile(join(aiDir, 'ai-handoff-validation.json'), 'utf8').catch(() => 'null'));
   const recommendation = docs['next-improvement-prompt.md']?.trim()
     ? { title: firstLine(docs['next-improvement-prompt.md'].replace(/^#\s*/, ''), snapshot.recommendedNextStep), actionability: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Actionability', 'Not classified.'), packageType: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Package Type', 'implementation'), explanation: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Source risk/recommendation', 'See generated prompt.'), whyItMatters: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Reason', 'Generated from Control Plane intelligence.'), evidenceSource: '.ai/next-improvement-prompt.md', prompt: docs['next-improvement-prompt.md'] }
     : recommendationDetails(docs);
-  return { status: snapshot, decisionRanking, evidenceLineage, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
+  return { status: snapshot, aiHandoffValidation, decisionRanking, evidenceLineage, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
 }
 
 async function persistControlPlane(repositoryPath, previousSnapshot, refreshStartedAt = new Date()) {
@@ -395,6 +398,9 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
     prompt: nextImprovement.prompt,
   };
   data.packages.builder = nextImprovement.prompt;
+  await runStep({ id: 'context-package', label: 'Context Package', command: ['node', [join(appRoot, 'scripts/context-package.mjs')]] }, repositoryPath);
+  data.packages.context = await readAiText(repositoryPath, 'context-package.md');
+  data.aiHandoffValidation = await validateAIHandoff(repositoryPath);
   await persistQuality(repositoryPath);
   data.verification = await verifyIntelligence(repositoryPath, { refreshStartedAt });
   const qualityResult = await persistQuality(repositoryPath);
@@ -402,7 +408,7 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   data.qualityHistory = qualityResult.history;
   data.decisionRanking = nextImprovement.decisionRanking;
   const goalsMarkdown = await readAiText(repositoryPath, 'goals.md');
-  data.explanations = { completeness: explainCompleteness(goalsMarkdown), evidenceSynthesis: explainEvidenceSynthesis(data.quality?.canonicalIntelligenceQuality?.evidenceSynthesis), quality: explainQuality(data.quality), recommendation: nextImprovement.explanation, decisionRanking: nextImprovement.decisionRanking.explanation, completenessSynchronization: explainCompletenessSynchronization({ completeness: evaluateCanonicalCompleteness(goalsMarkdown) }) };
+  data.explanations = { aiHandoffValidation: data.aiHandoffValidation, completeness: explainCompleteness(goalsMarkdown), evidenceSynthesis: explainEvidenceSynthesis(data.quality?.canonicalIntelligenceQuality?.evidenceSynthesis), quality: explainQuality(data.quality), recommendation: nextImprovement.explanation, decisionRanking: nextImprovement.decisionRanking.explanation, completenessSynchronization: explainCompletenessSynchronization({ completeness: evaluateCanonicalCompleteness(goalsMarkdown) }) };
   await persistIntelligenceExplanations(repositoryPath, data.explanations);
   data.verification = await verifyIntelligence(repositoryPath, { refreshStartedAt });
   return data;

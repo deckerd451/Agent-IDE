@@ -1,6 +1,6 @@
 # Context Package
 
-Generated: 2026-06-26T13:41:13.955Z
+Generated: 2026-06-26T13:59:08.445Z
 
 ## Product Thesis
 Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
@@ -116,6 +116,32 @@ Separating rationale from tasks prevents decision records from becoming another 
 Consequences:
 Generated decision records should include context, reason, and consequences, and should not duplicate backlog items or suggested next steps.
 
+## Decision Ranking
+Selected issue: Run AI Handoff Validation
+Selection explanation: Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.
+
+1. Run AI Handoff Validation (selected)
+   - ID: ai-handoff-validation
+   - Priority: 10
+   - Expected Improvement: +11 total (+2 Repository Health, +0 Canonical Completeness, +2 Quality, +4 Verification, +3 Handoff Readiness)
+   - Reason: When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.
+   - Evidence: No serious repository intelligence issue detected.
+
+## Highest-Priority Issue
+- ID: ai-handoff-validation
+- Category: AI handoff validation
+- Severity: low
+- Actionability: validation-experiment
+- Package Type: validation-experiment
+- Source: No serious repository intelligence issue detected.
+- Title: Run AI Handoff Validation
+- Evidence: No serious repository intelligence issue detected.
+- Reason: When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.
+- Recommended Action: Run and document a local AI handoff validation dry run.
+
+## Next Implementation Step
+No serious repository intelligence issue is detected, so the safest next step is validating that the generated AI handoff package is usable as-is.
+
 ## Validation Summary
 - Medium
 
@@ -181,3 +207,6 @@ Generated decision records should include context, reason, and consequences, and
 - No repository health risks detected.
 
 Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
+
+## Confidence Explanation
+Confidence is derived from repository-local canonical, independent, and generated evidence lineage. See Repository Health Evidence Lineage and Intelligence Quality confidence fields for the deterministic calculation.

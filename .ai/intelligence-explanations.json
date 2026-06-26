@@ -1,6 +1,98 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-26T13:41:53.999Z",
+  "generatedAt": "2026-06-26T13:59:09.648Z",
+  "aiHandoffValidation": {
+    "schemaVersion": 1,
+    "generatedAt": "2026-06-26T13:59:08.613Z",
+    "overallScore": 88,
+    "status": "Ready",
+    "categories": {
+      "repositoryExplanation": {
+        "label": "Repository explanation",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Product Thesis."
+      },
+      "productThesis": {
+        "label": "Product thesis",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Product Thesis."
+      },
+      "currentProductBet": {
+        "label": "Current product bet",
+        "status": "Partial",
+        "evidence": "Context Package mentions the category but does not expose a dedicated reconstructable section."
+      },
+      "currentFocus": {
+        "label": "Current focus",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Current Focus."
+      },
+      "strategy": {
+        "label": "Strategy",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Strategy."
+      },
+      "architecture": {
+        "label": "Architecture",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Core Systems."
+      },
+      "decisionRanking": {
+        "label": "Decision ranking",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Decision Ranking."
+      },
+      "highestPriorityIssue": {
+        "label": "Highest-priority issue",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Decision Ranking."
+      },
+      "nextImplementationStep": {
+        "label": "Next implementation step",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Next Implementation Step."
+      },
+      "validationStatus": {
+        "label": "Validation status",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Validation Summary."
+      },
+      "canonicalOwnership": {
+        "label": "Canonical ownership",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Canonical Intelligence Ownership."
+      },
+      "confidenceExplanation": {
+        "label": "Confidence explanation",
+        "status": "Present",
+        "evidence": "Context Package exposes ## Confidence Explanation."
+      }
+    },
+    "recoverableInformation": [
+      "Repository explanation",
+      "Product thesis",
+      "Current product bet",
+      "Current focus",
+      "Strategy",
+      "Architecture",
+      "Decision ranking",
+      "Highest-priority issue",
+      "Next implementation step",
+      "Validation status",
+      "Canonical ownership",
+      "Confidence explanation"
+    ],
+    "hiddenInformation": [],
+    "contradictions": [],
+    "missingExplanations": [
+      "Decision ranking rationale",
+      "Recommendation rationale"
+    ],
+    "suggestedImprovements": [
+      "Add decision ranking rationale to generated explanations.",
+      "Add recommendation rationale to generated explanations."
+    ]
+  },
   "completeness": {
     "id": "canonical-completeness",
     "title": "Canonical Completeness Evaluation",
@@ -525,7 +617,7 @@
   "quality": {
     "id": "intelligence-quality",
     "title": "Intelligence Quality Evaluation",
-    "score": 93,
+    "score": 92,
     "components": {
       "canonicalCompleteness": {
         "score": 83,
@@ -571,86 +663,6 @@
       }
     ]
   },
-  "recommendation": {
-    "id": "recommendation-selection",
-    "title": "Why This Issue Was Selected",
-    "rule": "Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.",
-    "candidateIssues": [
-      {
-        "id": "ai-handoff-validation",
-        "title": "Run AI Handoff Validation",
-        "category": "AI handoff validation",
-        "priority": 10,
-        "actionability": "validation-experiment",
-        "evidence": "No serious repository intelligence issue detected."
-      }
-    ],
-    "selected": {
-      "id": "ai-handoff-validation",
-      "title": "Run AI Handoff Validation",
-      "priority": 10
-    },
-    "computed": {
-      "selectedPriority": 10,
-      "highestPriority": 10
-    },
-    "classification": "Consistent",
-    "reason": "Highest deterministic priority requiring action.",
-    "recommendation": "Run and document a local AI handoff validation dry run."
-  },
-  "decisionRanking": {
-    "id": "decision-ranking",
-    "title": "Decision Ranking Explanation",
-    "rule": "Rank every candidate with deterministic repository-local scoring, then select rank #1.",
-    "scoringRules": [
-      "Priority score = issue base priority + severity boost + actionability boost, capped at 100.",
-      "Expected improvement is a deterministic repository-local lookup by issue type.",
-      "Ordering ties break by expected improvement total, actionability, severity, title, then issue ID."
-    ],
-    "tieBreaking": [
-      "priorityScore desc",
-      "expectedImprovement.total desc",
-      "actionability rank asc",
-      "severity rank asc",
-      "title asc",
-      "id asc"
-    ],
-    "candidateOrdering": [
-      {
-        "rank": 1,
-        "id": "ai-handoff-validation",
-        "title": "Run AI Handoff Validation",
-        "priorityScore": 10,
-        "expectedImprovement": {
-          "repositoryHealth": 2,
-          "canonicalCompleteness": 0,
-          "quality": 2,
-          "verification": 4,
-          "handoffReadiness": 3,
-          "total": 11
-        },
-        "selected": true
-      }
-    ],
-    "expectedImprovementCalculations": {
-      "ai-handoff-validation": {
-        "repositoryHealth": 2,
-        "canonicalCompleteness": 0,
-        "quality": 2,
-        "verification": 4,
-        "handoffReadiness": 3,
-        "total": 11
-      }
-    },
-    "selected": {
-      "id": "ai-handoff-validation",
-      "title": "Run AI Handoff Validation",
-      "rank": 1,
-      "priorityScore": 10
-    },
-    "classification": "Consistent",
-    "reason": "Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11."
-  },
   "completenessSynchronization": {
     "id": "completeness-synchronization",
     "title": "Completeness Synchronization",
@@ -662,7 +674,11 @@
       "suggestedManualUpdate": [
         "No Manual Goals fields require updates."
       ],
-      "evidenceSynthesis": null
+      "evidenceSynthesis": {
+        "strength": "Strong",
+        "supportedFields": 2,
+        "missingFields": 2
+      }
     },
     "consumers": [
       "Repository Health",

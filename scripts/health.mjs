@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { evaluateCanonicalCompleteness, formatCompletenessState } from './canonical-completeness.mjs';
 import { synthesizeEvidenceFromDocs } from './evidence-synthesis.mjs';
 import { persistEvidenceLineage, confidenceFromEvidence } from './evidence-lineage.mjs';
+import { renderAIHandoffValidationMarkdown, validateAIHandoff } from './ai-handoff-validation.mjs';
 import { explainHealth } from './intelligence-explanations.mjs';
 
 const root = process.cwd();
@@ -286,6 +287,7 @@ risks.push(...strategyQualityWarnings);
 const overallHealth = calculateOverallHealth(risks);
 const confidence = confidenceFromEvidence(evidenceLineage.sources).confidence;
 const healthExplanations = explainHealth({ risks, canonicalCompleteness });
+const aiHandoffValidation = await validateAIHandoff(root);
 
 const content = [
   '# Repository Health',
@@ -353,6 +355,8 @@ const content = [
     `- Result: ${item.result}`,
     `- Evidence: ${item.evidence.join('; ')}`,
   ].join('\n')) : ['- No repository health findings require explanation.'])].join('\n\n'),
+  '',
+  renderAIHandoffValidationMarkdown(aiHandoffValidation),
   '',
   '## Recommended Next Step',
   recommendationFor(risks),

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-26T13:42:25.346Z",
+  "generatedAt": "2026-06-26T13:59:09.481Z",
   "categories": {
     "Canonical": [
       {
@@ -45,6 +45,12 @@
         "file": ".ai/intelligence-audit.md",
         "category": "Independent",
         "group": "Intelligence Audit",
+        "ancestry": "Repository-local source."
+      },
+      {
+        "file": ".ai/ai-handoff-validation.json",
+        "category": "Independent",
+        "group": "Validation",
         "ancestry": "Repository-local source."
       },
       {
@@ -254,6 +260,12 @@
       "file": ".ai/intelligence-audit.md",
       "category": "Independent",
       "group": "Intelligence Audit",
+      "ancestry": "Repository-local source."
+    },
+    {
+      "file": ".ai/ai-handoff-validation.json",
+      "category": "Independent",
+      "group": "Validation",
       "ancestry": "Repository-local source."
     },
     {
