@@ -113,8 +113,8 @@ export function buildDecisionRanking(issues) {
 const issueDetails = {
   'missing-manual-goals': {
     problem: 'The repository has missing populated Manual Goals or incomplete Manual Goals fields, so generated intelligence cannot reliably identify all required product intent fields or the safest next implementation target.',
-    requirements: ['Update the appropriate manual section of \`.ai/goals.md\` with current product intent and success criteria.', 'Base the entry on repository-local evidence only.', 'Do not rewrite unrelated manual sections or generated intelligence artifacts.'],
-    acceptance: ['Manual Goals are populated with current product intent and success criteria.', 'Generated intelligence can be refreshed from \`.ai/goals.md\` without mixing Manual Goals with backlog, strategy, validation, or handoff issues.', 'Manual sections in \`.ai/goals.md\` remain intact.'],
+    requirements: ['Update only the incomplete Manual Goals fields identified by the deterministic evaluation.', 'Base the entry on repository-local evidence only.', 'Do not rewrite unrelated manual sections or generated intelligence artifacts.'],
+    acceptance: ['The missing Manual Goals fields identified by the deterministic evaluation have been completed.', 'Generated intelligence can be refreshed from \`.ai/goals.md\` without mixing Manual Goals with backlog, strategy, validation, or handoff issues.', 'Manual sections in \`.ai/goals.md\` remain intact.'],
   },
   'backlog-noise': {
     problem: 'The backlog contains severe noise that obscures the highest-leverage implementation work and makes generated implementation packages harder to trust.',
@@ -213,13 +213,19 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
 
 function suggestedManualUpdate(selected) {
   if (selected.id === 'missing-manual-goals') {
+    const explanation = selected.completenessExplanation;
+    if (!explanation) return 'Canonical completeness explanation unavailable. Regenerate repository intelligence before accepting a Manual Goals update so only deterministically missing fields are suggested.';
+    const missing = new Set(explanation.missing ?? []);
+    const updateLines = (explanation.requiredFields ?? [])
+      .filter((field) => missing.has(field.label))
+      .map((field) => field.manualUpdate)
+      .filter(Boolean);
+    if (!updateLines.length) return 'No Manual Goals fields are missing according to the shared deterministic completeness evaluation.';
     return [
       'Add text like the following under \`.ai/goals.md\` `## Manual Goals`:',
       '',
       '```md',
-      '- Product intent: [Repository owner: describe the product purpose this repository should serve.]',
-      '- Current focus: [Repository owner: describe the current product priority.]',
-      '- Success criteria: [Repository owner: describe how success should be judged.]',
+      ...updateLines,
       '```',
       '',
       'Do not edit automatically. The repository owner should review, accept, or edit this text before saving it.',

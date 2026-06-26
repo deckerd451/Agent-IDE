@@ -27,6 +27,12 @@ export function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+function mdSection(markdown, heading) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = markdown.match(new RegExp(`^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'));
+  return match?.[1]?.trim() ?? '';
+}
+
 function statusFromFailures(failures) {
   return failures.length ? 'Failed' : 'Verified';
 }
@@ -131,6 +137,13 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
       if (packageClassification && packageClassification !== explanationManual.classification) failures.push(`Product Decision Package explanation mismatch: package Manual Goals ${packageClassification} vs explanation ${explanationManual.classification}.`);
       for (const missing of explanationManual.missing ?? []) {
         if (!packageText.includes(missing)) failures.push(`Product Decision Package explanation mismatch: missing field not shown: ${missing}.`);
+      }
+      const missing = new Set(explanationManual.missing ?? []);
+      const suggestedManualUpdate = mdSection(packageText, 'Suggested Manual Update');
+      const suggestedLabels = new Set([...suggestedManualUpdate.matchAll(/^-\s*([^:\n]+):/gm)].map((match) => match[1].trim()));
+      for (const field of explanationManual.requiredFields ?? []) {
+        if (suggestedLabels.has(field.label) && !missing.has(field.label)) failures.push(`Product Decision Package manual update mismatch: ${field.label} suggested but deterministic evaluation marks it complete.`);
+        if (missing.has(field.label) && field.manualUpdate && !suggestedManualUpdate.includes(field.manualUpdate)) failures.push(`Product Decision Package manual update mismatch: missing field not suggested: ${field.label}.`);
       }
     }
   }

@@ -4,10 +4,10 @@ const missingPattern = /^(?:unknown|missing|not detected yet|none detected|gener
 
 export const canonicalFields = [
   { key: 'manualGoals', label: 'Manual Goals', heading: 'Manual Goals', required: [
-    { key: 'productIntent', label: 'Product intent', headings: ['Manual Goals', 'Product Purpose', 'Product Thesis'], patterns: [/product\s+(?:intent|purpose|thesis)\s*:/i] },
-    { key: 'currentFocus', label: 'Current focus', headings: ['Manual Goals', 'Current Focus'], patterns: [/current\s+focus\s*:/i] },
-    { key: 'successCriteria', label: 'Success criteria', headings: ['Manual Goals', 'Success Criteria', 'Success Definition'], patterns: [/success\s+(?:criteria|definition)\s*:/i] },
-    { key: 'longTermVision', label: 'Long-term vision', headings: ['Manual Goals', 'Long-Term Vision'], patterns: [/long[-\s]?term\s+vision\s*:/i] },
+    { key: 'productIntent', label: 'Product intent', headings: ['Manual Goals', 'Product Purpose', 'Product Thesis'], patterns: [/product\s+(?:intent|purpose|thesis)\s*:/i], manualUpdate: '- Product intent: [Repository owner: describe the product purpose this repository should serve.]' },
+    { key: 'currentFocus', label: 'Current focus', headings: ['Manual Goals', 'Current Focus'], patterns: [/current\s+focus\s*:/i], manualUpdate: '- Current focus: [Repository owner: describe the current product priority.]' },
+    { key: 'successCriteria', label: 'Success criteria', headings: ['Manual Goals', 'Success Criteria', 'Success Definition'], patterns: [/success\s+(?:criteria|definition)\s*:/i], manualUpdate: '- Success criteria: [Repository owner: describe how success should be judged.]' },
+    { key: 'longTermVision', label: 'Long-term vision', headings: ['Manual Goals', 'Long-Term Vision'], patterns: [/long[-\s]?term\s+vision\s*:/i], manualUpdate: '- Long-term vision: [Repository owner: describe the long-term vision for this product.]' },
   ] },
   { key: 'productThesis', label: 'Product Thesis', headings: ['Product Thesis', 'Product Purpose'] },
   { key: 'currentFocus', label: 'Current Focus', headings: ['Current Focus'] },
@@ -45,7 +45,7 @@ export function evaluateCanonicalCompleteness(goalsMarkdown = '') {
     if (field.required) {
       const requirements = field.required.map((req) => {
         const evidence = fieldEvidence(goalsMarkdown, req.headings, req.patterns);
-        return { key: req.key, label: req.label, state: stateFromEvidence(evidence), complete: evidence.length > 0, evidence: evidence.map((item) => `${item.heading}: ${item.line}`) };
+        return { key: req.key, label: req.label, state: stateFromEvidence(evidence), complete: evidence.length > 0, evidence: evidence.map((item) => `${item.heading}: ${item.line}`), manualUpdate: req.manualUpdate };
       });
       const completeCount = requirements.filter((req) => req.complete).length;
       const strongCount = requirements.filter((req) => req.state === 'Strong').length;

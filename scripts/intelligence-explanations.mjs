@@ -13,6 +13,7 @@ export function explainCompleteness(goalsMarkdown = '') {
       found: req.complete,
       state: req.state,
       evidence: req.evidence,
+      manualUpdate: req.manualUpdate,
       reason: req.complete ? `${req.label} detected.` : `${req.label} not detected.`,
     })) ?? [{
       key: field.key,
