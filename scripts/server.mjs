@@ -13,7 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
-const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'intelligence-explanations.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'intelligence-explanations.json', 'decision-ranking.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
 
 const baselineFiles = {
   'goals.md': `# Goals
@@ -98,7 +98,7 @@ const generatorSteps = [
 ];
 
 
-const controlFiles = ['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'];
+const controlFiles = ['decision-ranking.json', 'goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'];
 
 async function readAiText(repositoryPath, fileName) {
   return readFile(join(repositoryPath, '.ai', fileName), 'utf8').catch((error) => {
@@ -366,11 +366,12 @@ async function readControlPlane(repositoryPath) {
   const verification = await verifyIntelligence(repositoryPath, { displayedContents: docs, persist: false });
   const qualityHistory = JSON.parse(await readFile(join(aiDir, 'intelligence-history.json'), 'utf8').catch(() => '[]'));
   const explanations = await readIntelligenceExplanations(repositoryPath);
+  const decisionRanking = JSON.parse(await readFile(join(aiDir, 'decision-ranking.json'), 'utf8').catch(() => 'null'));
   const timeline = JSON.parse(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => '[]'));
   const recommendation = docs['next-improvement-prompt.md']?.trim()
     ? { title: firstLine(docs['next-improvement-prompt.md'].replace(/^#\s*/, ''), snapshot.recommendedNextStep), actionability: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Actionability', 'Not classified.'), packageType: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Package Type', 'implementation'), explanation: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Source risk/recommendation', 'See generated prompt.'), whyItMatters: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Reason', 'Generated from Control Plane intelligence.'), evidenceSource: '.ai/next-improvement-prompt.md', prompt: docs['next-improvement-prompt.md'] }
     : recommendationDetails(docs);
-  return { status: snapshot, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
+  return { status: snapshot, decisionRanking, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
 }
 
 async function persistControlPlane(repositoryPath, previousSnapshot, refreshStartedAt = new Date()) {
@@ -398,7 +399,8 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   const qualityResult = await persistQuality(repositoryPath);
   data.quality = qualityResult.snapshot;
   data.qualityHistory = qualityResult.history;
-  data.explanations = { completeness: explainCompleteness(await readAiText(repositoryPath, 'goals.md')), quality: explainQuality(data.quality), recommendation: nextImprovement.explanation };
+  data.decisionRanking = nextImprovement.decisionRanking;
+  data.explanations = { completeness: explainCompleteness(await readAiText(repositoryPath, 'goals.md')), quality: explainQuality(data.quality), recommendation: nextImprovement.explanation, decisionRanking: nextImprovement.decisionRanking.explanation };
   await persistIntelligenceExplanations(repositoryPath, data.explanations);
   data.verification = await verifyIntelligence(repositoryPath, { refreshStartedAt });
   return data;
