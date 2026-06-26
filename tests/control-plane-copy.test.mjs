@@ -18,6 +18,9 @@ test('Control Plane renders package labels based on packageType', async () => {
   ]) {
     assert.match(source, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+  for (const expected of ['Review and Apply Canonical Edit', 'Proposed markdown block', 'Supporting evidence', 'Apply Edit', 'Canonical edit applied. Refresh Intelligence to verify the task was resolved.', '/api/repository/apply-canonical-edit']) {
+    assert.match(source, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
   assert.match(source, /Copy Builder Prompt/);
 });
 
