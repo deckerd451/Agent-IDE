@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-25T23:59:57.941Z",
+  "generatedAt": "2026-06-26T13:41:53.999Z",
   "completeness": {
     "id": "canonical-completeness",
     "title": "Canonical Completeness Evaluation",
-    "score": 79,
+    "score": 83,
     "classification": "Partial",
     "rule": "Canonical completeness is the average percent completion across canonical goals fields.",
     "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = 100% with strong evidence.",
@@ -20,20 +20,24 @@
             "key": "productIntent",
             "label": "Product intent",
             "found": true,
-            "state": "Complete",
+            "state": "Strong",
             "evidence": [
+              "Manual Goals: Product intent: Nearify should help people transform real-world encounters into lasting professional relationships through accurate relationship memory and timely follow-up recommendations.",
               "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs."
             ],
+            "manualUpdate": "- Product intent: [Repository owner: describe the product purpose this repository should serve.]",
             "reason": "Product intent detected."
           },
           {
             "key": "currentFocus",
             "label": "Current focus",
             "found": true,
-            "state": "Complete",
+            "state": "Strong",
             "evidence": [
+              "Manual Goals: Current focus: Make repository understanding the primary surface of Agent IDE for Nearify handoffs.",
               "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE."
             ],
+            "manualUpdate": "- Current focus: [Repository owner: describe the current product priority.]",
             "reason": "Current focus detected."
           },
           {
@@ -42,41 +46,47 @@
             "found": true,
             "state": "Strong",
             "evidence": [
+              "Manual Goals: Success criteria: Manual Goals completeness reaches 100%, Canonical Completeness reports Manual Goals as Complete, and Repository Intelligence regenerates successfully with Verification Status remaining Verified with zero failures.",
               "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
               "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections."
             ],
+            "manualUpdate": "- Success criteria: [Repository owner: describe how success should be judged.]",
             "reason": "Success criteria detected."
           },
           {
             "key": "longTermVision",
             "label": "Long-term vision",
-            "found": false,
-            "state": "Missing",
-            "evidence": [],
-            "reason": "Long-term vision not detected."
+            "found": true,
+            "state": "Complete",
+            "evidence": [
+              "Manual Goals: Long-term vision: Nearify should become the world's most trusted relationship intelligence system, helping people transform real-world encounters into lasting professional relationships through accurate relationship memory, timely follow-up recommendations, and continuously improving relationship intelligence."
+            ],
+            "manualUpdate": "- Long-term vision: [Repository owner: describe the long-term vision for this product.]",
+            "reason": "Long-term vision detected."
           }
         ],
         "computed": {
-          "percent": 75,
-          "found": 3,
+          "percent": 100,
+          "found": 4,
           "total": 4
         },
         "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = multiple evidence lines for every required field.",
-        "classification": "Partial",
+        "classification": "Complete",
         "evidence": [
+          "Manual Goals: Product intent: Nearify should help people transform real-world encounters into lasting professional relationships through accurate relationship memory and timely follow-up recommendations.",
           "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.",
+          "Manual Goals: Current focus: Make repository understanding the primary surface of Agent IDE for Nearify handoffs.",
           "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE.",
+          "Manual Goals: Success criteria: Manual Goals completeness reaches 100%, Canonical Completeness reports Manual Goals as Complete, and Repository Intelligence regenerates successfully with Verification Status remaining Verified with zero failures.",
           "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
           "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections.",
-          "Long-term vision missing"
+          "Manual Goals: Long-term vision: Nearify should become the world's most trusted relationship intelligence system, helping people transform real-world encounters into lasting professional relationships through accurate relationship memory, timely follow-up recommendations, and continuously improving relationship intelligence."
         ],
-        "missing": [
-          "Long-term vision"
-        ],
+        "missing": [],
         "reason": [
-          "Long-term vision not detected."
+          "Manual Goals satisfied deterministic completeness requirements."
         ],
-        "recommendation": "Complete Manual Goals fields: Long-term vision."
+        "recommendation": "Manual Goals is complete."
       },
       "productThesis": {
         "id": "canonical-completeness:productThesis",
@@ -252,13 +262,273 @@
       }
     }
   },
+  "evidenceSynthesis": {
+    "id": "evidence-synthesis",
+    "title": "Evidence Synthesis",
+    "rule": "Missing canonical fields may display deterministic suggestions only when exact repository-local wording is found outside .ai/goals.md; confidence comes from independent evidence groups, not generated artifact counts.",
+    "strength": "Strong",
+    "supportedFields": 2,
+    "missingFields": 2,
+    "fields": {
+      "productThesis": {
+        "label": "Product Thesis",
+        "suggestedWording": null,
+        "confidence": "None",
+        "sources": [],
+        "state": "Canonical",
+        "independentEvidence": [],
+        "generatedConfirmations": [],
+        "confidenceCalculation": {
+          "confidence": "None",
+          "independentGroups": [],
+          "generatedConfirmations": [],
+          "independentGroupCount": 0,
+          "generatedConfirmationCount": 0,
+          "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+        },
+        "evidence": [],
+        "selectionRule": "No matching repository-local evidence found."
+      },
+      "currentFocus": {
+        "label": "Current Focus",
+        "suggestedWording": null,
+        "confidence": "None",
+        "sources": [],
+        "state": "Canonical",
+        "independentEvidence": [],
+        "generatedConfirmations": [],
+        "confidenceCalculation": {
+          "confidence": "None",
+          "independentGroups": [],
+          "generatedConfirmations": [],
+          "independentGroupCount": 0,
+          "generatedConfirmationCount": 0,
+          "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+        },
+        "evidence": [],
+        "selectionRule": "No matching repository-local evidence found."
+      },
+      "currentProductBet": {
+        "label": "Current Product Bet",
+        "suggestedWording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE.",
+        "confidence": "None",
+        "sources": [
+          "Architect",
+          "Builder",
+          "Debugger",
+          "Reviewer",
+          "Strategy"
+        ],
+        "state": "Repository Inferred",
+        "independentEvidence": [],
+        "generatedConfirmations": [
+          "Architect",
+          "Builder",
+          "Debugger",
+          "Reviewer",
+          "Strategy"
+        ],
+        "confidenceCalculation": {
+          "confidence": "None",
+          "independentGroups": [],
+          "generatedConfirmations": [
+            "Architect",
+            "Builder",
+            "Debugger",
+            "Reviewer",
+            "Strategy"
+          ],
+          "independentGroupCount": 0,
+          "generatedConfirmationCount": 5,
+          "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+        },
+        "evidence": [
+          {
+            "source": "Architect",
+            "file": ".ai/prompts/architect.md",
+            "heading": "Current Product Bet",
+            "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+          },
+          {
+            "source": "Builder",
+            "file": ".ai/prompts/builder.md",
+            "heading": "Current Product Bet",
+            "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+          },
+          {
+            "source": "Debugger",
+            "file": ".ai/prompts/debugger.md",
+            "heading": "Current Product Bet",
+            "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+          },
+          {
+            "source": "Reviewer",
+            "file": ".ai/prompts/reviewer.md",
+            "heading": "Current Product Bet",
+            "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+          },
+          {
+            "source": "Strategy",
+            "file": ".ai/strategy.md",
+            "heading": "Current Product Bet",
+            "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+          }
+        ],
+        "selectionRule": "Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence."
+      },
+      "longTermVision": {
+        "label": "Long-term Vision",
+        "suggestedWording": null,
+        "confidence": "None",
+        "sources": [],
+        "state": "Canonical",
+        "independentEvidence": [],
+        "generatedConfirmations": [],
+        "confidenceCalculation": {
+          "confidence": "None",
+          "independentGroups": [],
+          "generatedConfirmations": [],
+          "independentGroupCount": 0,
+          "generatedConfirmationCount": 0,
+          "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+        },
+        "evidence": [],
+        "selectionRule": "No matching repository-local evidence found."
+      },
+      "strategicDifferentiator": {
+        "label": "Strategic Differentiator",
+        "suggestedWording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows.",
+        "confidence": "None",
+        "sources": [
+          "Architect",
+          "Builder",
+          "Debugger",
+          "Reviewer",
+          "Strategy"
+        ],
+        "state": "Repository Inferred",
+        "independentEvidence": [],
+        "generatedConfirmations": [
+          "Architect",
+          "Builder",
+          "Debugger",
+          "Reviewer",
+          "Strategy"
+        ],
+        "confidenceCalculation": {
+          "confidence": "None",
+          "independentGroups": [],
+          "generatedConfirmations": [
+            "Architect",
+            "Builder",
+            "Debugger",
+            "Reviewer",
+            "Strategy"
+          ],
+          "independentGroupCount": 0,
+          "generatedConfirmationCount": 5,
+          "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+        },
+        "evidence": [
+          {
+            "source": "Architect",
+            "file": ".ai/prompts/architect.md",
+            "heading": "Strategic Differentiator",
+            "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+          },
+          {
+            "source": "Builder",
+            "file": ".ai/prompts/builder.md",
+            "heading": "Strategic Differentiator",
+            "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+          },
+          {
+            "source": "Debugger",
+            "file": ".ai/prompts/debugger.md",
+            "heading": "Strategic Differentiator",
+            "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+          },
+          {
+            "source": "Reviewer",
+            "file": ".ai/prompts/reviewer.md",
+            "heading": "Strategic Differentiator",
+            "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+          },
+          {
+            "source": "Strategy",
+            "file": ".ai/strategy.md",
+            "heading": "Strategic Differentiator",
+            "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+          }
+        ],
+        "selectionRule": "Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence."
+      },
+      "northStarMetric": {
+        "label": "North Star Metric",
+        "suggestedWording": null,
+        "confidence": "None",
+        "sources": [],
+        "state": "Canonical",
+        "independentEvidence": [],
+        "generatedConfirmations": [],
+        "confidenceCalculation": {
+          "confidence": "None",
+          "independentGroups": [],
+          "generatedConfirmations": [],
+          "independentGroupCount": 0,
+          "generatedConfirmationCount": 0,
+          "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+        },
+        "evidence": [],
+        "selectionRule": "No matching repository-local evidence found."
+      },
+      "successCriteria": {
+        "label": "Success Criteria",
+        "suggestedWording": null,
+        "confidence": "None",
+        "sources": [],
+        "state": "Canonical",
+        "independentEvidence": [],
+        "generatedConfirmations": [],
+        "confidenceCalculation": {
+          "confidence": "None",
+          "independentGroups": [],
+          "generatedConfirmations": [],
+          "independentGroupCount": 0,
+          "generatedConfirmationCount": 0,
+          "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+        },
+        "evidence": [],
+        "selectionRule": "No matching repository-local evidence found."
+      },
+      "whatNotToBuild": {
+        "label": "What Not To Build",
+        "suggestedWording": null,
+        "confidence": "None",
+        "sources": [],
+        "state": "Canonical",
+        "independentEvidence": [],
+        "generatedConfirmations": [],
+        "confidenceCalculation": {
+          "confidence": "None",
+          "independentGroups": [],
+          "generatedConfirmations": [],
+          "independentGroupCount": 0,
+          "generatedConfirmationCount": 0,
+          "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+        },
+        "evidence": [],
+        "selectionRule": "No matching repository-local evidence found."
+      }
+    }
+  },
   "quality": {
     "id": "intelligence-quality",
     "title": "Intelligence Quality Evaluation",
-    "score": 79,
+    "score": 93,
     "components": {
       "canonicalCompleteness": {
-        "score": 79,
+        "score": 83,
         "rule": "Completeness score comes from canonical goals field evaluation.",
         "evidence": ".ai/goals.md"
       },
@@ -279,7 +549,7 @@
         "evidence": []
       },
       "confidence": {
-        "score": 82,
+        "score": 90,
         "rule": "Confidence is derived from Repository Health, Strategy, and Validation confidence values.",
         "evidence": [
           ".ai/repository-health.md",
@@ -288,81 +558,16 @@
         ]
       },
       "verification": {
-        "score": 33,
+        "score": 100,
         "rule": "Verification score is the percent of expected artifacts verified.",
         "evidence": ".ai/intelligence-verification.json"
       }
     },
     "deductions": [
       {
-        "rule": "Missing Long-term vision",
-        "points": 3,
-        "evidence": ".ai/goals.md"
-      },
-      {
         "rule": "Missing Current Product Bet",
         "points": 10,
         "evidence": ".ai/goals.md"
-      },
-      {
-        "rule": "strategy.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "architecture.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "backlog.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "validation.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "decisions.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "repository-health.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "context-package.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "prompts/architect.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "prompts/builder.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "prompts/debugger.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
       }
     ]
   },
@@ -372,25 +577,103 @@
     "rule": "Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.",
     "candidateIssues": [
       {
-        "id": "missing-manual-goals",
-        "title": "Complete Manual Repository Intent Notes",
-        "category": "missing manual goals",
-        "priority": 74,
-        "actionability": "manual",
-        "evidence": "Manual Goals Partial (75%). Missing: Long-term vision."
+        "id": "ai-handoff-validation",
+        "title": "Run AI Handoff Validation",
+        "category": "AI handoff validation",
+        "priority": 10,
+        "actionability": "validation-experiment",
+        "evidence": "No serious repository intelligence issue detected."
       }
     ],
     "selected": {
-      "id": "missing-manual-goals",
-      "title": "Complete Manual Repository Intent Notes",
-      "priority": 74
+      "id": "ai-handoff-validation",
+      "title": "Run AI Handoff Validation",
+      "priority": 10
     },
     "computed": {
-      "selectedPriority": 74,
-      "highestPriority": 74
+      "selectedPriority": 10,
+      "highestPriority": 10
     },
     "classification": "Consistent",
     "reason": "Highest deterministic priority requiring action.",
-    "recommendation": "Complete only the incomplete Manual Goals fields in `.ai/goals.md`. Missing: Long-term vision."
+    "recommendation": "Run and document a local AI handoff validation dry run."
+  },
+  "decisionRanking": {
+    "id": "decision-ranking",
+    "title": "Decision Ranking Explanation",
+    "rule": "Rank every candidate with deterministic repository-local scoring, then select rank #1.",
+    "scoringRules": [
+      "Priority score = issue base priority + severity boost + actionability boost, capped at 100.",
+      "Expected improvement is a deterministic repository-local lookup by issue type.",
+      "Ordering ties break by expected improvement total, actionability, severity, title, then issue ID."
+    ],
+    "tieBreaking": [
+      "priorityScore desc",
+      "expectedImprovement.total desc",
+      "actionability rank asc",
+      "severity rank asc",
+      "title asc",
+      "id asc"
+    ],
+    "candidateOrdering": [
+      {
+        "rank": 1,
+        "id": "ai-handoff-validation",
+        "title": "Run AI Handoff Validation",
+        "priorityScore": 10,
+        "expectedImprovement": {
+          "repositoryHealth": 2,
+          "canonicalCompleteness": 0,
+          "quality": 2,
+          "verification": 4,
+          "handoffReadiness": 3,
+          "total": 11
+        },
+        "selected": true
+      }
+    ],
+    "expectedImprovementCalculations": {
+      "ai-handoff-validation": {
+        "repositoryHealth": 2,
+        "canonicalCompleteness": 0,
+        "quality": 2,
+        "verification": 4,
+        "handoffReadiness": 3,
+        "total": 11
+      }
+    },
+    "selected": {
+      "id": "ai-handoff-validation",
+      "title": "Run AI Handoff Validation",
+      "rank": 1,
+      "priorityScore": 10
+    },
+    "classification": "Consistent",
+    "reason": "Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11."
+  },
+  "completenessSynchronization": {
+    "id": "completeness-synchronization",
+    "title": "Completeness Synchronization",
+    "canonicalSource": "scripts/canonical-completeness.mjs",
+    "canonicalCompletenessResult": {
+      "classification": "Complete",
+      "percent": 100,
+      "missing": [],
+      "suggestedManualUpdate": [
+        "No Manual Goals fields require updates."
+      ],
+      "evidenceSynthesis": null
+    },
+    "consumers": [
+      "Repository Health",
+      "Intelligence Quality",
+      "Decision Ranking",
+      "Product Decision Packages",
+      "Suggested Manual Updates",
+      "Verification",
+      "Control Plane"
+    ],
+    "synchronizationStatus": "Synchronized",
+    "rule": "All consumers must read Manual Goals missing fields from the canonical completeness evaluation and must not render independent missing-field logic."
   }
 }

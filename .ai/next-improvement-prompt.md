@@ -1,73 +1,64 @@
-# Complete Manual Repository Intent Notes
+# Run AI Handoff Validation
 
-## Decision Instructions
-This is a product-owner decision task, not a Codex implementation task.
-Use repository-local evidence to decide or record the missing product, strategy, or manual-intelligence information.
-Do not send this package to Codex as implementation work.
-Do not edit files automatically; the repository owner should review, accept, or edit the suggested manual update in `.ai/goals.md`.
-Repository owner edits: `.ai/goals.md`
-Everything else will be regenerated.
+## Validation Instructions
+Run this Validation Experiment as a deterministic local check.
+Use the cited repository evidence to validate handoff quality without broadening scope.
+Do not make product-owner decisions, LLM calls, cloud calls, or telemetry changes.
 
 ## Selected Issue
-- ID: missing-manual-goals
-- Category: missing manual goals
-- Severity: high
-- Actionability: manual
-- Package Type: product-decision
-- Source: Manual Goals Partial (75%). Missing: Long-term vision.
-- Title: Complete Manual Repository Intent Notes
-- Evidence: Manual Goals Partial (75%). Missing: Long-term vision.
-- Reason: Manual Goals completeness is below the deterministic threshold. Missing: Long-term vision.
-- Recommended Action: Complete only the incomplete Manual Goals fields in `.ai/goals.md`. Missing: Long-term vision.
+- ID: ai-handoff-validation
+- Category: AI handoff validation
+- Severity: low
+- Actionability: validation-experiment
+- Package Type: validation-experiment
+- Source: No serious repository intelligence issue detected.
+- Title: Run AI Handoff Validation
+- Evidence: No serious repository intelligence issue detected.
+- Reason: When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.
+- Recommended Action: Run and document a local AI handoff validation dry run.
 
 ## Why This Issue Was Selected
 
 Rule: Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.
 
 Candidate Issues
-- Complete Manual Repository Intent Notes: Priority 74
+- Run AI Handoff Validation: Priority 10
 
-Selected: Complete Manual Repository Intent Notes
+Selected: Run AI Handoff Validation
 Reason: Highest deterministic priority requiring action.
 
-## Why Human Judgment Is Required
-The repository has missing populated Manual Goals or incomplete Manual Goals fields, so generated intelligence cannot reliably identify all required product intent fields or the safest next implementation target.
+## Decision Ranking
 
-Manual Goals completeness is below the deterministic threshold. Missing: Long-term vision. This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.
+Selected issue: Run AI Handoff Validation
+Selection explanation: Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.
 
+1. Run AI Handoff Validation (selected)
+   - ID: ai-handoff-validation
+   - Priority: 10
+   - Expected Improvement: +11 total (+2 Repository Health, +0 Canonical Completeness, +2 Quality, +4 Verification, +3 Handoff Readiness)
+   - Reason: When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.
+   - Evidence: No serious repository intelligence issue detected.
 ## Current Evidence
-- Source risk/recommendation: Manual Goals Partial (75%). Missing: Long-term vision.
-- Reason: Manual Goals completeness is below the deterministic threshold. Missing: Long-term vision.
+- Source risk/recommendation: No serious repository intelligence issue detected.
+- Reason: When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.
 
-## Decision Needed
-Complete only the incomplete Manual Goals fields in `.ai/goals.md`. Missing: Long-term vision.
+## Experiment
+No serious repository intelligence issue is detected, so the safest next step is validating that the generated AI handoff package is usable as-is.
 
-## Suggested Manual Update
-Add text like the following under `.ai/goals.md` `## Manual Goals`:
-
-```md
-- Product intent: [Repository owner: describe the product purpose this repository should serve.]
-- Current focus: [Repository owner: describe the current product priority.]
-- Success criteria: [Repository owner: describe how success should be judged.]
-```
-
-Do not edit automatically. The repository owner should review, accept, or edit this text before saving it.
+## Requirements
+- Run a local AI handoff dry run using the generated context package and prompts as static inputs.
+- Document whether the package contains enough context for an outside builder to choose safe first edits.
+- Do not request code changes unless adding or documenting a validation workflow.
 
 ## Acceptance Criteria
-- Manual Goals are populated with current product intent and success criteria.
-- Generated intelligence can be refreshed from `.ai/goals.md` without mixing Manual Goals with backlog, strategy, validation, or handoff issues.
-- Manual sections in `.ai/goals.md` remain intact.
-- The repository owner reviews the suggested manual text.
-- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.
-- Any accepted decision is recorded in the correct manual section of `.ai/goals.md`.
-- No manual work is labeled as Codex implementation work.
+- AI handoff validation is documented with deterministic local evidence.
+- Any missing context or acceptance-test gaps are recorded in the appropriate manual section of `.ai/goals.md`.
+- No unrelated code changes are requested.
+- The validation result is deterministic, local-first, and reviewable.
 
-## After Decision
-- Refresh Repository Intelligence.
-- Compare Repository Health before and after.
-- Compare Intelligence Quality before and after.
-- Verify whether the selected manual issue was resolved or downgraded.
-- Generate the next correctly typed package.
+## Testing Commands
+- npm test
+- npm run build
 
 ## Constraints
 - local-first
@@ -77,3 +68,8 @@ Do not edit automatically. The repository owner should review, accept, or edit t
 - no telemetry
 - preserve manual sections
 - keep changes small and reviewable
+
+## After Validation
+- Refresh Repository Intelligence.
+- Record any gaps in the appropriate manual section of `.ai/goals.md`.
+- Generate the next correctly typed package.

@@ -1,34 +1,38 @@
 {
-  "timestamp": "2026-06-25T23:59:57.937Z",
-  "overallScore": 79,
+  "timestamp": "2026-06-26T13:42:25.342Z",
+  "overallScore": 93,
   "canonicalIntelligenceQuality": {
-    "score": 86,
-    "completenessScore": 79,
+    "score": 90,
+    "completenessScore": 83,
     "completenessState": "Partial",
     "fields": {
       "manualGoals": {
         "key": "manualGoals",
         "label": "Manual Goals",
-        "state": "Partial",
-        "percent": 75,
+        "state": "Complete",
+        "percent": 100,
         "requirements": [
           {
             "key": "productIntent",
             "label": "Product intent",
-            "state": "Complete",
+            "state": "Strong",
             "complete": true,
             "evidence": [
+              "Manual Goals: Product intent: Nearify should help people transform real-world encounters into lasting professional relationships through accurate relationship memory and timely follow-up recommendations.",
               "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs."
-            ]
+            ],
+            "manualUpdate": "- Product intent: [Repository owner: describe the product purpose this repository should serve.]"
           },
           {
             "key": "currentFocus",
             "label": "Current focus",
-            "state": "Complete",
+            "state": "Strong",
             "complete": true,
             "evidence": [
+              "Manual Goals: Current focus: Make repository understanding the primary surface of Agent IDE for Nearify handoffs.",
               "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE."
-            ]
+            ],
+            "manualUpdate": "- Current focus: [Repository owner: describe the current product priority.]"
           },
           {
             "key": "successCriteria",
@@ -36,21 +40,24 @@
             "state": "Strong",
             "complete": true,
             "evidence": [
+              "Manual Goals: Success criteria: Manual Goals completeness reaches 100%, Canonical Completeness reports Manual Goals as Complete, and Repository Intelligence regenerates successfully with Verification Status remaining Verified with zero failures.",
               "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
               "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections."
-            ]
+            ],
+            "manualUpdate": "- Success criteria: [Repository owner: describe how success should be judged.]"
           },
           {
             "key": "longTermVision",
             "label": "Long-term vision",
-            "state": "Missing",
-            "complete": false,
-            "evidence": []
+            "state": "Complete",
+            "complete": true,
+            "evidence": [
+              "Manual Goals: Long-term vision: Nearify should become the world's most trusted relationship intelligence system, helping people transform real-world encounters into lasting professional relationships through accurate relationship memory, timely follow-up recommendations, and continuously improving relationship intelligence."
+            ],
+            "manualUpdate": "- Long-term vision: [Repository owner: describe the long-term vision for this product.]"
           }
         ],
-        "missing": [
-          "Long-term vision"
-        ]
+        "missing": []
       },
       "productThesis": {
         "key": "productThesis",
@@ -104,7 +111,790 @@
         "missing": []
       }
     },
-    "coverageScore": 79,
+    "evidenceSynthesis": {
+      "schemaVersion": 1,
+      "supportedFields": 2,
+      "missingFields": 2,
+      "totalFields": 8,
+      "strength": "Strong",
+      "fields": {
+        "productThesis": {
+          "key": "productThesis",
+          "label": "Product Thesis",
+          "state": "Canonical",
+          "canonical": true,
+          "missing": false,
+          "suggestedWording": null,
+          "evidence": [],
+          "allEvidence": [],
+          "lineage": {
+            "schemaVersion": 1,
+            "generatedAt": "2026-06-26T13:42:25.343Z",
+            "categories": {
+              "Canonical": [],
+              "Independent": [],
+              "Generated": []
+            },
+            "sources": []
+          },
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "confidence": "None",
+          "selectionRule": "No matching repository-local evidence found.",
+          "reason": "No deterministic repository-local source contains this concept."
+        },
+        "currentFocus": {
+          "key": "currentFocus",
+          "label": "Current Focus",
+          "state": "Canonical",
+          "canonical": true,
+          "missing": false,
+          "suggestedWording": null,
+          "evidence": [],
+          "allEvidence": [],
+          "lineage": {
+            "schemaVersion": 1,
+            "generatedAt": "2026-06-26T13:42:25.343Z",
+            "categories": {
+              "Canonical": [],
+              "Independent": [],
+              "Generated": []
+            },
+            "sources": []
+          },
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "confidence": "None",
+          "selectionRule": "No matching repository-local evidence found.",
+          "reason": "No deterministic repository-local source contains this concept."
+        },
+        "currentProductBet": {
+          "key": "currentProductBet",
+          "label": "Current Product Bet",
+          "state": "Repository Inferred",
+          "canonical": false,
+          "missing": true,
+          "suggestedWording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE.",
+          "evidence": [
+            {
+              "source": "Architect",
+              "file": ".ai/prompts/architect.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Builder",
+              "file": ".ai/prompts/builder.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Debugger",
+              "file": ".ai/prompts/debugger.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Reviewer",
+              "file": ".ai/prompts/reviewer.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Strategy",
+              "file": ".ai/strategy.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            }
+          ],
+          "allEvidence": [
+            {
+              "source": "Architect",
+              "file": ".ai/prompts/architect.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Builder",
+              "file": ".ai/prompts/builder.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Debugger",
+              "file": ".ai/prompts/debugger.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Reviewer",
+              "file": ".ai/prompts/reviewer.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Strategy",
+              "file": ".ai/strategy.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            }
+          ],
+          "lineage": {
+            "schemaVersion": 1,
+            "generatedAt": "2026-06-26T13:42:25.344Z",
+            "categories": {
+              "Canonical": [],
+              "Independent": [],
+              "Generated": [
+                {
+                  "file": ".ai/prompts/architect.md",
+                  "category": "Generated",
+                  "group": "Architect",
+                  "ancestry": "Generated descendant of canonical and independent repository intelligence."
+                },
+                {
+                  "file": ".ai/prompts/builder.md",
+                  "category": "Generated",
+                  "group": "Builder",
+                  "ancestry": "Generated descendant of canonical and independent repository intelligence."
+                },
+                {
+                  "file": ".ai/prompts/debugger.md",
+                  "category": "Generated",
+                  "group": "Debugger",
+                  "ancestry": "Generated descendant of canonical and independent repository intelligence."
+                },
+                {
+                  "file": ".ai/prompts/reviewer.md",
+                  "category": "Generated",
+                  "group": "Reviewer",
+                  "ancestry": "Generated descendant of canonical and independent repository intelligence."
+                },
+                {
+                  "file": ".ai/strategy.md",
+                  "category": "Generated",
+                  "group": "Strategy",
+                  "ancestry": "Generated descendant of canonical and independent repository intelligence."
+                }
+              ]
+            },
+            "sources": [
+              {
+                "file": ".ai/prompts/architect.md",
+                "category": "Generated",
+                "group": "Architect",
+                "ancestry": "Generated descendant of canonical and independent repository intelligence."
+              },
+              {
+                "file": ".ai/prompts/builder.md",
+                "category": "Generated",
+                "group": "Builder",
+                "ancestry": "Generated descendant of canonical and independent repository intelligence."
+              },
+              {
+                "file": ".ai/prompts/debugger.md",
+                "category": "Generated",
+                "group": "Debugger",
+                "ancestry": "Generated descendant of canonical and independent repository intelligence."
+              },
+              {
+                "file": ".ai/prompts/reviewer.md",
+                "category": "Generated",
+                "group": "Reviewer",
+                "ancestry": "Generated descendant of canonical and independent repository intelligence."
+              },
+              {
+                "file": ".ai/strategy.md",
+                "category": "Generated",
+                "group": "Strategy",
+                "ancestry": "Generated descendant of canonical and independent repository intelligence."
+              }
+            ]
+          },
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [
+              "Architect",
+              "Builder",
+              "Debugger",
+              "Reviewer",
+              "Strategy"
+            ],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 5,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "confidence": "None",
+          "selectionRule": "Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.",
+          "reason": "0 independent evidence groups contain selected wording."
+        },
+        "longTermVision": {
+          "key": "longTermVision",
+          "label": "Long-term Vision",
+          "state": "Canonical",
+          "canonical": true,
+          "missing": false,
+          "suggestedWording": null,
+          "evidence": [],
+          "allEvidence": [],
+          "lineage": {
+            "schemaVersion": 1,
+            "generatedAt": "2026-06-26T13:42:25.344Z",
+            "categories": {
+              "Canonical": [],
+              "Independent": [],
+              "Generated": []
+            },
+            "sources": []
+          },
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "confidence": "None",
+          "selectionRule": "No matching repository-local evidence found.",
+          "reason": "No deterministic repository-local source contains this concept."
+        },
+        "strategicDifferentiator": {
+          "key": "strategicDifferentiator",
+          "label": "Strategic Differentiator",
+          "state": "Repository Inferred",
+          "canonical": false,
+          "missing": true,
+          "suggestedWording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows.",
+          "evidence": [
+            {
+              "source": "Architect",
+              "file": ".ai/prompts/architect.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Builder",
+              "file": ".ai/prompts/builder.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Debugger",
+              "file": ".ai/prompts/debugger.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Reviewer",
+              "file": ".ai/prompts/reviewer.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Strategy",
+              "file": ".ai/strategy.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            }
+          ],
+          "allEvidence": [
+            {
+              "source": "Architect",
+              "file": ".ai/prompts/architect.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Builder",
+              "file": ".ai/prompts/builder.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Debugger",
+              "file": ".ai/prompts/debugger.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Reviewer",
+              "file": ".ai/prompts/reviewer.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Strategy",
+              "file": ".ai/strategy.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            }
+          ],
+          "lineage": {
+            "schemaVersion": 1,
+            "generatedAt": "2026-06-26T13:42:25.345Z",
+            "categories": {
+              "Canonical": [],
+              "Independent": [],
+              "Generated": [
+                {
+                  "file": ".ai/prompts/architect.md",
+                  "category": "Generated",
+                  "group": "Architect",
+                  "ancestry": "Generated descendant of canonical and independent repository intelligence."
+                },
+                {
+                  "file": ".ai/prompts/builder.md",
+                  "category": "Generated",
+                  "group": "Builder",
+                  "ancestry": "Generated descendant of canonical and independent repository intelligence."
+                },
+                {
+                  "file": ".ai/prompts/debugger.md",
+                  "category": "Generated",
+                  "group": "Debugger",
+                  "ancestry": "Generated descendant of canonical and independent repository intelligence."
+                },
+                {
+                  "file": ".ai/prompts/reviewer.md",
+                  "category": "Generated",
+                  "group": "Reviewer",
+                  "ancestry": "Generated descendant of canonical and independent repository intelligence."
+                },
+                {
+                  "file": ".ai/strategy.md",
+                  "category": "Generated",
+                  "group": "Strategy",
+                  "ancestry": "Generated descendant of canonical and independent repository intelligence."
+                }
+              ]
+            },
+            "sources": [
+              {
+                "file": ".ai/prompts/architect.md",
+                "category": "Generated",
+                "group": "Architect",
+                "ancestry": "Generated descendant of canonical and independent repository intelligence."
+              },
+              {
+                "file": ".ai/prompts/builder.md",
+                "category": "Generated",
+                "group": "Builder",
+                "ancestry": "Generated descendant of canonical and independent repository intelligence."
+              },
+              {
+                "file": ".ai/prompts/debugger.md",
+                "category": "Generated",
+                "group": "Debugger",
+                "ancestry": "Generated descendant of canonical and independent repository intelligence."
+              },
+              {
+                "file": ".ai/prompts/reviewer.md",
+                "category": "Generated",
+                "group": "Reviewer",
+                "ancestry": "Generated descendant of canonical and independent repository intelligence."
+              },
+              {
+                "file": ".ai/strategy.md",
+                "category": "Generated",
+                "group": "Strategy",
+                "ancestry": "Generated descendant of canonical and independent repository intelligence."
+              }
+            ]
+          },
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [
+              "Architect",
+              "Builder",
+              "Debugger",
+              "Reviewer",
+              "Strategy"
+            ],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 5,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "confidence": "None",
+          "selectionRule": "Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.",
+          "reason": "0 independent evidence groups contain selected wording."
+        },
+        "northStarMetric": {
+          "key": "northStarMetric",
+          "label": "North Star Metric",
+          "state": "Canonical",
+          "canonical": true,
+          "missing": false,
+          "suggestedWording": null,
+          "evidence": [],
+          "allEvidence": [],
+          "lineage": {
+            "schemaVersion": 1,
+            "generatedAt": "2026-06-26T13:42:25.345Z",
+            "categories": {
+              "Canonical": [],
+              "Independent": [],
+              "Generated": []
+            },
+            "sources": []
+          },
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "confidence": "None",
+          "selectionRule": "No matching repository-local evidence found.",
+          "reason": "No deterministic repository-local source contains this concept."
+        },
+        "successCriteria": {
+          "key": "successCriteria",
+          "label": "Success Criteria",
+          "state": "Canonical",
+          "canonical": true,
+          "missing": false,
+          "suggestedWording": null,
+          "evidence": [],
+          "allEvidence": [],
+          "lineage": {
+            "schemaVersion": 1,
+            "generatedAt": "2026-06-26T13:42:25.345Z",
+            "categories": {
+              "Canonical": [],
+              "Independent": [],
+              "Generated": []
+            },
+            "sources": []
+          },
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "confidence": "None",
+          "selectionRule": "No matching repository-local evidence found.",
+          "reason": "No deterministic repository-local source contains this concept."
+        },
+        "whatNotToBuild": {
+          "key": "whatNotToBuild",
+          "label": "What Not To Build",
+          "state": "Canonical",
+          "canonical": true,
+          "missing": false,
+          "suggestedWording": null,
+          "evidence": [],
+          "allEvidence": [],
+          "lineage": {
+            "schemaVersion": 1,
+            "generatedAt": "2026-06-26T13:42:25.345Z",
+            "categories": {
+              "Canonical": [],
+              "Independent": [],
+              "Generated": []
+            },
+            "sources": []
+          },
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "confidence": "None",
+          "selectionRule": "No matching repository-local evidence found.",
+          "reason": "No deterministic repository-local source contains this concept."
+        }
+      }
+    },
+    "evidenceLineage": {
+      "schemaVersion": 1,
+      "generatedAt": "2026-06-26T13:42:25.346Z",
+      "categories": {
+        "Canonical": [
+          {
+            "file": ".ai/goals.md",
+            "category": "Canonical",
+            "group": "Goals",
+            "ancestry": "Repository-local source."
+          }
+        ],
+        "Independent": [
+          {
+            "file": ".ai/agents.md",
+            "category": "Independent",
+            "group": "Agents",
+            "ancestry": "Repository-local source."
+          },
+          {
+            "file": ".ai/architecture.md",
+            "category": "Independent",
+            "group": "Architecture",
+            "ancestry": "Repository-local source."
+          },
+          {
+            "file": ".ai/backlog.md",
+            "category": "Independent",
+            "group": "Backlog",
+            "ancestry": "Repository-local source."
+          },
+          {
+            "file": ".ai/code.md",
+            "category": "Independent",
+            "group": "Code",
+            "ancestry": "Repository-local source."
+          },
+          {
+            "file": ".ai/decisions.md",
+            "category": "Independent",
+            "group": "Decision Log",
+            "ancestry": "Repository-local source."
+          },
+          {
+            "file": ".ai/intelligence-audit.md",
+            "category": "Independent",
+            "group": "Intelligence Audit",
+            "ancestry": "Repository-local source."
+          },
+          {
+            "file": ".ai/validation.md",
+            "category": "Independent",
+            "group": "Validation",
+            "ancestry": "Repository-local source."
+          }
+        ],
+        "Generated": [
+          {
+            "file": ".ai/prompts/architect.md",
+            "category": "Generated",
+            "group": "Architect",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/prompts/builder.md",
+            "category": "Generated",
+            "group": "Builder",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/context-package.md",
+            "category": "Generated",
+            "group": "Context Package",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/prompts/debugger.md",
+            "category": "Generated",
+            "group": "Debugger",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/intelligence-diff.json",
+            "category": "Generated",
+            "group": "Intelligence Diff",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/intelligence-history.json",
+            "category": "Generated",
+            "group": "Intelligence History",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/intelligence-quality.json",
+            "category": "Generated",
+            "group": "Intelligence Quality",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/intelligence-snapshot.json",
+            "category": "Generated",
+            "group": "Intelligence Snapshot",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/intelligence-verification.json",
+            "category": "Generated",
+            "group": "Intelligence Verification",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/next-improvement-prompt.md",
+            "category": "Generated",
+            "group": "Next Improvement Prompt",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/repository-health.md",
+            "category": "Generated",
+            "group": "Repository Health",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/prompts/reviewer.md",
+            "category": "Generated",
+            "group": "Reviewer",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          },
+          {
+            "file": ".ai/strategy.md",
+            "category": "Generated",
+            "group": "Strategy",
+            "ancestry": "Generated descendant of canonical and independent repository intelligence."
+          }
+        ]
+      },
+      "sources": [
+        {
+          "file": ".ai/goals.md",
+          "category": "Canonical",
+          "group": "Goals",
+          "ancestry": "Repository-local source."
+        },
+        {
+          "file": ".ai/prompts/architect.md",
+          "category": "Generated",
+          "group": "Architect",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/prompts/builder.md",
+          "category": "Generated",
+          "group": "Builder",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/context-package.md",
+          "category": "Generated",
+          "group": "Context Package",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/prompts/debugger.md",
+          "category": "Generated",
+          "group": "Debugger",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/intelligence-diff.json",
+          "category": "Generated",
+          "group": "Intelligence Diff",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/intelligence-history.json",
+          "category": "Generated",
+          "group": "Intelligence History",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/intelligence-quality.json",
+          "category": "Generated",
+          "group": "Intelligence Quality",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/intelligence-snapshot.json",
+          "category": "Generated",
+          "group": "Intelligence Snapshot",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/intelligence-verification.json",
+          "category": "Generated",
+          "group": "Intelligence Verification",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/next-improvement-prompt.md",
+          "category": "Generated",
+          "group": "Next Improvement Prompt",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/repository-health.md",
+          "category": "Generated",
+          "group": "Repository Health",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/prompts/reviewer.md",
+          "category": "Generated",
+          "group": "Reviewer",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/strategy.md",
+          "category": "Generated",
+          "group": "Strategy",
+          "ancestry": "Generated descendant of canonical and independent repository intelligence."
+        },
+        {
+          "file": ".ai/agents.md",
+          "category": "Independent",
+          "group": "Agents",
+          "ancestry": "Repository-local source."
+        },
+        {
+          "file": ".ai/architecture.md",
+          "category": "Independent",
+          "group": "Architecture",
+          "ancestry": "Repository-local source."
+        },
+        {
+          "file": ".ai/backlog.md",
+          "category": "Independent",
+          "group": "Backlog",
+          "ancestry": "Repository-local source."
+        },
+        {
+          "file": ".ai/code.md",
+          "category": "Independent",
+          "group": "Code",
+          "ancestry": "Repository-local source."
+        },
+        {
+          "file": ".ai/decisions.md",
+          "category": "Independent",
+          "group": "Decision Log",
+          "ancestry": "Repository-local source."
+        },
+        {
+          "file": ".ai/intelligence-audit.md",
+          "category": "Independent",
+          "group": "Intelligence Audit",
+          "ancestry": "Repository-local source."
+        },
+        {
+          "file": ".ai/validation.md",
+          "category": "Independent",
+          "group": "Validation",
+          "ancestry": "Repository-local source."
+        }
+      ]
+    },
+    "coverageScore": 83,
     "consistencyScore": 100,
     "freshnessScore": 100,
     "sourceOfTruth": "goals.md"
@@ -142,37 +932,56 @@
   },
   "freshness": {
     "score": 100,
-    "lastRefresh": "2026-06-25T23:59:57.937Z",
+    "lastRefresh": "2026-06-26T13:42:25.342Z",
     "filesChanged": 0,
     "staleDocuments": [],
     "canonicalStaleDocuments": [],
     "derivedStaleDocuments": [],
-    "manualNotesPreserved": false
+    "manualNotesPreserved": true
   },
   "confidence": {
-    "score": 82,
+    "score": 90,
     "existingConfidence": "High",
     "strategyConfidence": "High",
     "validationConfidence": "Medium",
+    "lineageConfidence": {
+      "confidence": "High",
+      "independentGroups": [
+        "Agents",
+        "Architecture",
+        "Backlog",
+        "Code",
+        "Decision Log",
+        "Goals",
+        "Intelligence Audit",
+        "Validation"
+      ],
+      "generatedConfirmations": [
+        "Architect",
+        "Builder",
+        "Context Package",
+        "Debugger",
+        "Intelligence Diff",
+        "Intelligence History",
+        "Intelligence Quality",
+        "Intelligence Snapshot",
+        "Intelligence Verification",
+        "Next Improvement Prompt",
+        "Repository Health",
+        "Reviewer",
+        "Strategy"
+      ],
+      "independentGroupCount": 8,
+      "generatedConfirmationCount": 13,
+      "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+    },
+    "confidenceCalculation": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence.",
     "overallRepositoryConfidence": "High"
   },
   "verification": {
-    "score": 33,
-    "status": "Failed",
-    "failures": [
-      "strategy.md: Artifact timestamp is older than refresh start.",
-      "architecture.md: Artifact timestamp is older than refresh start.",
-      "backlog.md: Artifact timestamp is older than refresh start.",
-      "validation.md: Artifact timestamp is older than refresh start.",
-      "decisions.md: Artifact timestamp is older than refresh start.",
-      "repository-health.md: Artifact timestamp is older than refresh start.",
-      "context-package.md: Artifact timestamp is older than refresh start.",
-      "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
-      "prompts/architect.md: Artifact timestamp is older than refresh start.",
-      "prompts/builder.md: Artifact timestamp is older than refresh start.",
-      "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
-      "prompts/debugger.md: Artifact timestamp is older than refresh start."
-    ]
+    "score": 100,
+    "status": "Verified",
+    "failures": []
   },
   "drift": {
     "productThesisChanged": false,
@@ -183,9 +992,7 @@
     "newRisks": [],
     "removedRisks": []
   },
-  "risks": [
-    "Manual Goals Partial (75%). Missing: Long-term vision."
-  ],
+  "risks": [],
   "backlogCount": 22,
   "fingerprints": {
     "productThesis": "agent ide makes repository understanding the primary developer interface for ai ready developer handoffs.",
@@ -198,7 +1005,7 @@
     "completeness": {
       "id": "canonical-completeness",
       "title": "Canonical Completeness Evaluation",
-      "score": 79,
+      "score": 83,
       "classification": "Partial",
       "rule": "Canonical completeness is the average percent completion across canonical goals fields.",
       "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = 100% with strong evidence.",
@@ -214,20 +1021,24 @@
               "key": "productIntent",
               "label": "Product intent",
               "found": true,
-              "state": "Complete",
+              "state": "Strong",
               "evidence": [
+                "Manual Goals: Product intent: Nearify should help people transform real-world encounters into lasting professional relationships through accurate relationship memory and timely follow-up recommendations.",
                 "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs."
               ],
+              "manualUpdate": "- Product intent: [Repository owner: describe the product purpose this repository should serve.]",
               "reason": "Product intent detected."
             },
             {
               "key": "currentFocus",
               "label": "Current focus",
               "found": true,
-              "state": "Complete",
+              "state": "Strong",
               "evidence": [
+                "Manual Goals: Current focus: Make repository understanding the primary surface of Agent IDE for Nearify handoffs.",
                 "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE."
               ],
+              "manualUpdate": "- Current focus: [Repository owner: describe the current product priority.]",
               "reason": "Current focus detected."
             },
             {
@@ -236,41 +1047,47 @@
               "found": true,
               "state": "Strong",
               "evidence": [
+                "Manual Goals: Success criteria: Manual Goals completeness reaches 100%, Canonical Completeness reports Manual Goals as Complete, and Repository Intelligence regenerates successfully with Verification Status remaining Verified with zero failures.",
                 "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
                 "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections."
               ],
+              "manualUpdate": "- Success criteria: [Repository owner: describe how success should be judged.]",
               "reason": "Success criteria detected."
             },
             {
               "key": "longTermVision",
               "label": "Long-term vision",
-              "found": false,
-              "state": "Missing",
-              "evidence": [],
-              "reason": "Long-term vision not detected."
+              "found": true,
+              "state": "Complete",
+              "evidence": [
+                "Manual Goals: Long-term vision: Nearify should become the world's most trusted relationship intelligence system, helping people transform real-world encounters into lasting professional relationships through accurate relationship memory, timely follow-up recommendations, and continuously improving relationship intelligence."
+              ],
+              "manualUpdate": "- Long-term vision: [Repository owner: describe the long-term vision for this product.]",
+              "reason": "Long-term vision detected."
             }
           ],
           "computed": {
-            "percent": 75,
-            "found": 3,
+            "percent": 100,
+            "found": 4,
             "total": 4
           },
           "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = multiple evidence lines for every required field.",
-          "classification": "Partial",
+          "classification": "Complete",
           "evidence": [
+            "Manual Goals: Product intent: Nearify should help people transform real-world encounters into lasting professional relationships through accurate relationship memory and timely follow-up recommendations.",
             "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.",
+            "Manual Goals: Current focus: Make repository understanding the primary surface of Agent IDE for Nearify handoffs.",
             "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE.",
+            "Manual Goals: Success criteria: Manual Goals completeness reaches 100%, Canonical Completeness reports Manual Goals as Complete, and Repository Intelligence regenerates successfully with Verification Status remaining Verified with zero failures.",
             "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
             "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections.",
-            "Long-term vision missing"
+            "Manual Goals: Long-term vision: Nearify should become the world's most trusted relationship intelligence system, helping people transform real-world encounters into lasting professional relationships through accurate relationship memory, timely follow-up recommendations, and continuously improving relationship intelligence."
           ],
-          "missing": [
-            "Long-term vision"
-          ],
+          "missing": [],
           "reason": [
-            "Long-term vision not detected."
+            "Manual Goals satisfied deterministic completeness requirements."
           ],
-          "recommendation": "Complete Manual Goals fields: Long-term vision."
+          "recommendation": "Manual Goals is complete."
         },
         "productThesis": {
           "id": "canonical-completeness:productThesis",
@@ -446,13 +1263,273 @@
         }
       }
     },
+    "evidenceSynthesis": {
+      "id": "evidence-synthesis",
+      "title": "Evidence Synthesis",
+      "rule": "Missing canonical fields may display deterministic suggestions only when exact repository-local wording is found outside .ai/goals.md; confidence comes from independent evidence groups, not generated artifact counts.",
+      "strength": "Strong",
+      "supportedFields": 2,
+      "missingFields": 2,
+      "fields": {
+        "productThesis": {
+          "label": "Product Thesis",
+          "suggestedWording": null,
+          "confidence": "None",
+          "sources": [],
+          "state": "Canonical",
+          "independentEvidence": [],
+          "generatedConfirmations": [],
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "evidence": [],
+          "selectionRule": "No matching repository-local evidence found."
+        },
+        "currentFocus": {
+          "label": "Current Focus",
+          "suggestedWording": null,
+          "confidence": "None",
+          "sources": [],
+          "state": "Canonical",
+          "independentEvidence": [],
+          "generatedConfirmations": [],
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "evidence": [],
+          "selectionRule": "No matching repository-local evidence found."
+        },
+        "currentProductBet": {
+          "label": "Current Product Bet",
+          "suggestedWording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE.",
+          "confidence": "None",
+          "sources": [
+            "Architect",
+            "Builder",
+            "Debugger",
+            "Reviewer",
+            "Strategy"
+          ],
+          "state": "Repository Inferred",
+          "independentEvidence": [],
+          "generatedConfirmations": [
+            "Architect",
+            "Builder",
+            "Debugger",
+            "Reviewer",
+            "Strategy"
+          ],
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [
+              "Architect",
+              "Builder",
+              "Debugger",
+              "Reviewer",
+              "Strategy"
+            ],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 5,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "evidence": [
+            {
+              "source": "Architect",
+              "file": ".ai/prompts/architect.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Builder",
+              "file": ".ai/prompts/builder.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Debugger",
+              "file": ".ai/prompts/debugger.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Reviewer",
+              "file": ".ai/prompts/reviewer.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            },
+            {
+              "source": "Strategy",
+              "file": ".ai/strategy.md",
+              "heading": "Current Product Bet",
+              "wording": "The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            }
+          ],
+          "selectionRule": "Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence."
+        },
+        "longTermVision": {
+          "label": "Long-term Vision",
+          "suggestedWording": null,
+          "confidence": "None",
+          "sources": [],
+          "state": "Canonical",
+          "independentEvidence": [],
+          "generatedConfirmations": [],
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "evidence": [],
+          "selectionRule": "No matching repository-local evidence found."
+        },
+        "strategicDifferentiator": {
+          "label": "Strategic Differentiator",
+          "suggestedWording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows.",
+          "confidence": "None",
+          "sources": [
+            "Architect",
+            "Builder",
+            "Debugger",
+            "Reviewer",
+            "Strategy"
+          ],
+          "state": "Repository Inferred",
+          "independentEvidence": [],
+          "generatedConfirmations": [
+            "Architect",
+            "Builder",
+            "Debugger",
+            "Reviewer",
+            "Strategy"
+          ],
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [
+              "Architect",
+              "Builder",
+              "Debugger",
+              "Reviewer",
+              "Strategy"
+            ],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 5,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "evidence": [
+            {
+              "source": "Architect",
+              "file": ".ai/prompts/architect.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Builder",
+              "file": ".ai/prompts/builder.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Debugger",
+              "file": ".ai/prompts/debugger.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Reviewer",
+              "file": ".ai/prompts/reviewer.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            },
+            {
+              "source": "Strategy",
+              "file": ".ai/strategy.md",
+              "heading": "Strategic Differentiator",
+              "wording": "Repository intelligence that turns repository understanding into reusable AI context for developer workflows."
+            }
+          ],
+          "selectionRule": "Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence."
+        },
+        "northStarMetric": {
+          "label": "North Star Metric",
+          "suggestedWording": null,
+          "confidence": "None",
+          "sources": [],
+          "state": "Canonical",
+          "independentEvidence": [],
+          "generatedConfirmations": [],
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "evidence": [],
+          "selectionRule": "No matching repository-local evidence found."
+        },
+        "successCriteria": {
+          "label": "Success Criteria",
+          "suggestedWording": null,
+          "confidence": "None",
+          "sources": [],
+          "state": "Canonical",
+          "independentEvidence": [],
+          "generatedConfirmations": [],
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "evidence": [],
+          "selectionRule": "No matching repository-local evidence found."
+        },
+        "whatNotToBuild": {
+          "label": "What Not To Build",
+          "suggestedWording": null,
+          "confidence": "None",
+          "sources": [],
+          "state": "Canonical",
+          "independentEvidence": [],
+          "generatedConfirmations": [],
+          "confidenceCalculation": {
+            "confidence": "None",
+            "independentGroups": [],
+            "generatedConfirmations": [],
+            "independentGroupCount": 0,
+            "generatedConfirmationCount": 0,
+            "rule": "Confidence is based only on canonical plus independent evidence groups; generated confirmations verify consistency but do not increase confidence."
+          },
+          "evidence": [],
+          "selectionRule": "No matching repository-local evidence found."
+        }
+      }
+    },
     "quality": {
       "id": "intelligence-quality",
       "title": "Intelligence Quality Evaluation",
-      "score": 79,
+      "score": 93,
       "components": {
         "canonicalCompleteness": {
-          "score": 79,
+          "score": 83,
           "rule": "Completeness score comes from canonical goals field evaluation.",
           "evidence": ".ai/goals.md"
         },
@@ -473,7 +1550,7 @@
           "evidence": []
         },
         "confidence": {
-          "score": 82,
+          "score": 90,
           "rule": "Confidence is derived from Repository Health, Strategy, and Validation confidence values.",
           "evidence": [
             ".ai/repository-health.md",
@@ -482,85 +1559,49 @@
           ]
         },
         "verification": {
-          "score": 33,
+          "score": 100,
           "rule": "Verification score is the percent of expected artifacts verified.",
           "evidence": ".ai/intelligence-verification.json"
         }
       },
       "deductions": [
         {
-          "rule": "Missing Long-term vision",
-          "points": 3,
-          "evidence": ".ai/goals.md"
-        },
-        {
           "rule": "Missing Current Product Bet",
           "points": 10,
           "evidence": ".ai/goals.md"
-        },
-        {
-          "rule": "strategy.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "architecture.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "backlog.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "validation.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "decisions.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "repository-health.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "context-package.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "prompts/architect.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "prompts/builder.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "prompts/debugger.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
         }
       ]
+    },
+    "completenessSynchronization": {
+      "id": "completeness-synchronization",
+      "title": "Completeness Synchronization",
+      "canonicalSource": "scripts/canonical-completeness.mjs",
+      "canonicalCompletenessResult": {
+        "classification": "Complete",
+        "percent": 100,
+        "missing": [],
+        "suggestedManualUpdate": [
+          "No Manual Goals fields require updates."
+        ],
+        "evidenceSynthesis": {
+          "strength": "Strong",
+          "supportedFields": 2,
+          "missingFields": 2
+        }
+      },
+      "consumers": [
+        "Repository Health",
+        "Intelligence Quality",
+        "Decision Ranking",
+        "Product Decision Packages",
+        "Suggested Manual Updates",
+        "Verification",
+        "Control Plane"
+      ],
+      "synchronizationStatus": "Synchronized",
+      "rule": "All consumers must read Manual Goals missing fields from the canonical completeness evaluation and must not render independent missing-field logic."
     }
   },
   "trend": "Stable",
-  "recommendedAction": "Complete Manual Goals fields: Long-term vision."
+  "recommendedAction": "Keep refreshing intelligence after meaningful repository changes."
 }

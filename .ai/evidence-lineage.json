@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-26T12:37:54.279Z",
+  "generatedAt": "2026-06-26T13:42:25.346Z",
   "categories": {
     "Canonical": [
       {
@@ -8,15 +8,15 @@
         "category": "Canonical",
         "group": "Goals",
         "ancestry": "Repository-local source."
-      },
-      {
-        "file": "README.md",
-        "category": "Canonical",
-        "group": "README",
-        "ancestry": "Repository-local source."
       }
     ],
     "Independent": [
+      {
+        "file": ".ai/agents.md",
+        "category": "Independent",
+        "group": "Agents",
+        "ancestry": "Repository-local source."
+      },
       {
         "file": ".ai/architecture.md",
         "category": "Independent",
@@ -24,9 +24,27 @@
         "ancestry": "Repository-local source."
       },
       {
+        "file": ".ai/backlog.md",
+        "category": "Independent",
+        "group": "Backlog",
+        "ancestry": "Repository-local source."
+      },
+      {
+        "file": ".ai/code.md",
+        "category": "Independent",
+        "group": "Code",
+        "ancestry": "Repository-local source."
+      },
+      {
         "file": ".ai/decisions.md",
         "category": "Independent",
         "group": "Decision Log",
+        "ancestry": "Repository-local source."
+      },
+      {
+        "file": ".ai/intelligence-audit.md",
+        "category": "Independent",
+        "group": "Intelligence Audit",
         "ancestry": "Repository-local source."
       },
       {
@@ -44,15 +62,69 @@
         "ancestry": "Generated descendant of canonical and independent repository intelligence."
       },
       {
+        "file": ".ai/prompts/builder.md",
+        "category": "Generated",
+        "group": "Builder",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
         "file": ".ai/context-package.md",
         "category": "Generated",
         "group": "Context Package",
         "ancestry": "Generated descendant of canonical and independent repository intelligence."
       },
       {
+        "file": ".ai/prompts/debugger.md",
+        "category": "Generated",
+        "group": "Debugger",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
+        "file": ".ai/intelligence-diff.json",
+        "category": "Generated",
+        "group": "Intelligence Diff",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
+        "file": ".ai/intelligence-history.json",
+        "category": "Generated",
+        "group": "Intelligence History",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
+        "file": ".ai/intelligence-quality.json",
+        "category": "Generated",
+        "group": "Intelligence Quality",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
+        "file": ".ai/intelligence-snapshot.json",
+        "category": "Generated",
+        "group": "Intelligence Snapshot",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
+        "file": ".ai/intelligence-verification.json",
+        "category": "Generated",
+        "group": "Intelligence Verification",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
+        "file": ".ai/next-improvement-prompt.md",
+        "category": "Generated",
+        "group": "Next Improvement Prompt",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
         "file": ".ai/repository-health.md",
         "category": "Generated",
         "group": "Repository Health",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
+        "file": ".ai/prompts/reviewer.md",
+        "category": "Generated",
+        "group": "Reviewer",
         "ancestry": "Generated descendant of canonical and independent repository intelligence."
       },
       {
@@ -71,15 +143,15 @@
       "ancestry": "Repository-local source."
     },
     {
-      "file": "README.md",
-      "category": "Canonical",
-      "group": "README",
-      "ancestry": "Repository-local source."
-    },
-    {
       "file": ".ai/prompts/architect.md",
       "category": "Generated",
       "group": "Architect",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/prompts/builder.md",
+      "category": "Generated",
+      "group": "Builder",
       "ancestry": "Generated descendant of canonical and independent repository intelligence."
     },
     {
@@ -89,9 +161,57 @@
       "ancestry": "Generated descendant of canonical and independent repository intelligence."
     },
     {
+      "file": ".ai/prompts/debugger.md",
+      "category": "Generated",
+      "group": "Debugger",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/intelligence-diff.json",
+      "category": "Generated",
+      "group": "Intelligence Diff",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/intelligence-history.json",
+      "category": "Generated",
+      "group": "Intelligence History",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/intelligence-quality.json",
+      "category": "Generated",
+      "group": "Intelligence Quality",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/intelligence-snapshot.json",
+      "category": "Generated",
+      "group": "Intelligence Snapshot",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/intelligence-verification.json",
+      "category": "Generated",
+      "group": "Intelligence Verification",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/next-improvement-prompt.md",
+      "category": "Generated",
+      "group": "Next Improvement Prompt",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
       "file": ".ai/repository-health.md",
       "category": "Generated",
       "group": "Repository Health",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/prompts/reviewer.md",
+      "category": "Generated",
+      "group": "Reviewer",
       "ancestry": "Generated descendant of canonical and independent repository intelligence."
     },
     {
@@ -101,15 +221,39 @@
       "ancestry": "Generated descendant of canonical and independent repository intelligence."
     },
     {
+      "file": ".ai/agents.md",
+      "category": "Independent",
+      "group": "Agents",
+      "ancestry": "Repository-local source."
+    },
+    {
       "file": ".ai/architecture.md",
       "category": "Independent",
       "group": "Architecture",
       "ancestry": "Repository-local source."
     },
     {
+      "file": ".ai/backlog.md",
+      "category": "Independent",
+      "group": "Backlog",
+      "ancestry": "Repository-local source."
+    },
+    {
+      "file": ".ai/code.md",
+      "category": "Independent",
+      "group": "Code",
+      "ancestry": "Repository-local source."
+    },
+    {
       "file": ".ai/decisions.md",
       "category": "Independent",
       "group": "Decision Log",
+      "ancestry": "Repository-local source."
+    },
+    {
+      "file": ".ai/intelligence-audit.md",
+      "category": "Independent",
+      "group": "Intelligence Audit",
       "ancestry": "Repository-local source."
     },
     {
