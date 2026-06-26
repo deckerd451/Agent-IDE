@@ -18,7 +18,7 @@ test('Control Plane renders package labels based on packageType', async () => {
   ]) {
     assert.match(source, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
-  assert.doesNotMatch(source, /Builder Prompt/);
+  assert.match(source, /Copy Builder Prompt/);
 });
 
 test('Control Plane separates verification status, score, count, and reason', async () => {

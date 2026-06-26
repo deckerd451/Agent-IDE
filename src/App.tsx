@@ -52,9 +52,19 @@ type QualitySnapshot = {
   recommendedAction: string;
 };
 
-type DecisionCandidate = { rank: number; id: string; title: string; category: string; severity: string; actionability: string; priorityScore: number; expectedImprovement: { total: number; repositoryHealth: number; canonicalCompleteness: number; quality: number; verification: number; handoffReadiness: number }; reason: string; evidence: string; selected: boolean };
+type DecisionCandidate = { rank: number; id: string; title: string; category: string; severity: string; actionability: string; priorityScore: number; expectedImprovement: { total: number; repositoryHealth: number; canonicalCompleteness: number; quality: number; verification: number; handoffReadiness: number }; reason: string; evidence: string; selected: boolean; ownerAction?: string; expectedCompletionTarget?: string; dependency?: string };
 
 type AIHandoffValidation = { overallScore: number; status: string; recoverableInformation: string[]; hiddenInformation: string[]; contradictions: string[]; missingExplanations: string[]; suggestedImprovements: string[] };
+
+type ProgressSummary = {
+  completedTask: string;
+  repositoryQualityDelta: string;
+  confidenceDelta: string;
+  verificationDelta: string;
+  currentTopPriority: string;
+  newlyResolvedIssues: string[];
+  newlyIntroducedIssues: string[];
+};
 
 type ControlPlane = {
   status: Record<string, string>;
@@ -297,6 +307,38 @@ function stateClass(state: IntelligenceState) {
   return 'present';
 }
 
+function formatDelta(before?: number | string, after?: number | string) {
+  if (before === undefined || before === null || after === undefined || after === null) return 'No baseline';
+  const beforeNumber = typeof before === 'number' ? before : Number.parseFloat(String(before));
+  const afterNumber = typeof after === 'number' ? after : Number.parseFloat(String(after));
+  if (Number.isFinite(beforeNumber) && Number.isFinite(afterNumber)) {
+    const delta = afterNumber - beforeNumber;
+    if (delta === 0) return 'No change';
+    return `${delta > 0 ? '+' : ''}${delta.toFixed(Number.isInteger(delta) ? 0 : 1)}`;
+  }
+  return String(before) === String(after) ? 'No change' : `${before} → ${after}`;
+}
+
+function firstCandidate(data: ControlPlane | null, rank: number) {
+  return data?.decisionRanking?.candidates?.find((candidate) => candidate.rank === rank) ?? data?.decisionRanking?.candidates?.[rank - 1];
+}
+
+function buildProgressSummary(previous: ControlPlane | null, current: ControlPlane): ProgressSummary {
+  const previousTop = firstCandidate(previous, 1);
+  const currentTop = firstCandidate(current, 1);
+  const previousIssues = new Set(previous?.decisionRanking?.candidates?.map((candidate) => candidate.title) ?? []);
+  const currentIssues = new Set(current.decisionRanking?.candidates?.map((candidate) => candidate.title) ?? []);
+  return {
+    completedTask: previousTop && previousTop.title !== currentTop?.title ? previousTop.title : 'No completed task detected',
+    repositoryQualityDelta: formatDelta(previous?.quality?.overallScore, current.quality?.overallScore),
+    confidenceDelta: formatDelta(previous?.quality?.confidence.score, current.quality?.confidence.score),
+    verificationDelta: formatDelta(previous?.verification?.score, current.verification?.score),
+    currentTopPriority: currentTop?.title ?? current.recommendation.title,
+    newlyResolvedIssues: [...previousIssues].filter((issue) => !currentIssues.has(issue)),
+    newlyIntroducedIssues: [...currentIssues].filter((issue) => !previousIssues.has(issue)),
+  };
+}
+
 function meaningfulDiffEntries(diff: ControlPlane['diff']): Array<readonly [string, string[]]> {
   const entries: Array<[string, string | string[]]> = [
     ['Health score changes', diff.healthScoreChanges],
@@ -307,7 +349,7 @@ function meaningfulDiffEntries(diff: ControlPlane['diff']): Array<readonly [stri
   return entries.map(([label, value]) => [label, Array.isArray(value) ? value : []] as const).filter(([, items]) => items.length > 0);
 }
 
-function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
+function ControlPlaneDashboard({ data, progressSummary }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null }) {
   if (!data) return <WelcomeDashboard />;
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
@@ -349,19 +391,66 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
   const packageLabels = [
     ['context', 'Copy Context Package'],
     ['architect', 'Copy Architect Prompt'],
-    ['builder', recommendedPackage.copyLabel],
+    ['builder', 'Copy Builder Prompt'],
     ['reviewer', 'Copy Reviewer Prompt'],
     ['debugger', 'Copy Debugger Prompt'],
+    ['product-decision', 'Copy Product Decision Package'],
   ];
+  const topWork = firstCandidate(data, 1);
+  const afterThis = firstCandidate(data, 2);
   const diffEntries = meaningfulDiffEntries(data.diff);
 
   return (
     <div className="controlPlane compactDashboard">
-      <section className="dashboardGrid statusGrid" aria-label="Repository status">
-        {statusCards.map(([label, value]) => <article className="metricCard" key={String(label)}><small>{label}</small><strong>{value || 'Unknown'}</strong></article>)}
+      <section className="todayWorkCard" aria-label="Today's Work">
+        <div>
+          <p className="kicker">Today's Work</p>
+          <h2>{topWork?.title ?? data.recommendation.title}</h2>
+          <p>{topWork?.reason ?? data.recommendation.whyItMatters}</p>
+          <div className="workMetaGrid">
+            <div><small>Owner action</small><strong>{topWork?.ownerAction ?? data.quality?.recommendedAction ?? data.recommendation.explanation}</strong></div>
+            <div><small>Estimated improvement</small><strong>{topWork ? `+${topWork.expectedImprovement.total}` : 'See package'}</strong></div>
+            <div><small>Expected completion</small><strong>{topWork?.expectedCompletionTarget ?? 'Not specified'}</strong></div>
+            <div><small>Package type</small><strong>{data.recommendation.packageType ?? topWork?.category ?? 'Implementation'}</strong></div>
+            <div><small>Actionability</small><strong>{topWork?.actionability ?? data.recommendation.actionability ?? 'Available'}</strong></div>
+          </div>
+        </div>
+        <button className="primaryCta" onClick={() => void copyText(data.recommendation.prompt)} type="button">Open Product Decision Package</button>
       </section>
 
-      <section className="controlCard answerGrid" aria-label="Repository intelligence answers">
+      {afterThis && (
+        <section className="controlCard afterThisCard" aria-label="After This">
+          <p className="kicker">After This</p>
+          <h2>{afterThis.title}</h2>
+          <div className="workMetaGrid compact">
+            <div><small>Expected improvement</small><strong>+{afterThis.expectedImprovement.total}</strong></div>
+            <div><small>Why it is next</small><strong>{afterThis.reason}</strong></div>
+            <div><small>Dependency</small><strong>{afterThis.dependency ?? 'None detected'}</strong></div>
+          </div>
+        </section>
+      )}
+
+      <section className="controlCard handoffCard quickAiActions" aria-label="Quick AI Actions"><h2>Quick AI Actions</h2><p>Start from Today's Work, then hand the deterministic package to the right AI role.</p><div className="handoffGrid">{packageLabels.map(([key, label]) => <button disabled={!data.packages[key] && key !== 'product-decision'} key={key} onClick={() => void copyText(key === 'product-decision' ? data.recommendation.prompt : (data.packages[key] ?? ''))} type="button">{label}</button>)}</div></section>
+
+      {progressSummary && (
+        <section className="controlCard progressSummaryCard" aria-label="Refresh progress summary">
+          <h2>Refresh Progress</h2>
+          <div className="qualityGrid">
+            <div><small>Completed task</small><strong>{progressSummary.completedTask}</strong></div>
+            <div><small>Repository quality delta</small><strong>{progressSummary.repositoryQualityDelta}</strong></div>
+            <div><small>Confidence delta</small><strong>{progressSummary.confidenceDelta}</strong></div>
+            <div><small>Verification delta</small><strong>{progressSummary.verificationDelta}</strong></div>
+            <div><small>Current top priority</small><strong>{progressSummary.currentTopPriority}</strong></div>
+          </div>
+          <div className="answerGrid"><div><h2>Newly resolved issues</h2>{progressSummary.newlyResolvedIssues.length ? <ul>{progressSummary.newlyResolvedIssues.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div><div><h2>Newly introduced issues</h2>{progressSummary.newlyIntroducedIssues.length ? <ul>{progressSummary.newlyIntroducedIssues.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div></div>
+        </section>
+      )}
+
+      <details className="controlCard disclosureCard" aria-label="Repository Health"><summary>Repository Health</summary><div className="dashboardGrid statusGrid">
+        {statusCards.map(([label, value]) => <article className="metricCard" key={String(label)}><small>{label}</small><strong>{value || 'Unknown'}</strong></article>)}
+      </div></details>
+
+      <details className="controlCard disclosureCard" aria-label="Repository intelligence answers"><summary>Repository Understanding and Current Risks</summary><div className="answerGrid">
         <div>
           <h2>Repository Understanding</h2>
           <div className="understandingGrid">
@@ -372,7 +461,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
           <h2>Current Risks</h2>
           {data.unknowns.length > 0 ? <ul className="unknownList">{data.unknowns.map((item) => <li key={item.label}>{item.label}<small>{item.source}</small></li>)}</ul> : <p>No current intelligence risks detected.</p>}
         </div>
-      </section>
+      </div></details>
 
 
       {data.verification && data.verification.status !== 'Verified' && (
@@ -384,7 +473,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
       )}
 
       {data.verification && (
-        <section className="controlCard qualityCard" aria-label="Repository intelligence verification">
+        <details className="controlCard qualityCard disclosureCard" aria-label="Repository intelligence verification"><summary>Verification</summary>
           <div className="qualityHeader"><div><small>Verification Status</small><strong>{data.verification.status === 'Verified' ? '✓ Verified' : '⚠ Failed'}</strong></div><span className={stateClass(data.verification.status === 'Verified' ? 'Present' : 'Needs Attention')}>Verification Score {data.verification.score}%</span></div>
           <div className="qualityGrid">
             <div><small>Verification Score</small><strong>{data.verification.score}%</strong></div>
@@ -397,11 +486,11 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
             {data.verification.artifacts.map((artifact) => <div className="understandingItem" key={artifact.artifact}><span>{artifact.artifact}</span><strong className={stateClass(artifact.status === 'Verified' ? 'Present' : 'Needs Attention')}>{artifact.status === 'Verified' ? '✓ Verified' : '⚠ Stale'}</strong>{artifact.failures.length > 0 && <small>{artifact.failures.join(' ')}</small>}</div>)}
             {(data.verification.crossChecks ?? []).map((check) => <div className="understandingItem" key={check.check}><span>{check.check}</span><strong className={stateClass(check.status === 'Verified' ? 'Present' : 'Needs Attention')}>{check.status === 'Verified' ? '✓ Verified' : '⚠ Failed'}</strong>{check.failures.length > 0 && <small>{check.failures.join(' ')}</small>}</div>)}
           </div>
-        </section>
+        </details>
       )}
 
       {data.quality && (
-        <section className="controlCard qualityCard" aria-label="Intelligence quality">
+        <details className="controlCard qualityCard disclosureCard" aria-label="Intelligence quality"><summary>Overall Quality</summary>
           <div className="qualityHeader"><div><small>Overall Quality</small><strong>{data.quality.overallScore}/100</strong></div><span className={stateClass(data.quality.trend === 'Needs Attention' ? 'Needs Attention' : 'Present')}>Trend: {data.quality.trend}</span></div>
           <div className="qualityGrid">
             <div><small>Canonical Intelligence</small><strong>{data.quality.canonicalIntelligenceQuality?.score ?? data.quality.overallScore}%</strong>{data.quality.canonicalIntelligenceQuality?.completenessState && <small>{data.quality.canonicalIntelligenceQuality.completenessState} {data.quality.canonicalIntelligenceQuality.completenessScore}% complete</small>}</div>
@@ -417,7 +506,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
             <div><h2>Recent improvements</h2>{data.quality.recentImprovements.length ? <ul>{data.quality.recentImprovements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No recent improvements detected.</p>}</div>
           </div>
           <p><b>Recommended action:</b> {data.quality.recommendedAction}</p>
-        </section>
+        </details>
       )}
 
       {data.aiHandoffValidation && (
@@ -434,7 +523,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         </section>
       )}
 
-      <section className="controlCard recommended" aria-label={recommendedPackage.ariaLabel}>
+      <details className="controlCard recommended disclosureCard"><summary>{recommendedPackage.heading} — uses Today's Work selection</summary><section aria-label={recommendedPackage.ariaLabel}>
         <small>{recommendedPackage.heading}</small>
         <strong>{data.recommendation.title}</strong>
         {data.recommendation.actionability && <p><b>Actionability:</b> {data.recommendation.actionability}</p>}
@@ -451,13 +540,13 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
           <summary>{recommendedPackage.viewLabel}</summary>
           <pre>{data.recommendation.prompt}</pre>
         </details>
-      </section>
+      </section></details>
 
 
       {data.decisionRanking?.candidates?.length ? (
         <section className="controlCard disclosureCard" aria-label="Decision Ranking">
-          <details open>
-            <summary>Decision Ranking — current winner: {data.decisionRanking.selectedIssue?.title}</summary>
+          <details>
+            <summary>Decision Ranking details — current winner: {data.decisionRanking.selectedIssue?.title}</summary>
             <p>{data.decisionRanking.selectionExplanation}</p>
             <div className="rankingTable" role="table" aria-label="Candidate Improvements">
               {data.decisionRanking.candidates.map((candidate) => (
@@ -475,11 +564,11 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
       ) : null}
 
       {data.explanations && (
-        <section className="controlCard disclosureCard" aria-label="Repository intelligence explanation">
+        <details className="controlCard disclosureCard" aria-label="Repository intelligence explanation"><summary>Repository Intelligence Explanation</summary><section>
           <h2>Repository Intelligence Explanation</h2>
           {data.explanations.recommendation && (
-            <details open>
-              <summary>{data.explanations.recommendation.title}</summary>
+            <details>
+              <summary>{data.explanations.recommendation.title} — references Today's Work</summary>
               <p><b>Rule:</b> {data.explanations.recommendation.rule}</p>
               <p><b>Selected:</b> {data.explanations.recommendation.selected?.title} ({data.explanations.recommendation.selected?.priority})</p>
               <p><b>Reason:</b> {data.explanations.recommendation.reason}</p>
@@ -528,12 +617,12 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
               {data.explanations.quality.deductions.length ? <ul>{data.explanations.quality.deductions.map((deduction) => <li key={`${deduction.rule}-${deduction.evidence}`}>{deduction.rule} (-{deduction.points})<small>{deduction.evidence}</small></li>)}</ul> : <p>No deterministic deductions detected.</p>}
             </details>
           )}
-        </section>
+        </section></details>
       )}
 
 
       {data.evidenceLineage && (
-        <section className="controlCard disclosureCard" aria-label="Evidence Lineage">
+        <details className="controlCard disclosureCard" aria-label="Evidence Lineage"><summary>Evidence Lineage</summary><section>
           <h2>Evidence Lineage</h2>
           <p><b>Confidence calculation:</b> canonical and independent evidence groups increase confidence; generated confirmations verify consistency but do not increase confidence.</p>
           <p><b>Evidence ancestry:</b> generated artifacts descend from canonical owner intent and independent repository evidence.</p>
@@ -543,12 +632,10 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
               <ul>{(data.evidenceLineage?.categories?.[category] ?? []).map((item) => <li key={item.file}><strong>{item.group}</strong><small>{item.file} · {item.ancestry}</small></li>)}</ul>
             </details>
           ))}
-        </section>
+        </section></details>
       )}
-      <section className="controlCard"><h2>Trend</h2><p>{data.quality ? data.quality.trend : 'No intelligence quality trend available yet.'}</p></section>
-      <section className="controlCard"><h2>Recent Changes</h2>{diffEntries.length > 0 ? diffEntries.map(([label, items]) => <details key={label}><summary>{label} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></details>) : <p>No material intelligence changes detected.</p>}</section>
-
-      <section className="controlCard handoffCard"><h2>AI Handoff</h2><div className="handoffGrid">{packageLabels.map(([key, label]) => <button disabled={!data.packages[key]} key={key} onClick={() => void copyText(data.packages[key] ?? '')} type="button">{label}</button>)}</div></section>
+      <details className="controlCard disclosureCard"><summary>Trend</summary><section><h2>Trend</h2><p>{data.quality ? data.quality.trend : 'No intelligence quality trend available yet.'}</p></section></details>
+      <details className="controlCard disclosureCard"><summary>Recent Changes</summary><section><h2>Recent Changes</h2>{diffEntries.length > 0 ? diffEntries.map(([label, items]) => <details key={label}><summary>{label} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></details>) : <p>No material intelligence changes detected.</p>}</section></details>
 
       <details className="controlCard disclosureCard"><summary>Evidence Explorer</summary>{data.evidence.length ? data.evidence.map((item) => <details key={`${item.file}-${item.line}`}><summary>{item.section}</summary><p><strong>File:</strong> {item.file}:{item.line}</p><p><strong>Extracted evidence:</strong> {item.evidence}</p><p><strong>Confidence:</strong> {item.confidence}</p></details>) : <p>No generated evidence lines detected yet.</p>}</details>
       <details className="controlCard disclosureCard"><summary>Timeline</summary>{data.timeline.length ? <ol className="timelineList">{data.timeline.slice().reverse().map((item) => <li key={item.timestamp}><strong>{item.timestamp}</strong><span>{item.repositoryHealth} · Strategy {item.strategyQuality} · Confidence {item.confidence}</span><small>{item.recommendation}</small></li>)}</ol> : <p>No refresh executions recorded yet.</p>}</details>
@@ -572,6 +659,7 @@ export function App() {
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [controlPlane, setControlPlane] = useState<ControlPlane | null>(null);
+  const [progressSummary, setProgressSummary] = useState<ProgressSummary | null>(null);
 
   const selected = useMemo(
     () => sections.find((section) => section.id === selectedId) ?? sections[0],
@@ -646,6 +734,7 @@ export function App() {
     setSummary('');
     setSteps([]);
     setDocuments({});
+    const previousControlPlane = controlPlane;
     setControlPlane(null);
     setIsRefreshing(true);
 
@@ -702,7 +791,13 @@ export function App() {
       if (refreshedRepositoryPath) {
         setSelectedId('Control Plane');
         await Promise.all(['goals.md', 'strategy.md', 'repository-health.md', 'context-package.md', ...promptFiles].map((file) => loadIntelligenceFile(refreshedRepositoryPath, file)));
-        await loadControlPlane(refreshedRepositoryPath);
+        const url = new URL('/api/repository/control-plane', serverBaseUrl);
+        url.searchParams.set('repositoryPath', refreshedRepositoryPath);
+        const response = await fetch(url);
+        const refreshedControlPlane = await response.json() as ControlPlane & { error?: string };
+        if (!response.ok) throw new Error(refreshedControlPlane.error ?? 'Unable to load control plane.');
+        setControlPlane(refreshedControlPlane);
+        setProgressSummary(buildProgressSummary(previousControlPlane, refreshedControlPlane));
       }
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
@@ -772,7 +867,7 @@ export function App() {
           <small>{document?.sourcePath ?? (connectedPath ? `${connectedPath}/.ai/${selected.markdownFile}` : `.ai/${selected.markdownFile}`)}</small>
         </section>
 
-        {selected.id === 'Control Plane' && <ControlPlaneDashboard data={controlPlane} />}
+        {selected.id === 'Control Plane' && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}
