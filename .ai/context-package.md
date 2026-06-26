@@ -1,6 +1,6 @@
 # Context Package
 
-Generated: 2026-06-26T13:59:08.445Z
+Generated: 2026-06-26T14:15:44.493Z
 
 ## Product Thesis
 Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
@@ -117,15 +117,34 @@ Consequences:
 Generated decision records should include context, reason, and consequences, and should not duplicate backlog items or suggested next steps.
 
 ## Decision Ranking
-Selected issue: Run AI Handoff Validation
-Selection explanation: Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.
+Selected Issue: Run AI Handoff Validation
+Selected Issue ID: ai-handoff-validation
+Package Type/Actionability: validation-experiment
+Priority Score: 10
+Expected Improvement: repositoryHealth: 2, canonicalCompleteness: 0, quality: 2, verification: 4, handoffReadiness: 3, total: 11
+Deterministic Selection Explanation: Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.
 
-1. Run AI Handoff Validation (selected)
-   - ID: ai-handoff-validation
-   - Priority: 10
-   - Expected Improvement: +11 total (+2 Repository Health, +0 Canonical Completeness, +2 Quality, +4 Verification, +3 Handoff Readiness)
-   - Reason: When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.
-   - Evidence: No serious repository intelligence issue detected.
+Ranked Candidates:
+1. Run AI Handoff Validation (ai-handoff-validation)
+  - selected: yes
+  - package type/actionability: validation-experiment
+  - priority score: 10
+  - expected improvement: repositoryHealth: 2, canonicalCompleteness: 0, quality: 2, verification: 4, handoffReadiness: 3, total: 11
+  - reason: When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.
+  - recommended action: Run and document a local AI handoff validation dry run.
+
+Selection Rules:
+- Priority score = issue base priority + severity boost + actionability boost, capped at 100.
+- Expected improvement is a deterministic repository-local lookup by issue type.
+- Ordering ties break by expected improvement total, actionability, severity, title, then issue ID.
+
+Tie Breakers:
+- priorityScore desc
+- expectedImprovement.total desc
+- actionability rank asc
+- severity rank asc
+- title asc
+- id asc
 
 ## Highest-Priority Issue
 - ID: ai-handoff-validation

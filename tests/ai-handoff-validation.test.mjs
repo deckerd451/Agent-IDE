@@ -32,7 +32,19 @@ Follow-Up Engine, Event Presence, Notification Pipeline.
 - Preserve local-first deterministic intelligence.
 
 ## Decision Ranking
-1. Run AI Handoff Validation (selected)
+Selected Issue: Run AI Handoff Validation
+Selected Issue ID: ai-handoff-validation
+Package Type/Actionability: validation-experiment
+Priority Score: 10
+Expected Improvement: total: 11
+Deterministic Selection Explanation: Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.
+
+Ranked Candidates:
+1. Run AI Handoff Validation (ai-handoff-validation)
+  - selected: yes
+  - package type/actionability: validation-experiment
+  - priority score: 10
+  - expected improvement: total: 11
 
 ## Highest-Priority Issue
 - ID: ai-handoff-validation
@@ -92,3 +104,14 @@ assert.ok(contradictory.contradictions.some((item) => /confidence/i.test(item)) 
 
 const nearify = await validateWithContext(completePackage.replace('Nearify helps people maintain real-world relationships.', 'Nearify helps people maintain real-world relationships through event context and timely follow-up workflows.'));
 assert.ok(nearify.overallScore >= 85);
+
+const reconstructableDecisionRankingPackage = completePackage;
+
+const reconstructableDecisionRanking = await validateWithContext(reconstructableDecisionRankingPackage);
+assert.equal(reconstructableDecisionRanking.categories.decisionRanking.status, 'Present');
+assert.ok(!reconstructableDecisionRanking.hiddenInformation.includes('Decision ranking'));
+assert.ok(!reconstructableDecisionRanking.contradictions.includes('Package omits decision ranking.'));
+
+const nearifyReconstructable = await validateWithContext(reconstructableDecisionRankingPackage.replace('Nearify helps people maintain real-world relationships.', 'Nearify helps people maintain real-world relationships through event context and timely follow-up workflows.'));
+assert.ok(!nearifyReconstructable.hiddenInformation.includes('Decision ranking'));
+assert.ok(!nearifyReconstructable.contradictions.includes('Package omits decision ranking.'));
