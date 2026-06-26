@@ -68,3 +68,16 @@ test('unchanged required artifact detects stale refresh', async () => {
   assert.equal(second.status, 'Failed');
   assert.deepEqual(second.artifacts[0].failures, ['Refresh completed but artifact hash is unchanged.']);
 });
+
+test('verification detects product decision package and explanation mismatch', async () => {
+  const dir = await fixture('agent-ide-verification-package-');
+  await writeFile(join(dir, '.ai/repository-health.md'), '# Repository Health\n\n## Quality Signals\n- Manual Goals Partial (50%)\n');
+  await writeFile(join(dir, '.ai/intelligence-quality.json'), JSON.stringify({ canonicalIntelligenceQuality: { fields: { manualGoals: { state: 'Partial', percent: 50 } } } }));
+  await writeFile(join(dir, '.ai/intelligence-explanations.json'), JSON.stringify({ completeness: { fields: { manualGoals: { classification: 'Partial', computed: { percent: 50 }, missing: ['Success criteria'] } } } }));
+  await writeFile(join(dir, '.ai/next-improvement-prompt.md'), '# Complete Manual Repository Intent Notes\n\n## Selected Issue\n- ID: missing-manual-goals\n- Package Type: product-decision\n\n## Deterministic Evaluation\n- Completeness percentage: 75%\n- Classification: Partial\n');
+
+  const metadata = await verifyIntelligence(dir, { persist: false, expectedArtifacts: ['repository-health.md', 'intelligence-quality.json', 'intelligence-explanations.json', 'next-improvement-prompt.md'] });
+  assert.equal(metadata.status, 'Failed');
+  assert.ok(metadata.failures.some((failure) => /package Manual Goals 75% vs explanation 50%/.test(failure)));
+  assert.ok(metadata.failures.some((failure) => /missing field not shown: Success criteria/.test(failure)));
+});
