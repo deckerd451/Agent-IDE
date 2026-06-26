@@ -60,6 +60,11 @@ type ControlPlane = {
   quality: QualitySnapshot | null;
   qualityHistory: Array<Record<string, unknown>>;
   verification: VerificationSnapshot | null;
+  explanations?: {
+    completeness?: { title: string; score: number; classification: string; fields: Record<string, { title: string; rule: string; classification: string; computed: { percent: number }; evidence: string[]; reason: string[]; recommendation: string }> };
+    quality?: { title: string; score: number; deductions: Array<{ rule: string; points: number; evidence: string }> };
+    recommendation?: { title: string; rule: string; reason: string; candidateIssues: Array<{ title: string; priority: number; evidence?: string }>; selected?: { title: string; priority: number } };
+  } | null;
   evidence: Array<{ file: string; section: string; line: number; evidence: string; confidence: string }>;
   packages: Record<string, string>;
   timeline: Array<{ timestamp: string; repositoryHealth: string; strategyQuality: string; confidence: string; recommendation: string }>;
@@ -415,6 +420,40 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
           <pre>{data.recommendation.prompt}</pre>
         </details>
       </section>
+
+      {data.explanations && (
+        <section className="controlCard disclosureCard" aria-label="Repository intelligence explanation">
+          <h2>Repository Intelligence Explanation</h2>
+          {data.explanations.recommendation && (
+            <details open>
+              <summary>{data.explanations.recommendation.title}</summary>
+              <p><b>Rule:</b> {data.explanations.recommendation.rule}</p>
+              <p><b>Selected:</b> {data.explanations.recommendation.selected?.title} ({data.explanations.recommendation.selected?.priority})</p>
+              <p><b>Reason:</b> {data.explanations.recommendation.reason}</p>
+              <ul>{data.explanations.recommendation.candidateIssues.map((issue) => <li key={issue.title}>{issue.title}: priority {issue.priority}<small>{issue.evidence}</small></li>)}</ul>
+            </details>
+          )}
+          {data.explanations.completeness && (
+            <details>
+              <summary>{data.explanations.completeness.title}: {data.explanations.completeness.classification} {data.explanations.completeness.score}%</summary>
+              {Object.values(data.explanations.completeness.fields).map((field) => (
+                <details key={field.title}>
+                  <summary>{field.title}: {field.classification} {field.computed.percent}%</summary>
+                  <p><b>Rule:</b> {field.rule}</p>
+                  <p><b>Reason:</b> {field.reason.join(' ')}</p>
+                  <p><b>Recommendation:</b> {field.recommendation}</p>
+                </details>
+              ))}
+            </details>
+          )}
+          {data.explanations.quality && (
+            <details>
+              <summary>{data.explanations.quality.title}: {data.explanations.quality.score}%</summary>
+              {data.explanations.quality.deductions.length ? <ul>{data.explanations.quality.deductions.map((deduction) => <li key={`${deduction.rule}-${deduction.evidence}`}>{deduction.rule} (-{deduction.points})<small>{deduction.evidence}</small></li>)}</ul> : <p>No deterministic deductions detected.</p>}
+            </details>
+          )}
+        </section>
+      )}
 
       <section className="controlCard"><h2>Trend</h2><p>{data.quality ? data.quality.trend : 'No intelligence quality trend available yet.'}</p></section>
       <section className="controlCard"><h2>Recent Changes</h2>{diffEntries.length > 0 ? diffEntries.map(([label, items]) => <details key={label}><summary>{label} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></details>) : <p>No material intelligence changes detected.</p>}</section>

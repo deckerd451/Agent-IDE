@@ -200,5 +200,71 @@
     "trend": "Stable",
     "regressions": [],
     "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T23:58:49.238Z",
+    "overallScore": 90,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 82,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T23:58:49.262Z",
+    "overallScore": 79,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 82,
+    "trend": "Needs Attention",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T23:59:05.327Z",
+    "overallScore": 80,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 82,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T23:59:05.352Z",
+    "overallScore": 79,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 82,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T23:59:57.911Z",
+    "overallScore": 80,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 82,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-25T23:59:57.937Z",
+    "overallScore": 79,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 82,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
   }
 ]

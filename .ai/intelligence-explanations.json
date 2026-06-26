@@ -1,0 +1,396 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-25T23:59:57.941Z",
+  "completeness": {
+    "id": "canonical-completeness",
+    "title": "Canonical Completeness Evaluation",
+    "score": 79,
+    "classification": "Partial",
+    "rule": "Canonical completeness is the average percent completion across canonical goals fields.",
+    "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = 100% with strong evidence.",
+    "fields": {
+      "manualGoals": {
+        "id": "canonical-completeness:manualGoals",
+        "title": "Manual Goals Completeness Evaluation",
+        "component": "Canonical Completeness",
+        "subject": "Manual Goals",
+        "rule": "Manual Goals completeness = found required fields / total required fields.",
+        "requiredFields": [
+          {
+            "key": "productIntent",
+            "label": "Product intent",
+            "found": true,
+            "state": "Complete",
+            "evidence": [
+              "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs."
+            ],
+            "reason": "Product intent detected."
+          },
+          {
+            "key": "currentFocus",
+            "label": "Current focus",
+            "found": true,
+            "state": "Complete",
+            "evidence": [
+              "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            ],
+            "reason": "Current focus detected."
+          },
+          {
+            "key": "successCriteria",
+            "label": "Success criteria",
+            "found": true,
+            "state": "Strong",
+            "evidence": [
+              "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
+              "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections."
+            ],
+            "reason": "Success criteria detected."
+          },
+          {
+            "key": "longTermVision",
+            "label": "Long-term vision",
+            "found": false,
+            "state": "Missing",
+            "evidence": [],
+            "reason": "Long-term vision not detected."
+          }
+        ],
+        "computed": {
+          "percent": 75,
+          "found": 3,
+          "total": 4
+        },
+        "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = multiple evidence lines for every required field.",
+        "classification": "Partial",
+        "evidence": [
+          "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.",
+          "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE.",
+          "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
+          "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections.",
+          "Long-term vision missing"
+        ],
+        "missing": [
+          "Long-term vision"
+        ],
+        "reason": [
+          "Long-term vision not detected."
+        ],
+        "recommendation": "Complete Manual Goals fields: Long-term vision."
+      },
+      "productThesis": {
+        "id": "canonical-completeness:productThesis",
+        "title": "Product Thesis Completeness Evaluation",
+        "component": "Canonical Completeness",
+        "subject": "Product Thesis",
+        "rule": "Product Thesis is complete when repository-local evidence exists.",
+        "requiredFields": [
+          {
+            "key": "productThesis",
+            "label": "Product Thesis",
+            "found": true,
+            "state": "Complete",
+            "evidence": [
+              "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs."
+            ],
+            "reason": "Product Thesis detected."
+          }
+        ],
+        "computed": {
+          "percent": 100,
+          "found": 1,
+          "total": 1
+        },
+        "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = multiple evidence lines for every required field.",
+        "classification": "Complete",
+        "evidence": [
+          "Product Thesis: Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs."
+        ],
+        "missing": [],
+        "reason": [
+          "Product Thesis satisfied deterministic completeness requirements."
+        ],
+        "recommendation": "Product Thesis is complete."
+      },
+      "currentFocus": {
+        "id": "canonical-completeness:currentFocus",
+        "title": "Current Focus Completeness Evaluation",
+        "component": "Canonical Completeness",
+        "subject": "Current Focus",
+        "rule": "Current Focus is complete when repository-local evidence exists.",
+        "requiredFields": [
+          {
+            "key": "currentFocus",
+            "label": "Current Focus",
+            "found": true,
+            "state": "Complete",
+            "evidence": [
+              "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+            ],
+            "reason": "Current Focus detected."
+          }
+        ],
+        "computed": {
+          "percent": 100,
+          "found": 1,
+          "total": 1
+        },
+        "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = multiple evidence lines for every required field.",
+        "classification": "Complete",
+        "evidence": [
+          "Current Focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE."
+        ],
+        "missing": [],
+        "reason": [
+          "Current Focus satisfied deterministic completeness requirements."
+        ],
+        "recommendation": "Current Focus is complete."
+      },
+      "successCriteria": {
+        "id": "canonical-completeness:successCriteria",
+        "title": "Success Criteria Completeness Evaluation",
+        "component": "Canonical Completeness",
+        "subject": "Success Criteria",
+        "rule": "Success Criteria is complete when repository-local evidence exists.",
+        "requiredFields": [
+          {
+            "key": "successCriteria",
+            "label": "Success Criteria",
+            "found": true,
+            "state": "Strong",
+            "evidence": [
+              "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
+              "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections."
+            ],
+            "reason": "Success Criteria detected."
+          }
+        ],
+        "computed": {
+          "percent": 100,
+          "found": 1,
+          "total": 1
+        },
+        "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = multiple evidence lines for every required field.",
+        "classification": "Strong",
+        "evidence": [
+          "Success Criteria: Control Plane reports repository handoff readiness as Ready.",
+          "Success Criteria: Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections."
+        ],
+        "missing": [],
+        "reason": [
+          "Success Criteria satisfied deterministic completeness requirements."
+        ],
+        "recommendation": "Success Criteria is complete."
+      },
+      "currentProductBet": {
+        "id": "canonical-completeness:currentProductBet",
+        "title": "Current Product Bet Completeness Evaluation",
+        "component": "Canonical Completeness",
+        "subject": "Current Product Bet",
+        "rule": "Current Product Bet is complete when repository-local evidence exists.",
+        "requiredFields": [
+          {
+            "key": "currentProductBet",
+            "label": "Current Product Bet",
+            "found": false,
+            "state": "Missing",
+            "evidence": [],
+            "reason": "Current Product Bet not detected."
+          }
+        ],
+        "computed": {
+          "percent": 0,
+          "found": 0,
+          "total": 1
+        },
+        "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = multiple evidence lines for every required field.",
+        "classification": "Missing",
+        "evidence": [
+          "Current Product Bet missing"
+        ],
+        "missing": [
+          "Current Product Bet"
+        ],
+        "reason": [
+          "Current Product Bet not detected."
+        ],
+        "recommendation": "Complete Current Product Bet fields: Current Product Bet."
+      },
+      "whatNotToBuild": {
+        "id": "canonical-completeness:whatNotToBuild",
+        "title": "What Not To Build Completeness Evaluation",
+        "component": "Canonical Completeness",
+        "subject": "What Not To Build",
+        "rule": "What Not To Build is complete when repository-local evidence exists.",
+        "requiredFields": [
+          {
+            "key": "whatNotToBuild",
+            "label": "What Not To Build",
+            "found": true,
+            "state": "Complete",
+            "evidence": [
+              "What Not To Build: Do not build broad automation before repository understanding is consistently reliable for handoffs."
+            ],
+            "reason": "What Not To Build detected."
+          }
+        ],
+        "computed": {
+          "percent": 100,
+          "found": 1,
+          "total": 1
+        },
+        "threshold": "Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = multiple evidence lines for every required field.",
+        "classification": "Complete",
+        "evidence": [
+          "What Not To Build: Do not build broad automation before repository understanding is consistently reliable for handoffs."
+        ],
+        "missing": [],
+        "reason": [
+          "What Not To Build satisfied deterministic completeness requirements."
+        ],
+        "recommendation": "What Not To Build is complete."
+      }
+    }
+  },
+  "quality": {
+    "id": "intelligence-quality",
+    "title": "Intelligence Quality Evaluation",
+    "score": 79,
+    "components": {
+      "canonicalCompleteness": {
+        "score": 79,
+        "rule": "Completeness score comes from canonical goals field evaluation.",
+        "evidence": ".ai/goals.md"
+      },
+      "consistency": {
+        "score": 100,
+        "rule": "Consistency checks compare thesis, focus, north star, validation confidence, evidence, duplicates, and contradictions.",
+        "evidence": [
+          ".ai/goals.md",
+          ".ai/strategy.md",
+          ".ai/architecture.md",
+          ".ai/validation.md",
+          ".ai/repository-health.md"
+        ]
+      },
+      "freshness": {
+        "score": 100,
+        "rule": "Freshness deducts for stale intelligence documents.",
+        "evidence": []
+      },
+      "confidence": {
+        "score": 82,
+        "rule": "Confidence is derived from Repository Health, Strategy, and Validation confidence values.",
+        "evidence": [
+          ".ai/repository-health.md",
+          ".ai/strategy.md",
+          ".ai/validation.md"
+        ]
+      },
+      "verification": {
+        "score": 33,
+        "rule": "Verification score is the percent of expected artifacts verified.",
+        "evidence": ".ai/intelligence-verification.json"
+      }
+    },
+    "deductions": [
+      {
+        "rule": "Missing Long-term vision",
+        "points": 3,
+        "evidence": ".ai/goals.md"
+      },
+      {
+        "rule": "Missing Current Product Bet",
+        "points": 10,
+        "evidence": ".ai/goals.md"
+      },
+      {
+        "rule": "strategy.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "architecture.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "backlog.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "validation.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "decisions.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "repository-health.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "context-package.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "prompts/architect.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "prompts/builder.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "prompts/debugger.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      }
+    ]
+  },
+  "recommendation": {
+    "id": "recommendation-selection",
+    "title": "Why This Issue Was Selected",
+    "rule": "Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.",
+    "candidateIssues": [
+      {
+        "id": "missing-manual-goals",
+        "title": "Complete Manual Repository Intent Notes",
+        "category": "missing manual goals",
+        "priority": 74,
+        "actionability": "manual",
+        "evidence": "Manual Goals Partial (75%). Missing: Long-term vision."
+      }
+    ],
+    "selected": {
+      "id": "missing-manual-goals",
+      "title": "Complete Manual Repository Intent Notes",
+      "priority": 74
+    },
+    "computed": {
+      "selectedPriority": 74,
+      "highestPriority": 74
+    },
+    "classification": "Consistent",
+    "reason": "Highest deterministic priority requiring action.",
+    "recommendation": "Complete only the incomplete Manual Goals fields in `.ai/goals.md`. Missing: Long-term vision."
+  }
+}

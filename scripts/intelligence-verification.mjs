@@ -16,6 +16,7 @@ export const expectedVerifiedArtifacts = [
   'intelligence-snapshot.json',
   'intelligence-diff.json',
   'intelligence-timeline.json',
+  'intelligence-explanations.json',
   'prompts/architect.md',
   'prompts/builder.md',
   'prompts/reviewer.md',
@@ -79,12 +80,14 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
 
   const failures = artifacts.flatMap((item) => item.failures.map((failure) => `${item.artifact}: ${failure}`));
 
-  const [health, qualityText, packageText] = await Promise.all([
+  const [health, qualityText, packageText, explanationText] = await Promise.all([
     readFile(join(aiDir, 'repository-health.md'), 'utf8').catch(() => ''),
     readFile(join(aiDir, 'intelligence-quality.json'), 'utf8').catch(() => ''),
     readFile(join(aiDir, 'next-improvement-prompt.md'), 'utf8').catch(() => ''),
+    readFile(join(aiDir, 'intelligence-explanations.json'), 'utf8').catch(() => ''),
   ]);
   const quality = qualityText ? JSON.parse(qualityText) : null;
+  const explanations = explanationText ? JSON.parse(explanationText) : null;
   const healthManual = health.match(/^-\s*Manual Goals:\s*(Missing|Partial|Complete|Strong)\s*\((\d+)%\)/im);
   const qualityManual = quality?.canonicalIntelligenceQuality?.fields?.manualGoals;
   if (healthManual && qualityManual && (healthManual[1] !== qualityManual.state || Number(healthManual[2]) !== Number(qualityManual.percent))) {
@@ -92,6 +95,13 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
   }
   if (qualityManual && Number(qualityManual.percent) >= 100 && /Manual Goals.*(?:partially complete|incomplete|below the deterministic threshold|manual goals completeness)/i.test(packageText)) {
     failures.push('Product Decision Package contradicts Manual Goals completeness threshold.');
+  }
+  const explanationManual = explanations?.completeness?.fields?.manualGoals;
+  if (qualityManual && explanationManual && (qualityManual.state !== explanationManual.classification || Number(qualityManual.percent) !== Number(explanationManual.computed?.percent))) {
+    failures.push(`Explanation contradiction: Manual Goals ${explanationManual.classification} (${explanationManual.computed?.percent}%) vs Intelligence Quality ${qualityManual.state} (${qualityManual.percent}%).`);
+  }
+  if (packageText && explanations?.recommendation?.selected?.title && !packageText.includes(explanations.recommendation.selected.title)) {
+    failures.push('Explanation contradiction: selected recommendation is not referenced by generated package.');
   }
   const verifiedCount = artifacts.filter((item) => item.status === 'Verified').length;
   const score = artifacts.length ? Math.round((verifiedCount / artifacts.length) * 100) : 100;
