@@ -115,3 +115,8 @@ assert.ok(!reconstructableDecisionRanking.contradictions.includes('Package omits
 const nearifyReconstructable = await validateWithContext(reconstructableDecisionRankingPackage.replace('Nearify helps people maintain real-world relationships.', 'Nearify helps people maintain real-world relationships through event context and timely follow-up workflows.'));
 assert.ok(!nearifyReconstructable.hiddenInformation.includes('Decision ranking'));
 assert.ok(!nearifyReconstructable.contradictions.includes('Package omits decision ranking.'));
+assert.ok(nearifyReconstructable.overallScore > hiddenDecisionRanking.overallScore);
+
+const partialDecisionRanking = await validateWithContext(reconstructableDecisionRankingPackage.replace(/Deterministic Selection Explanation:.*\n/, ''));
+assert.equal(partialDecisionRanking.categories.decisionRanking.status, 'Partial');
+assert.ok(partialDecisionRanking.contradictions.includes('Package decision ranking is not reconstructable.'));

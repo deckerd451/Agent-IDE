@@ -3,7 +3,7 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { canonicalManualGoalsUpdateLines, canonicalManualGoalsSuggestedUpdate } from './canonical-completeness.mjs';
 import { classifyEvidenceSource, confidenceFromEvidence } from './evidence-lineage.mjs';
-import { validateAIHandoff } from './ai-handoff-validation.mjs';
+import { parseDecisionRankingSection, validateAIHandoff } from './ai-handoff-validation.mjs';
 
 export const expectedVerifiedArtifacts = [
   'strategy.md',
@@ -127,10 +127,11 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
   const failures = artifacts.flatMap((item) => item.failures.map((failure) => `${item.artifact}: ${failure}`));
   const crossChecks = [];
 
-  const [health, qualityText, packageText, explanationText, rankingText] = await Promise.all([
+  const [health, qualityText, packageText, contextPackageText, explanationText, rankingText] = await Promise.all([
     readFile(join(aiDir, 'repository-health.md'), 'utf8').catch(() => ''),
     readFile(join(aiDir, 'intelligence-quality.json'), 'utf8').catch(() => ''),
     readFile(join(aiDir, 'next-improvement-prompt.md'), 'utf8').catch(() => ''),
+    readFile(join(aiDir, 'context-package.md'), 'utf8').catch(() => ''),
     readFile(join(aiDir, 'intelligence-explanations.json'), 'utf8').catch(() => ''),
     readFile(join(aiDir, 'decision-ranking.json'), 'utf8').catch(() => ''),
   ]);
@@ -195,7 +196,8 @@ ${field.label}
     }
   }
 
-  if (/## Selected Issue/i.test(packageText) && !decisionRanking?.candidates?.length) {
+  const renderedDecisionRanking = parseDecisionRankingSection(contextPackageText || packageText);
+  if (renderedDecisionRanking.sectionExists && !decisionRanking?.candidates?.length) {
     failures.push('Decision ranking missing or empty.');
   } else if (decisionRanking?.candidates?.length) {
     const sorted = decisionRanking.candidates.slice().sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
@@ -204,9 +206,9 @@ ${field.label}
     if (!selected) failures.push('Decision ranking has no selected candidate.');
     if (selected && highest && selected.id !== highest.id) failures.push('Decision ranking contradiction: selected issue is not rank #1.');
     if (decisionRanking.selectedIssue?.id && highest?.id && decisionRanking.selectedIssue.id !== highest.id) failures.push('Decision ranking contradiction: selectedIssue does not match rank #1 candidate.');
-    if (highest?.title && packageText && !packageText.includes(highest.title)) failures.push('Package contradiction: generated package does not reference the rank #1 selected issue.');
+    if (highest?.title && (contextPackageText || packageText) && !(contextPackageText || packageText).includes(highest.title)) failures.push('Package contradiction: generated package does not reference the rank #1 selected issue.');
     if (explanations?.decisionRanking?.selected?.id && highest?.id && explanations.decisionRanking.selected.id !== highest.id) failures.push('Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.');
-    const packageRankingTitles = [...packageText.matchAll(/^\d+\.\s+(.+?)(?:\s+\(selected\))?$/gm)].map((match) => match[1]);
+    const packageRankingTitles = renderedDecisionRanking.rankedCandidates.map((candidate) => candidate.title);
     if (packageRankingTitles.length && packageRankingTitles.join('|') !== sorted.map((issue) => issue.title).join('|')) failures.push('Package contradiction: Decision Ranking section order differs from decision-ranking.json.');
   }
 

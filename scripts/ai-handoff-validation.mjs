@@ -26,6 +26,10 @@ export function mdSection(markdown, heading) {
   return match?.[1]?.trim() ?? '';
 }
 function meaningful(text) { return Boolean(text?.trim()) && !/no generated content|not detected yet|missing|unknown|none detected|tbd|todo/i.test(text); }
+function fieldValue(text, label) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.match(new RegExp(`^\\s*(?:[-*]\\s*)?${escaped}\\s*:\\s*(.+)$`, 'im'))?.[1]?.trim() ?? '';
+}
 function evidenceFor(packageText, headings, pattern) {
   const sections = headings.map((heading) => ({ heading, text: mdSection(packageText, heading) })).filter((item) => meaningful(item.text));
   const match = sections.find((item) => !pattern || pattern.test(item.text) || pattern.test(item.heading));
@@ -34,15 +38,40 @@ function evidenceFor(packageText, headings, pattern) {
   if (fallback) return { status: 'Partial', evidence: 'Context Package mentions the category but does not expose a dedicated reconstructable section.' };
   return { status: 'Missing', evidence: `Context Package does not expose ${headings.map((h) => `## ${h}`).join(' or ')}.` };
 }
-function evidenceForDecisionRanking(packageText, ranking) {
+export function parseDecisionRankingSection(packageText) {
   const text = mdSection(packageText, 'Decision Ranking');
-  if (!meaningful(text)) return { status: 'Missing', evidence: 'Context Package does not expose ## Decision Ranking.' };
-  const hasSelectedIssue = /selected issue/i.test(text) && includesNormalized(text, ranking?.selectedIssue?.title) && includesNormalized(text, ranking?.selectedIssue?.id);
-  const candidates = Array.isArray(ranking?.candidates) ? ranking.candidates : [];
-  const rankedCandidates = candidates.filter((candidate) => includesNormalized(text, candidate.title) && includesNormalized(text, candidate.id));
-  const hasRankedCandidates = /ranked candidates/i.test(text) && (!candidates.length || rankedCandidates.length === candidates.length);
-  if (hasSelectedIssue && hasRankedCandidates) return { status: 'Present', evidence: 'Context Package exposes ## Decision Ranking with selected issue and ranked candidates.' };
-  return { status: 'Partial', evidence: 'Context Package exposes ## Decision Ranking but it is missing the selected issue, selected issue ID, or ranked candidates.' };
+  const sectionExists = Boolean(text.trim());
+  if (!sectionExists) return { sectionExists: false, text: '', selectedIssue: '', selectedIssueId: '', deterministicSelectionExplanation: '', rankedCandidates: [] };
+  const rankedCandidatesBlock = text.match(/^\s*Ranked Candidates\s*:\s*$([\s\S]*?)(?=^\s*(?:Selection Rules|Tie Breakers)\s*:\s*$|(?![\s\S]))/im)?.[1] ?? '';
+  const rankedCandidates = [...rankedCandidatesBlock.matchAll(/^\s*\d+\.\s+(.+?)(?:\s+\(([^)]+)\))?\s*$/gm)].map((match) => ({ title: match[1].trim(), id: match[2]?.trim() ?? '' }));
+  return {
+    sectionExists,
+    text,
+    selectedIssue: fieldValue(text, 'Selected Issue'),
+    selectedIssueId: fieldValue(text, 'Selected Issue ID'),
+    packageType: fieldValue(text, 'Package Type') || fieldValue(text, 'Package Type/Actionability'),
+    priority: fieldValue(text, 'Priority') || fieldValue(text, 'Priority Score'),
+    expectedImprovement: fieldValue(text, 'Expected Improvement'),
+    deterministicSelectionExplanation: fieldValue(text, 'Deterministic Selection Explanation') || fieldValue(text, 'Selection Explanation'),
+    rankedCandidates,
+  };
+}
+
+export function decisionRankingCompleteness(packageText) {
+  const parsed = parseDecisionRankingSection(packageText);
+  if (!parsed.sectionExists) return { status: 'Missing', parsed, missing: ['Decision Ranking section'] };
+  const missing = [];
+  if (!meaningful(parsed.selectedIssue)) missing.push('Selected Issue');
+  if (!parsed.rankedCandidates.length) missing.push('Ranked Candidates');
+  if (!meaningful(parsed.deterministicSelectionExplanation)) missing.push('Deterministic Selection Explanation');
+  return { status: missing.length ? 'Partial' : 'Present', parsed, missing };
+}
+
+export function evidenceForDecisionRanking(packageText) {
+  const completeness = decisionRankingCompleteness(packageText);
+  if (completeness.status === 'Missing') return { status: 'Missing', evidence: 'Context Package does not expose ## Decision Ranking.' };
+  if (completeness.status === 'Present') return { status: 'Present', evidence: 'Context Package exposes ## Decision Ranking with selected issue, deterministic selection explanation, and ranked candidates.' };
+  return { status: 'Partial', evidence: `Context Package exposes ## Decision Ranking but it is missing ${completeness.missing.join(', ')}.` };
 }
 function bullets(items) { return items.length ? items.map((item) => `- ${item}`).join('\n') : '- None detected.'; }
 function includesNormalized(haystack, needle) {
@@ -60,7 +89,7 @@ export async function validateAIHandoff(repositoryPath) {
   const ranking = rankingText ? JSON.parse(rankingText) : null;
   const synthesis = synthesisText ? JSON.parse(synthesisText) : null;
   const evaluated = Object.fromEntries(categories.map(([key, label, headings, pattern]) => [key, { label, ...evidenceFor(contextPackage, headings, pattern) }]));
-  evaluated.decisionRanking = { label: 'Decision ranking', ...evidenceForDecisionRanking(contextPackage, ranking) };
+  evaluated.decisionRanking = { label: 'Decision ranking', ...evidenceForDecisionRanking(contextPackage) };
   const contradictions = [];
   const hiddenInformation = [];
   const missingExplanations = [];
