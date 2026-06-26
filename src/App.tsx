@@ -88,6 +88,15 @@ type DocumentState = {
   sourcePath: string;
 };
 
+type ProgressSummary = {
+  completed: string;
+  repositoryQualityBefore?: number;
+  repositoryQualityAfter?: number;
+  confidenceBefore?: number;
+  confidenceAfter?: number;
+  nextTask?: string;
+};
+
 const handoffWrapper = 'Using only this repository intelligence package, explain the product, current focus, strategic bet, risks, and safest next development step. Do not assume source-code access.';
 
 const promptFiles = ['prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'] as const;
@@ -307,7 +316,39 @@ function meaningfulDiffEntries(diff: ControlPlane['diff']): Array<readonly [stri
   return entries.map(([label, value]) => [label, Array.isArray(value) ? value : []] as const).filter(([, items]) => items.length > 0);
 }
 
-function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
+
+function candidateByRank(data: ControlPlane, rank: number) {
+  return data.decisionRanking?.candidates?.find((candidate) => candidate.rank === rank) ?? (rank === 1 ? data.decisionRanking?.candidates?.[0] : data.decisionRanking?.candidates?.[rank - 1]);
+}
+
+function actionLabel(actionability?: string, packageType?: string) {
+  if (packageType === 'product-decision' || /manual/i.test(actionability ?? '')) return 'Owner Action';
+  if (packageType === 'validation-experiment') return 'Validation Action';
+  return 'Implementation Action';
+}
+
+function actionText(candidate: DecisionCandidate | undefined, recommendation: ControlPlaneRecommendation) {
+  if (recommendation.packageType === 'product-decision' || /manual/i.test(candidate?.actionability ?? recommendation.actionability ?? '')) return 'Edit `.ai/goals.md`';
+  if (recommendation.packageType === 'validation-experiment') return 'Run the validation package';
+  return 'Use the generated implementation package';
+}
+
+function ProgressSummaryCard({ progress }: { progress: ProgressSummary | null }) {
+  if (!progress) return null;
+  return (
+    <section className="controlCard progressSummaryCard" aria-label="Repository progress summary">
+      <h2>✓ Repository Intelligence Updated</h2>
+      <div className="progressSummaryGrid">
+        <div><small>Completed</small><strong>{progress.completed}</strong></div>
+        <div><small>Repository Quality</small><strong>{progress.repositoryQualityBefore ?? '—'} → {progress.repositoryQualityAfter ?? '—'}</strong></div>
+        <div><small>Confidence</small><strong>{progress.confidenceBefore ?? '—'} → {progress.confidenceAfter ?? '—'}</strong></div>
+        <div><small>Next Task</small><strong>{progress.nextTask ?? 'No ranked task available'}</strong></div>
+      </div>
+    </section>
+  );
+}
+
+function ControlPlaneDashboard({ data, progress }: { data: ControlPlane | null; progress?: ProgressSummary | null }) {
   if (!data) return <WelcomeDashboard />;
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
@@ -354,25 +395,60 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
     ['debugger', 'Copy Debugger Prompt'],
   ];
   const diffEntries = meaningfulDiffEntries(data.diff);
+  const todaysWork = candidateByRank(data, 1);
+  const afterThis = candidateByRank(data, 2);
 
   return (
     <div className="controlPlane compactDashboard">
-      <section className="dashboardGrid statusGrid" aria-label="Repository status">
-        {statusCards.map(([label, value]) => <article className="metricCard" key={String(label)}><small>{label}</small><strong>{value || 'Unknown'}</strong></article>)}
+      <ProgressSummaryCard progress={progress ?? null} />
+
+      <section className="controlCard todaysWorkCard recommended" aria-label="Today's Work">
+        <small>Today's Work</small>
+        <strong>{todaysWork?.title ?? data.recommendation.title}</strong>
+        {todaysWork?.reason && <p>{todaysWork.reason}</p>}
+        {todaysWork?.evidence && <p><b>Missing:</b> {todaysWork.evidence}</p>}
+        {data.recommendation.packageType === 'product-decision' && <div className="canonicalEditNotice"><b>Repository Owner edits:</b><code>.ai/goals.md</code><span>Everything else will be regenerated.</span></div>}
+        <div className="workSummaryGrid">
+          <div><small>Estimated Improvement</small><strong>+{todaysWork?.expectedImprovement.total ?? 0}</strong></div>
+          <div><small>Package Type</small><strong>{data.recommendation.packageType ?? todaysWork?.actionability ?? 'implementation'}</strong></div>
+          <div><small>{actionLabel(todaysWork?.actionability, data.recommendation.packageType)}</small><strong>{renderInlineMarkdown(actionText(todaysWork, data.recommendation))}</strong></div>
+        </div>
+        <div className="promptActions">
+          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">Open {recommendedPackage.heading.replace('Recommended ', '')}</button>
+        </div>
+        <details>
+          <summary>View package details</summary>
+          <p><b>Source risk/recommendation:</b> {data.recommendation.explanation}</p>
+          <p><b>Reason:</b> {data.recommendation.whyItMatters}</p>
+          <p><b>Evidence source:</b> {data.recommendation.evidenceSource}</p>
+          <pre>{data.recommendation.prompt}</pre>
+        </details>
       </section>
 
-      <section className="controlCard answerGrid" aria-label="Repository intelligence answers">
-        <div>
-          <h2>Repository Understanding</h2>
-          <div className="understandingGrid">
-            {data.understanding.map((item) => <div className="understandingItem" key={item.label}><span>{item.label}</span><strong className={stateClass(item.state)}>{item.state}</strong></div>)}
-          </div>
-        </div>
-        <div>
-          <h2>Current Risks</h2>
-          {data.unknowns.length > 0 ? <ul className="unknownList">{data.unknowns.map((item) => <li key={item.label}>{item.label}<small>{item.source}</small></li>)}</ul> : <p>No current intelligence risks detected.</p>}
-        </div>
-      </section>
+      {afterThis && (
+        <section className="controlCard afterThisCard" aria-label="After This">
+          <small>After This</small>
+          <h2>{afterThis.title}</h2>
+          <p><b>Estimated Improvement:</b> +{afterThis.expectedImprovement.total}</p>
+          <details>
+            <summary>Why this is next</summary>
+            <p>{afterThis.reason}</p>
+            <p>{afterThis.evidence}</p>
+          </details>
+        </section>
+      )}
+
+      <section className="controlCard handoffCard" aria-label="Quick AI Actions"><h2>Quick AI Actions</h2><div className="handoffGrid">{packageLabels.filter(([key]) => key !== 'builder').map(([key, label]) => <button disabled={!data.packages[key]} key={key} onClick={() => void copyText(data.packages[key] ?? '')} type="button">{label}</button>)}</div></section>
+
+      <details className="controlCard disclosureCard" aria-label="Repository Health"><summary>Repository Health</summary>
+        <section className="dashboardGrid statusGrid" aria-label="Repository status">
+          {statusCards.map(([label, value]) => <article className="metricCard" key={String(label)}><small>{label}</small><strong>{value || 'Unknown'}</strong></article>)}
+        </section>
+        <section className="controlCard answerGrid" aria-label="Repository intelligence answers">
+          <div><h2>Repository Understanding</h2><div className="understandingGrid">{data.understanding.map((item) => <div className="understandingItem" key={item.label}><span>{item.label}</span><strong className={stateClass(item.state)}>{item.state}</strong></div>)}</div></div>
+          <div><h2>Current Risks</h2>{data.unknowns.length > 0 ? <ul className="unknownList">{data.unknowns.map((item) => <li key={item.label}>{item.label}<small>{item.source}</small></li>)}</ul> : <p>No current intelligence risks detected.</p>}</div>
+        </section>
+      </details>
 
 
       {data.verification && data.verification.status !== 'Verified' && (
@@ -383,25 +459,8 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         </section>
       )}
 
-      {data.verification && (
-        <section className="controlCard qualityCard" aria-label="Repository intelligence verification">
-          <div className="qualityHeader"><div><small>Verification Status</small><strong>{data.verification.status === 'Verified' ? '✓ Verified' : '⚠ Failed'}</strong></div><span className={stateClass(data.verification.status === 'Verified' ? 'Present' : 'Needs Attention')}>Verification Score {data.verification.score}%</span></div>
-          <div className="qualityGrid">
-            <div><small>Verification Score</small><strong>{data.verification.score}%</strong></div>
-            <div><small>Pass/Fail State</small><strong>{data.verification.status === 'Verified' ? '✓ Verified' : '⚠ Failed'}</strong></div>
-            <div><small>Failures</small><strong>{data.verification.failureCount ?? data.verification.failures.length}</strong></div>
-            <div><small>Failure Reason</small><strong>{data.verification.failureReason ?? data.verification.failures[0] ?? 'None'}</strong></div>
-          </div>
-          <p>{data.verification.summary}</p>
-          <div className="understandingGrid">
-            {data.verification.artifacts.map((artifact) => <div className="understandingItem" key={artifact.artifact}><span>{artifact.artifact}</span><strong className={stateClass(artifact.status === 'Verified' ? 'Present' : 'Needs Attention')}>{artifact.status === 'Verified' ? '✓ Verified' : '⚠ Stale'}</strong>{artifact.failures.length > 0 && <small>{artifact.failures.join(' ')}</small>}</div>)}
-            {(data.verification.crossChecks ?? []).map((check) => <div className="understandingItem" key={check.check}><span>{check.check}</span><strong className={stateClass(check.status === 'Verified' ? 'Present' : 'Needs Attention')}>{check.status === 'Verified' ? '✓ Verified' : '⚠ Failed'}</strong>{check.failures.length > 0 && <small>{check.failures.join(' ')}</small>}</div>)}
-          </div>
-        </section>
-      )}
-
       {data.quality && (
-        <section className="controlCard qualityCard" aria-label="Intelligence quality">
+        <details className="controlCard qualityCard" aria-label="Repository Quality"><summary>Repository Quality</summary>
           <div className="qualityHeader"><div><small>Overall Quality</small><strong>{data.quality.overallScore}/100</strong></div><span className={stateClass(data.quality.trend === 'Needs Attention' ? 'Needs Attention' : 'Present')}>Trend: {data.quality.trend}</span></div>
           <div className="qualityGrid">
             <div><small>Canonical Intelligence</small><strong>{data.quality.canonicalIntelligenceQuality?.score ?? data.quality.overallScore}%</strong>{data.quality.canonicalIntelligenceQuality?.completenessState && <small>{data.quality.canonicalIntelligenceQuality.completenessState} {data.quality.canonicalIntelligenceQuality.completenessScore}% complete</small>}</div>
@@ -412,51 +471,30 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
             <div><small>Confidence</small><strong>{data.quality.confidence.score}%</strong></div>
             <div><small>Verification</small><strong>{data.quality.verification?.score ?? data.verification?.score ?? 0}%</strong></div>
           </div>
-          <div className="answerGrid">
-            <div><h2>Recent regressions</h2>{data.quality.recentRegressions.length ? <ul>{data.quality.recentRegressions.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No recent regressions detected.</p>}</div>
-            <div><h2>Recent improvements</h2>{data.quality.recentImprovements.length ? <ul>{data.quality.recentImprovements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No recent improvements detected.</p>}</div>
-          </div>
+          <div className="answerGrid"><div><h2>Recent regressions</h2>{data.quality.recentRegressions.length ? <ul>{data.quality.recentRegressions.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No recent regressions detected.</p>}</div><div><h2>Recent improvements</h2>{data.quality.recentImprovements.length ? <ul>{data.quality.recentImprovements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No recent improvements detected.</p>}</div></div>
           <p><b>Recommended action:</b> {data.quality.recommendedAction}</p>
-        </section>
+        </details>
+      )}
+
+      {data.verification && (
+        <details className="controlCard qualityCard" aria-label="Verification"><summary>Verification</summary>
+          <div className="qualityHeader"><div><small>Verification Status</small><strong>{data.verification.status === 'Verified' ? '✓ Verified' : '⚠ Failed'}</strong></div><span className={stateClass(data.verification.status === 'Verified' ? 'Present' : 'Needs Attention')}>Verification Score {data.verification.score}%</span></div>
+          <div className="qualityGrid"><div><small>Verification Score</small><strong>{data.verification.score}%</strong></div><div><small>Pass/Fail State</small><strong>{data.verification.status === 'Verified' ? '✓ Verified' : '⚠ Failed'}</strong></div><div><small>Failures</small><strong>{data.verification.failureCount ?? data.verification.failures.length}</strong></div><div><small>Failure Reason</small><strong>{data.verification.failureReason ?? data.verification.failures[0] ?? 'None'}</strong></div></div>
+          <p>{data.verification.summary}</p>
+        </details>
       )}
 
       {data.aiHandoffValidation && (
-        <section className="controlCard qualityCard" aria-label="AI Handoff Validation">
+        <details className="controlCard qualityCard" aria-label="AI Handoff Validation"><summary>AI Handoff Validation</summary>
           <div className="qualityHeader"><div><small>AI Handoff Validation</small><strong>{data.aiHandoffValidation.overallScore}/100</strong></div><span className={stateClass(data.aiHandoffValidation.status === 'Ready' ? 'Present' : 'Needs Attention')}>{data.aiHandoffValidation.status}</span></div>
-          <div className="answerGrid">
-            <div><h2>Recoverable information</h2>{data.aiHandoffValidation.recoverableInformation.length ? <ul>{data.aiHandoffValidation.recoverableInformation.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div>
-            <div><h2>Hidden information</h2>{data.aiHandoffValidation.hiddenInformation.length ? <ul>{data.aiHandoffValidation.hiddenInformation.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No hidden required handoff information detected.</p>}</div>
-            <div><h2>Contradictions</h2>{data.aiHandoffValidation.contradictions.length ? <ul>{data.aiHandoffValidation.contradictions.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No handoff contradictions detected.</p>}</div>
-            <div><h2>Missing explanations</h2>{data.aiHandoffValidation.missingExplanations.length ? <ul>{data.aiHandoffValidation.missingExplanations.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No missing explanations detected.</p>}</div>
-          </div>
-          <h2>Suggested improvements</h2>
-          {data.aiHandoffValidation.suggestedImprovements.length ? <ul>{data.aiHandoffValidation.suggestedImprovements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No suggested handoff improvements.</p>}
-        </section>
-      )}
-
-      <section className="controlCard recommended" aria-label={recommendedPackage.ariaLabel}>
-        <small>{recommendedPackage.heading}</small>
-        <strong>{data.recommendation.title}</strong>
-        {data.recommendation.actionability && <p><b>Actionability:</b> {data.recommendation.actionability}</p>}
-        {data.recommendation.packageType && <p><b>Package Type:</b> {data.recommendation.packageType}</p>}
-        <p><b>Source risk/recommendation:</b> {data.recommendation.explanation}</p>
-        <p><b>Reason:</b> {data.recommendation.whyItMatters}</p>
-        <p><b>Evidence source:</b> {data.recommendation.evidenceSource}</p>
-        {data.recommendation.packageType === 'product-decision' && <div className="canonicalEditNotice"><b>Repository Owner edits:</b><code>.ai/goals.md</code><span>Everything else will be regenerated.</span></div>}
-        <div className="promptActions">
-          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">{recommendedPackage.copyLabel}</button>
-          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">{recommendedPackage.generateLabel}</button>
-        </div>
-        <details>
-          <summary>{recommendedPackage.viewLabel}</summary>
-          <pre>{data.recommendation.prompt}</pre>
+          <h2>Suggested improvements</h2>{data.aiHandoffValidation.suggestedImprovements.length ? <ul>{data.aiHandoffValidation.suggestedImprovements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No suggested handoff improvements.</p>}
         </details>
-      </section>
+      )}
 
 
       {data.decisionRanking?.candidates?.length ? (
         <section className="controlCard disclosureCard" aria-label="Decision Ranking">
-          <details open>
+          <details>
             <summary>Decision Ranking — current winner: {data.decisionRanking.selectedIssue?.title}</summary>
             <p>{data.decisionRanking.selectionExplanation}</p>
             <div className="rankingTable" role="table" aria-label="Candidate Improvements">
@@ -478,7 +516,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         <section className="controlCard disclosureCard" aria-label="Repository intelligence explanation">
           <h2>Repository Intelligence Explanation</h2>
           {data.explanations.recommendation && (
-            <details open>
+            <details>
               <summary>{data.explanations.recommendation.title}</summary>
               <p><b>Rule:</b> {data.explanations.recommendation.rule}</p>
               <p><b>Selected:</b> {data.explanations.recommendation.selected?.title} ({data.explanations.recommendation.selected?.priority})</p>
@@ -538,7 +576,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
           <p><b>Confidence calculation:</b> canonical and independent evidence groups increase confidence; generated confirmations verify consistency but do not increase confidence.</p>
           <p><b>Evidence ancestry:</b> generated artifacts descend from canonical owner intent and independent repository evidence.</p>
           {['Canonical', 'Independent', 'Generated'].map((category) => (
-            <details key={category} open={category !== 'Generated'}>
+            <details key={category}>
               <summary>{category} Sources <span>{data.evidenceLineage?.categories?.[category]?.length ?? 0}</span></summary>
               <ul>{(data.evidenceLineage?.categories?.[category] ?? []).map((item) => <li key={item.file}><strong>{item.group}</strong><small>{item.file} · {item.ancestry}</small></li>)}</ul>
             </details>
@@ -548,7 +586,6 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
       <section className="controlCard"><h2>Trend</h2><p>{data.quality ? data.quality.trend : 'No intelligence quality trend available yet.'}</p></section>
       <section className="controlCard"><h2>Recent Changes</h2>{diffEntries.length > 0 ? diffEntries.map(([label, items]) => <details key={label}><summary>{label} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></details>) : <p>No material intelligence changes detected.</p>}</section>
 
-      <section className="controlCard handoffCard"><h2>AI Handoff</h2><div className="handoffGrid">{packageLabels.map(([key, label]) => <button disabled={!data.packages[key]} key={key} onClick={() => void copyText(data.packages[key] ?? '')} type="button">{label}</button>)}</div></section>
 
       <details className="controlCard disclosureCard"><summary>Evidence Explorer</summary>{data.evidence.length ? data.evidence.map((item) => <details key={`${item.file}-${item.line}`}><summary>{item.section}</summary><p><strong>File:</strong> {item.file}:{item.line}</p><p><strong>Extracted evidence:</strong> {item.evidence}</p><p><strong>Confidence:</strong> {item.confidence}</p></details>) : <p>No generated evidence lines detected yet.</p>}</details>
       <details className="controlCard disclosureCard"><summary>Timeline</summary>{data.timeline.length ? <ol className="timelineList">{data.timeline.slice().reverse().map((item) => <li key={item.timestamp}><strong>{item.timestamp}</strong><span>{item.repositoryHealth} · Strategy {item.strategyQuality} · Confidence {item.confidence}</span><small>{item.recommendation}</small></li>)}</ol> : <p>No refresh executions recorded yet.</p>}</details>
@@ -572,6 +609,7 @@ export function App() {
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [controlPlane, setControlPlane] = useState<ControlPlane | null>(null);
+  const [progressSummary, setProgressSummary] = useState<ProgressSummary | null>(null);
 
   const selected = useMemo(
     () => sections.find((section) => section.id === selectedId) ?? sections[0],
@@ -587,7 +625,21 @@ export function App() {
     const response = await fetch(url);
     const data = await response.json() as ControlPlane & { error?: string };
     if (!response.ok) throw new Error(data.error ?? 'Unable to load control plane.');
-    setControlPlane(data);
+    setControlPlane((previous) => {
+      const previousIssue = previous?.decisionRanking?.selectedIssue;
+      const nextIssue = data.decisionRanking?.selectedIssue;
+      if (previousIssue && nextIssue && previousIssue.id !== nextIssue.id) {
+        setProgressSummary({
+          completed: previousIssue.title,
+          repositoryQualityBefore: previous?.quality?.overallScore,
+          repositoryQualityAfter: data.quality?.overallScore,
+          confidenceBefore: previous?.quality?.confidence.score,
+          confidenceAfter: data.quality?.confidence.score,
+          nextTask: nextIssue.title,
+        });
+      }
+      return data;
+    });
   }, []);
 
   const loadIntelligenceFile = useCallback(async (path: string, file: string) => {
@@ -646,7 +698,6 @@ export function App() {
     setSummary('');
     setSteps([]);
     setDocuments({});
-    setControlPlane(null);
     setIsRefreshing(true);
 
     try {
@@ -772,7 +823,7 @@ export function App() {
           <small>{document?.sourcePath ?? (connectedPath ? `${connectedPath}/.ai/${selected.markdownFile}` : `.ai/${selected.markdownFile}`)}</small>
         </section>
 
-        {selected.id === 'Control Plane' && <ControlPlaneDashboard data={controlPlane} />}
+        {selected.id === 'Control Plane' && <ControlPlaneDashboard data={controlPlane} progress={progressSummary} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}
