@@ -95,6 +95,23 @@ export function explainRecommendation(selectedIssue, candidates = []) {
   };
 }
 
+
+export function explainDecisionRanking(decisionRanking = {}) {
+  const candidates = decisionRanking.candidates ?? [];
+  return {
+    id: 'decision-ranking',
+    title: 'Decision Ranking Explanation',
+    rule: 'Rank every candidate with deterministic repository-local scoring, then select rank #1.',
+    scoringRules: decisionRanking.scoringRules ?? [],
+    tieBreaking: decisionRanking.tieBreaking ?? [],
+    candidateOrdering: candidates.map((issue) => ({ rank: issue.rank, id: issue.id, title: issue.title, priorityScore: issue.priorityScore, expectedImprovement: issue.expectedImprovement, selected: issue.selected })),
+    expectedImprovementCalculations: Object.fromEntries(candidates.map((issue) => [issue.id, issue.expectedImprovement])),
+    selected: decisionRanking.selectedIssue ?? null,
+    classification: candidates[0]?.selected ? 'Consistent' : 'Needs Attention',
+    reason: decisionRanking.selectionExplanation ?? 'No decision ranking generated.',
+  };
+}
+
 export function explainHealth({ risks = [], canonicalCompleteness } = {}) {
   return risks.map((risk) => {
     const manual = /^Manual Goals (Missing|Partial|Complete|Strong) \((\d+)%\)/.exec(risk);
@@ -114,6 +131,9 @@ export function explainHealth({ risks = [], canonicalCompleteness } = {}) {
 export function renderExplanationMarkdown(explanation) {
   if (!explanation) return '';
   const lines = [`## ${explanation.title ?? 'Repository Intelligence Explanation'}`, '', `Rule: ${explanation.rule ?? 'Deterministic repository-local rule.'}`];
+  if (explanation.candidateOrdering) {
+    lines.push('', 'Candidate Ordering', ...explanation.candidateOrdering.map((issue) => `- #${issue.rank} ${issue.title}: Priority ${issue.priorityScore}, Expected +${issue.expectedImprovement?.total ?? 0}${issue.selected ? ' (selected)' : ''}`), '', `Selected: ${explanation.selected?.title ?? 'None'}`, `Reason: ${explanation.reason}`);
+  }
   if (explanation.candidateIssues) {
     lines.push('', 'Candidate Issues', ...explanation.candidateIssues.map((issue) => `- ${issue.title}: Priority ${issue.priority}`), '', `Selected: ${explanation.selected?.title ?? 'None'}`, `Reason: ${explanation.reason}`);
   }

@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { chooseNextImprovement, generateNextImprovement, renderPrompt } from '../scripts/next-improvement.mjs';
+import { chooseNextImprovement, chooseNextImprovementWithCandidates, generateNextImprovement, renderPrompt } from '../scripts/next-improvement.mjs';
 
 const healthyQuality = {
   coverage: { goalsPresent: true, strategyPresent: true, architecturePresent: true, decisionsPresent: true, validationPresent: true, backlogPresent: true, repositoryHealthPresent: true, agentsPresent: true, codePresent: true },
@@ -316,4 +316,44 @@ test('missing manual goals explanation renders unavailable warning', () => {
   const prompt = renderPrompt(choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } }));
   assert.match(prompt, /## Deterministic Evaluation/);
   assert.match(prompt, /Explanation unavailable: canonical completeness explanation was not generated\./);
+});
+
+test('decision ranking orders all candidates with deterministic priority and improvements', () => {
+  const manyItems = Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n');
+  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({
+    health: '# Repository Health\n\n## Risks\n- No repository health risks detected.\n',
+    quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 }, consistency: { contradictions: ['Goals contradict strategy.'], duplicatedSections: [] } },
+    backlog: `# Backlog\n\n## Prioritized Backlog\n${manyItems}\n`,
+    strategy: '# Strategy\n\n## Strategy Confidence\nLow\n',
+    contextPackage: '# Context Package\nReady.\n',
+    audit: '',
+  });
+  assert.equal(selectedIssue.id, 'consistency-cleanup');
+  assert.deepEqual(candidates.map((candidate) => candidate.rank), [1, 2, 3]);
+  assert.deepEqual(candidates.map((candidate) => candidate.id), ['consistency-cleanup', 'backlog-noise', 'strategy-quality']);
+  assert.equal(decisionRanking.selectedIssue.id, 'consistency-cleanup');
+  assert.equal(decisionRanking.candidates[0].selected, true);
+  assert.equal(decisionRanking.candidates[0].expectedImprovement.total, 31);
+  assert.match(decisionRanking.selectionExplanation, /ranked #1/);
+});
+
+test('generated package and artifact include shared decision ranking', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'agent-ide-decision-ranking-'));
+  await mkdir(join(dir, '.ai'), { recursive: true });
+  await writeFile(join(dir, '.ai/goals.md'), '# Goals\n');
+  await writeFile(join(dir, '.ai/repository-health.md'), '# Repository Health\n\n## Risks\n- No repository health risks detected.\n');
+  await writeFile(join(dir, '.ai/intelligence-quality.json'), JSON.stringify(healthyQuality, null, 2));
+  await writeFile(join(dir, '.ai/intelligence-audit.md'), '# Intelligence Audit\n');
+  await writeFile(join(dir, '.ai/backlog.md'), `# Backlog\n\n## Prioritized Backlog\n${Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n')}\n`);
+  await writeFile(join(dir, '.ai/strategy.md'), '# Strategy\n\n## Strategy Confidence\nHigh\n');
+  await writeFile(join(dir, '.ai/context-package.md'), '# Context Package\nReady.\n');
+
+  const result = await generateNextImprovement(dir);
+  const ranking = JSON.parse(await readFile(join(dir, '.ai/decision-ranking.json'), 'utf8'));
+
+  assert.equal(ranking.selectedIssue.id, result.selectedIssue.id);
+  assert.equal(ranking.candidates[0].selected, true);
+  assert.match(result.prompt, /## Decision Ranking/);
+  assert.match(result.prompt, /1\. Reduce Backlog Noise \(selected\)/);
+  assert.match(result.prompt, /Expected Improvement: \+19 total/);
 });

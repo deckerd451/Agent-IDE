@@ -51,11 +51,14 @@ type QualitySnapshot = {
   recommendedAction: string;
 };
 
+type DecisionCandidate = { rank: number; id: string; title: string; category: string; severity: string; actionability: string; priorityScore: number; expectedImprovement: { total: number; repositoryHealth: number; canonicalCompleteness: number; quality: number; verification: number; handoffReadiness: number }; reason: string; evidence: string; selected: boolean };
+
 type ControlPlane = {
   status: Record<string, string>;
   understanding: Array<{ label: string; state: IntelligenceState; source: string }>;
   unknowns: Array<{ label: string; source: string }>;
   recommendation: ControlPlaneRecommendation;
+  decisionRanking?: { selectionExplanation: string; selectedIssue?: { id: string; title: string; rank: number; priorityScore: number }; candidates: DecisionCandidate[] } | null;
   diff: Record<string, string | string[]>;
   quality: QualitySnapshot | null;
   qualityHistory: Array<Record<string, unknown>>;
@@ -64,6 +67,7 @@ type ControlPlane = {
     completeness?: { title: string; score: number; classification: string; fields: Record<string, { title: string; rule: string; classification: string; computed: { percent: number }; evidence: string[]; reason: string[]; recommendation: string }> };
     quality?: { title: string; score: number; deductions: Array<{ rule: string; points: number; evidence: string }> };
     recommendation?: { title: string; rule: string; reason: string; candidateIssues: Array<{ title: string; priority: number; evidence?: string }>; selected?: { title: string; priority: number } };
+    decisionRanking?: { title: string; rule: string; reason: string; candidateOrdering: Array<{ rank: number; title: string; priorityScore: number; selected: boolean; expectedImprovement: { total: number } }>; selected?: { title: string } };
   } | null;
   evidence: Array<{ file: string; section: string; line: number; evidence: string; confidence: string }>;
   packages: Record<string, string>;
@@ -421,6 +425,27 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         </details>
       </section>
 
+
+      {data.decisionRanking?.candidates?.length ? (
+        <section className="controlCard disclosureCard" aria-label="Decision Ranking">
+          <details open>
+            <summary>Decision Ranking — current winner: {data.decisionRanking.selectedIssue?.title}</summary>
+            <p>{data.decisionRanking.selectionExplanation}</p>
+            <div className="rankingTable" role="table" aria-label="Candidate Improvements">
+              {data.decisionRanking.candidates.map((candidate) => (
+                <article className={candidate.selected ? 'rankingRow selected' : 'rankingRow'} key={candidate.id}>
+                  <div><small>Rank</small><strong>#{candidate.rank}</strong></div>
+                  <div><small>Candidate Improvement</small><strong>{candidate.title}</strong><span>{candidate.category}</span></div>
+                  <div><small>Priority</small><strong>{candidate.priorityScore}</strong></div>
+                  <div><small>Expected Improvement</small><strong>+{candidate.expectedImprovement.total}</strong><span>+{candidate.expectedImprovement.repositoryHealth} Health · +{candidate.expectedImprovement.canonicalCompleteness} Completeness · +{candidate.expectedImprovement.quality} Quality</span></div>
+                  <div><small>Reason</small><span>{candidate.reason}</span><span>{candidate.evidence}</span></div>
+                </article>
+              ))}
+            </div>
+          </details>
+        </section>
+      ) : null}
+
       {data.explanations && (
         <section className="controlCard disclosureCard" aria-label="Repository intelligence explanation">
           <h2>Repository Intelligence Explanation</h2>
@@ -431,6 +456,15 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
               <p><b>Selected:</b> {data.explanations.recommendation.selected?.title} ({data.explanations.recommendation.selected?.priority})</p>
               <p><b>Reason:</b> {data.explanations.recommendation.reason}</p>
               <ul>{data.explanations.recommendation.candidateIssues.map((issue) => <li key={issue.title}>{issue.title}: priority {issue.priority}<small>{issue.evidence}</small></li>)}</ul>
+            </details>
+          )}
+          {data.explanations.decisionRanking && (
+            <details>
+              <summary>{data.explanations.decisionRanking.title}</summary>
+              <p><b>Rule:</b> {data.explanations.decisionRanking.rule}</p>
+              <p><b>Selected:</b> {data.explanations.decisionRanking.selected?.title}</p>
+              <p><b>Reason:</b> {data.explanations.decisionRanking.reason}</p>
+              <ul>{data.explanations.decisionRanking.candidateOrdering.map((issue) => <li key={`${issue.rank}-${issue.title}`}>#{issue.rank} {issue.title}: priority {issue.priorityScore}, expected +{issue.expectedImprovement.total}{issue.selected ? ' (selected)' : ''}</li>)}</ul>
             </details>
           )}
           {data.explanations.completeness && (

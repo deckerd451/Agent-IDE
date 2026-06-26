@@ -80,14 +80,16 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
 
   const failures = artifacts.flatMap((item) => item.failures.map((failure) => `${item.artifact}: ${failure}`));
 
-  const [health, qualityText, packageText, explanationText] = await Promise.all([
+  const [health, qualityText, packageText, explanationText, rankingText] = await Promise.all([
     readFile(join(aiDir, 'repository-health.md'), 'utf8').catch(() => ''),
     readFile(join(aiDir, 'intelligence-quality.json'), 'utf8').catch(() => ''),
     readFile(join(aiDir, 'next-improvement-prompt.md'), 'utf8').catch(() => ''),
     readFile(join(aiDir, 'intelligence-explanations.json'), 'utf8').catch(() => ''),
+    readFile(join(aiDir, 'decision-ranking.json'), 'utf8').catch(() => ''),
   ]);
   const quality = qualityText ? JSON.parse(qualityText) : null;
   const explanations = explanationText ? JSON.parse(explanationText) : null;
+  const decisionRanking = rankingText ? JSON.parse(rankingText) : null;
   const healthManual = health.match(/^-\s*Manual Goals:\s*(Missing|Partial|Complete|Strong)\s*\((\d+)%\)/im);
   const qualityManual = quality?.canonicalIntelligenceQuality?.fields?.manualGoals;
   if (healthManual && qualityManual && (healthManual[1] !== qualityManual.state || Number(healthManual[2]) !== Number(qualityManual.percent))) {
@@ -100,6 +102,22 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
   if (qualityManual && explanationManual && (qualityManual.state !== explanationManual.classification || Number(qualityManual.percent) !== Number(explanationManual.computed?.percent))) {
     failures.push(`Explanation contradiction: Manual Goals ${explanationManual.classification} (${explanationManual.computed?.percent}%) vs Intelligence Quality ${qualityManual.state} (${qualityManual.percent}%).`);
   }
+
+  if (/## Selected Issue/i.test(packageText) && !decisionRanking?.candidates?.length) {
+    failures.push('Decision ranking missing or empty.');
+  } else if (decisionRanking?.candidates?.length) {
+    const sorted = decisionRanking.candidates.slice().sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
+    const highest = sorted[0];
+    const selected = decisionRanking.candidates.find((candidate) => candidate.selected);
+    if (!selected) failures.push('Decision ranking has no selected candidate.');
+    if (selected && highest && selected.id !== highest.id) failures.push('Decision ranking contradiction: selected issue is not rank #1.');
+    if (decisionRanking.selectedIssue?.id && highest?.id && decisionRanking.selectedIssue.id !== highest.id) failures.push('Decision ranking contradiction: selectedIssue does not match rank #1 candidate.');
+    if (highest?.title && packageText && !packageText.includes(highest.title)) failures.push('Package contradiction: generated package does not reference the rank #1 selected issue.');
+    if (explanations?.decisionRanking?.selected?.id && highest?.id && explanations.decisionRanking.selected.id !== highest.id) failures.push('Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.');
+    const packageRankingTitles = [...packageText.matchAll(/^\d+\.\s+(.+?)(?:\s+\(selected\))?$/gm)].map((match) => match[1]);
+    if (packageRankingTitles.length && packageRankingTitles.join('|') !== sorted.map((issue) => issue.title).join('|')) failures.push('Package contradiction: Decision Ranking section order differs from decision-ranking.json.');
+  }
+
   if (packageText && explanations?.recommendation?.selected?.title && !packageText.includes(explanations.recommendation.selected.title)) {
     failures.push('Explanation contradiction: selected recommendation is not referenced by generated package.');
   }

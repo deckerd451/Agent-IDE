@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { explainRecommendation, renderExplanationMarkdown } from './intelligence-explanations.mjs';
+import { explainDecisionRanking, explainRecommendation, renderExplanationMarkdown } from './intelligence-explanations.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md'];
 const constraints = ['local-first','deterministic','no LLM calls','no cloud','no telemetry','preserve manual sections','keep changes small and reviewable'];
@@ -56,8 +56,58 @@ function severityRank(issue) {
   return { critical: 0, high: 1, medium: 2, low: 3 }[issue.severity] ?? 4;
 }
 
-function selectBestIssue(issues) {
-  return issues.sort((a, b) => actionabilityRank(a) - actionabilityRank(b) || severityRank(a) - severityRank(b))[0];
+
+
+const basePriorityById = { 'consistency-cleanup': 98, 'missing-intelligence': 95, validation: 86, 'handoff-readiness': 84, 'backlog-noise': 82, 'missing-manual-goals': 74, 'strategy-quality': 72, 'stale-intelligence': 55, 'ai-handoff-validation': 10 };
+const improvementById = {
+  'missing-manual-goals': { repositoryHealth: 8, canonicalCompleteness: 12, quality: 4, verification: 0, handoffReadiness: 4 },
+  'missing-intelligence': { repositoryHealth: 10, canonicalCompleteness: 10, quality: 8, verification: 6, handoffReadiness: 6 },
+  'consistency-cleanup': { repositoryHealth: 9, canonicalCompleteness: 0, quality: 10, verification: 5, handoffReadiness: 7 },
+  validation: { repositoryHealth: 7, canonicalCompleteness: 0, quality: 5, verification: 10, handoffReadiness: 5 },
+  'handoff-readiness': { repositoryHealth: 6, canonicalCompleteness: 0, quality: 5, verification: 3, handoffReadiness: 10 },
+  'backlog-noise': { repositoryHealth: 6, canonicalCompleteness: 0, quality: 5, verification: 2, handoffReadiness: 6 },
+  'strategy-quality': { repositoryHealth: 7, canonicalCompleteness: 8, quality: 7, verification: 0, handoffReadiness: 5 },
+  'stale-intelligence': { repositoryHealth: 5, canonicalCompleteness: 3, quality: 4, verification: 2, handoffReadiness: 4 },
+  'ai-handoff-validation': { repositoryHealth: 2, canonicalCompleteness: 0, quality: 2, verification: 4, handoffReadiness: 3 },
+};
+
+export function issuePriority(issue) {
+  const base = issue?.priority ?? basePriorityById[issue?.id] ?? 40;
+  const severityBoost = { critical: 8, high: 4, medium: 2, low: 0 }[issue?.severity] ?? 0;
+  const actionabilityBoost = { 'code-fixable': 4, manual: 2, 'validation-experiment': 0 }[issue?.actionability] ?? 0;
+  return Math.min(100, base + severityBoost + actionabilityBoost);
+}
+
+export function expectedRepositoryImprovement(issue) {
+  const base = improvementById[issue?.id] ?? { repositoryHealth: 3, canonicalCompleteness: 0, quality: 2, verification: 1, handoffReadiness: 2 };
+  return { ...base, total: Object.values(base).reduce((sum, value) => sum + value, 0) };
+}
+
+function compareCandidates(a, b) {
+  return b.priorityScore - a.priorityScore || b.expectedImprovement.total - a.expectedImprovement.total || actionabilityRank(a) - actionabilityRank(b) || severityRank(a) - severityRank(b) || a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
+}
+
+export function buildDecisionRanking(issues) {
+  const enriched = issues.map((issue) => ({
+    ...issue,
+    priorityScore: issuePriority(issue),
+    priority: issuePriority(issue),
+    expectedImprovement: expectedRepositoryImprovement(issue),
+  })).sort(compareCandidates).map((issue, index) => ({ ...issue, rank: index + 1, selected: index === 0 }));
+  const selectedIssue = enriched[0];
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date(0).toISOString(),
+    scoringRules: [
+      'Priority score = issue base priority + severity boost + actionability boost, capped at 100.',
+      'Expected improvement is a deterministic repository-local lookup by issue type.',
+      'Ordering ties break by expected improvement total, actionability, severity, title, then issue ID.',
+    ],
+    tieBreaking: ['priorityScore desc', 'expectedImprovement.total desc', 'actionability rank asc', 'severity rank asc', 'title asc', 'id asc'],
+    candidates: enriched,
+    selectedIssue: selectedIssue ? { id: selectedIssue.id, title: selectedIssue.title, rank: selectedIssue.rank, priorityScore: selectedIssue.priorityScore } : null,
+    selectionExplanation: selectedIssue ? `${selectedIssue.title} is ranked #1 with priority ${selectedIssue.priorityScore} and total expected improvement +${selectedIssue.expectedImprovement.total}.` : 'No candidate issue generated.',
+  };
 }
 
 const issueDetails = {
@@ -156,7 +206,8 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
     issues.push(selectedIssue({ id: 'backlog-noise', category: 'backlog filtering bugs', severity: 'medium', actionability: 'code-fixable', source: evidence, title: 'Reduce Backlog Noise', evidence, reason: 'A noisy backlog hides the highest-leverage next implementation work.', recommendedAction: 'Remove, merge, or downgrade noisy backlog items.' }));
   }
   const candidates = issues.length ? issues : [selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', actionability: 'validation-experiment', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' })];
-  return { selectedIssue: selectBestIssue(candidates), candidates };
+  const decisionRanking = buildDecisionRanking(candidates);
+  return { selectedIssue: decisionRanking.candidates[0], candidates: decisionRanking.candidates, decisionRanking };
 }
 
 
@@ -224,38 +275,46 @@ function renderSelectedIssue(selected) {
   return `- ID: ${selected.id}\n- Category: ${selected.category}\n- Severity: ${selected.severity}\n- Actionability: ${selected.actionability}\n- Package Type: ${selected.packageType ?? packageTypeForActionability(selected.actionability)}\n- Source: ${selected.source}\n- Title: ${selected.title}\n- Evidence: ${selected.evidence}\n- Reason: ${selected.reason}\n- Recommended Action: ${selected.recommendedAction}`;
 }
 
-function renderImplementationPackage(selected, details) {
-  return `# ${selected.title}\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written.\nUse the cited repository evidence to identify the root cause before making changes.\nKeep the implementation narrowly scoped.\nDo not broaden scope beyond the selected issue.\nPreserve deterministic, local-first behavior.\nPreserve manual intelligence sections.\nAvoid unrelated refactoring.\nUse only repository-local evidence.\nDo not make LLM calls, use cloud services, or add telemetry.\nEnsure execution and validation are fully reproducible.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n## Motivation\nAgent IDE should close the loop from repository intelligence to one safe next builder task. This Implementation Package was generated deterministically from the selected issue above.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Problem\n${details.problem}\n\n## Goal\n${selected.recommendedAction}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The final diff is small, deterministic, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## Expected Repository Improvement\n- Repository Health should improve.\n- Intelligence Quality should improve.\n- The selected issue should disappear or downgrade.\n- No new contradictions with \`.ai/goals.md\` should be introduced.\n\n## After Implementation\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected issue was resolved.\n- Summarize any newly discovered issues.\n- Generate the next Implementation Package.\n`;
+function renderDecisionRanking(ranking) {
+  if (!ranking?.candidates?.length) return '';
+  return ['## Decision Ranking', '', `Selected issue: ${ranking.selectedIssue?.title ?? 'None'}`, `Selection explanation: ${ranking.selectionExplanation}`, '', ...ranking.candidates.map((issue) => [`${issue.rank}. ${issue.title}${issue.selected ? ' (selected)' : ''}`, `   - ID: ${issue.id}`, `   - Priority: ${issue.priorityScore}`, `   - Expected Improvement: +${issue.expectedImprovement.total} total (+${issue.expectedImprovement.repositoryHealth} Repository Health, +${issue.expectedImprovement.canonicalCompleteness} Canonical Completeness, +${issue.expectedImprovement.quality} Quality, +${issue.expectedImprovement.verification} Verification, +${issue.expectedImprovement.handoffReadiness} Handoff Readiness)`, `   - Reason: ${issue.reason}`, `   - Evidence: ${issue.evidence}`].join('\n')), ''].join('\n');
 }
 
-function renderProductDecisionPackage(selected, details) {
+function renderImplementationPackage(selected, details, ranking) {
+  return `# ${selected.title}\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written.\nUse the cited repository evidence to identify the root cause before making changes.\nKeep the implementation narrowly scoped.\nDo not broaden scope beyond the selected issue.\nPreserve deterministic, local-first behavior.\nPreserve manual intelligence sections.\nAvoid unrelated refactoring.\nUse only repository-local evidence.\nDo not make LLM calls, use cloud services, or add telemetry.\nEnsure execution and validation are fully reproducible.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}## Motivation\nAgent IDE should close the loop from repository intelligence to one safe next builder task. This Implementation Package was generated deterministically from the selected issue above.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Problem\n${details.problem}\n\n## Goal\n${selected.recommendedAction}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The final diff is small, deterministic, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## Expected Repository Improvement\n- Repository Health should improve.\n- Intelligence Quality should improve.\n- The selected issue should disappear or downgrade.\n- No new contradictions with \`.ai/goals.md\` should be introduced.\n\n## After Implementation\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected issue was resolved.\n- Summarize any newly discovered issues.\n- Generate the next Implementation Package.\n`;
+}
+
+function renderProductDecisionPackage(selected, details, ranking) {
   return `# ${selected.title}\n\n## Decision Instructions\nThis is a product-owner decision task, not a Codex implementation task.\nUse repository-local evidence to decide or record the missing product, strategy, or manual-intelligence information.\nDo not send this package to Codex as implementation work.\nDo not edit files automatically; the repository owner should review, accept, or edit the suggested manual update in \`.ai/goals.md\`.
 Repository owner edits: \`.ai/goals.md\`
-Everything else will be regenerated.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderManualGoalsDeterministicEvaluation(selected)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct manual section of \`.ai/goals.md\`.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
+Everything else will be regenerated.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}${renderManualGoalsDeterministicEvaluation(selected)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct manual section of \`.ai/goals.md\`.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
 }
 
-function renderValidationPackage(selected, details) {
-  return `# ${selected.title}\n\n## Validation Instructions\nRun this Validation Experiment as a deterministic local check.\nUse the cited repository evidence to validate handoff quality without broadening scope.\nDo not make product-owner decisions, LLM calls, cloud calls, or telemetry changes.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Experiment\n${details.problem}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The validation result is deterministic, local-first, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## After Validation\n- Refresh Repository Intelligence.\n- Record any gaps in the appropriate manual section of \`.ai/goals.md\`.\n- Generate the next correctly typed package.\n`;
+function renderValidationPackage(selected, details, ranking) {
+  return `# ${selected.title}\n\n## Validation Instructions\nRun this Validation Experiment as a deterministic local check.\nUse the cited repository evidence to validate handoff quality without broadening scope.\nDo not make product-owner decisions, LLM calls, cloud calls, or telemetry changes.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Experiment\n${details.problem}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The validation result is deterministic, local-first, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## After Validation\n- Refresh Repository Intelligence.\n- Record any gaps in the appropriate manual section of \`.ai/goals.md\`.\n- Generate the next correctly typed package.\n`;
 }
 
 export function renderPrompt(choice) {
   const selected = choice.selectedIssue ?? choice;
   selected.packageType ??= packageTypeForActionability(selected.actionability);
   const details = issueDetails[selected.id] ?? issueDetails[selected.kind] ?? issueDetails['missing-intelligence'];
-  if (selected.packageType === 'product-decision') return renderProductDecisionPackage(selected, details);
-  if (selected.packageType === 'validation-experiment') return renderValidationPackage(selected, details);
-  return renderImplementationPackage(selected, details);
+  const ranking = choice.decisionRanking ?? selected.decisionRanking;
+  if (selected.packageType === 'product-decision') return renderProductDecisionPackage(selected, details, ranking);
+  if (selected.packageType === 'validation-experiment') return renderValidationPackage(selected, details, ranking);
+  return renderImplementationPackage(selected, details, ranking);
 }
 
 export async function generateNextImprovement(repositoryPath = process.cwd()) {
   const resolved = resolve(repositoryPath);
   const [health, quality, audit, backlog, strategy, contextPackage] = await Promise.all([readText(resolved, 'repository-health.md'), readJson(resolved, 'intelligence-quality.json'), readText(resolved, 'intelligence-audit.md'), readText(resolved, 'backlog.md'), readText(resolved, 'strategy.md'), readText(resolved, 'context-package.md')]);
-  const { selectedIssue, candidates } = chooseNextImprovementWithCandidates({ health, quality, audit, backlog, strategy, contextPackage });
+  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ health, quality, audit, backlog, strategy, contextPackage });
   selectedIssue.explanation = explainRecommendation(selectedIssue, candidates);
-  const prompt = renderPrompt({ selectedIssue });
+  decisionRanking.explanation = explainDecisionRanking(decisionRanking);
+  const prompt = renderPrompt({ selectedIssue, decisionRanking });
   await mkdir(join(resolved, '.ai'), { recursive: true });
   await writeFile(join(resolved, '.ai', 'next-improvement-prompt.md'), prompt);
-  return { choice: selectedIssue, selectedIssue, candidates, explanation: selectedIssue.explanation, prompt, filesRead: requiredFiles };
+  await writeFile(join(resolved, '.ai', 'decision-ranking.json'), `${JSON.stringify(decisionRanking, null, 2)}\n`);
+  return { choice: selectedIssue, selectedIssue, candidates, decisionRanking, explanation: selectedIssue.explanation, prompt, filesRead: requiredFiles };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
