@@ -1,6 +1,6 @@
 # Repository Health
 
-Last Audit: 2026-06-25T23:45:56.237Z
+Last Audit: 2026-06-25T23:59:05.067Z
 Overall Health: Needs Attention
 Confidence: High
 
@@ -55,6 +55,14 @@ Confidence: High
 
 ## Risks
 - Manual Goals Partial (75%). Missing: Long-term vision.
+
+## Repository Intelligence Explanation
+### Finding: Manual Goals Partial (75%). Missing: Long-term vision.
+- Rule: Manual Goals completeness < 100%
+- Computed: 75%
+- Threshold: Complete or Strong Manual Goals required for no finding.
+- Result: Partial
+- Evidence: Product intent found; Current focus found; Success criteria found; Long-term vision missing
 
 ## Recommended Next Step
 Manual Goals Partial (75%). Missing: Long-term vision. Update only the incomplete canonical fields in .ai/goals.md.

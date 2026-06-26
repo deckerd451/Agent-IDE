@@ -20,6 +20,16 @@ Everything else will be regenerated.
 - Reason: Manual Goals completeness is below the deterministic threshold. Missing: Long-term vision.
 - Recommended Action: Complete only the incomplete Manual Goals fields in `.ai/goals.md`. Missing: Long-term vision.
 
+## Why This Issue Was Selected
+
+Rule: Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.
+
+Candidate Issues
+- Complete Manual Repository Intent Notes: Priority 74
+
+Selected: Complete Manual Repository Intent Notes
+Reason: Highest deterministic priority requiring action.
+
 ## Why Human Judgment Is Required
 The repository has missing populated Manual Goals or incomplete Manual Goals fields, so generated intelligence cannot reliably identify all required product intent fields or the safest next implementation target.
 

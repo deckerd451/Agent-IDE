@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { evaluateCanonicalCompleteness, formatCompletenessState } from './canonical-completeness.mjs';
+import { explainHealth } from './intelligence-explanations.mjs';
 
 const root = process.cwd();
 const aiDir = join(root, '.ai');
@@ -278,6 +279,7 @@ risks.push(...strategyQualityWarnings);
 
 const overallHealth = calculateOverallHealth(risks);
 const confidence = calculateConfidence(docs, signals, risks);
+const healthExplanations = explainHealth({ risks, canonicalCompleteness });
 
 const content = [
   '# Repository Health',
@@ -318,6 +320,16 @@ const content = [
   '',
   '## Risks',
   risks.length ? risks.map((risk) => `- ${risk}`).join('\n') : '- No repository health risks detected.',
+  '',
+  '## Repository Intelligence Explanation',
+  healthExplanations.length ? healthExplanations.map((item) => [
+    `### Finding: ${item.finding}`,
+    `- Rule: ${item.rule}`,
+    `- Computed: ${item.computed}`,
+    `- Threshold: ${item.threshold}`,
+    `- Result: ${item.result}`,
+    `- Evidence: ${item.evidence.join('; ')}`,
+  ].join('\n')).join('\n\n') : '- No repository health findings require explanation.',
   '',
   '## Recommended Next Step',
   recommendationFor(risks),

@@ -1,6 +1,7 @@
 import { readFile, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { evaluateCanonicalCompleteness } from './canonical-completeness.mjs';
+import { explainCompleteness, explainQuality } from './intelligence-explanations.mjs';
 
 export const canonicalIntelligenceFiles = ['goals.md'];
 export const generatedIntelligenceFiles = ['strategy.md','architecture.md','repository-health.md','context-package.md','intelligence-quality.json','intelligence-history.json','intelligence-snapshot.json','intelligence-diff.json','intelligence-verification.json','next-improvement-prompt.md','prompts/architect.md','prompts/builder.md','prompts/reviewer.md','prompts/debugger.md'];
@@ -161,6 +162,7 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const generatedExportQualityScore = Math.round(exportCoverageScore * 0.55 + exportFreshnessScore * 0.35 + (promptsPresent && docs['context-package.md']?.trim() ? 100 : 50) * 0.1);
   const overallScore = Math.round(canonicalIntelligenceQualityScore * 0.75 + generatedExportQualityScore * 0.1 + verificationScore * 0.15);
   const snapshot = { timestamp: now.toISOString(), overallScore, canonicalIntelligenceQuality: { score: canonicalIntelligenceQualityScore, completenessScore: canonicalCompleteness.score, completenessState: canonicalCompleteness.state, fields: canonicalCompleteness.fields, coverageScore: canonicalCoverageScore, consistencyScore, freshnessScore: canonicalFreshnessScore, sourceOfTruth: 'goals.md' }, generatedExportQuality: { score: generatedExportQualityScore, coverageScore: exportCoverageScore, freshnessScore: exportFreshnessScore, promptsFreshnessOnly: true }, coverage: { score: coverageScore, ...coverageItems }, consistency: { score: consistencyScore, productThesisConsistent: !thesisContradictory, currentFocusConsistent: !focusContradictory, northStarConsistent: !northStarContradictory, validationConsistent, strategyConsistent, strategyReferencesSupportedByEvidence: strategyEvidence, duplicatedSections: duplicates, contradictions }, freshness: { score: freshnessScore, lastRefresh: now.toISOString(), filesChanged: previousQuality ? Number(drift.productThesisChanged) + Number(drift.strategyChanged) + Number(drift.architectureChanged) + Number(drift.backlogGrew || drift.backlogShrank) + drift.newRisks.length + drift.removedRisks.length : 0, staleDocuments, canonicalStaleDocuments, derivedStaleDocuments, manualNotesPreserved }, confidence: { score: confidenceScore, existingConfidence, strategyConfidence, validationConfidence, overallRepositoryConfidence: confidenceScore >= 80 ? 'High' : confidenceScore >= 55 ? 'Medium' : 'Low' }, verification: { score: verificationScore, status: verification?.status ?? 'Missing', failures: verificationFailures }, drift, risks, backlogCount, fingerprints: current.fingerprints, recentRegressions, recentImprovements };
+  snapshot.explanations = { completeness: explainCompleteness(docs['goals.md'] ?? ''), quality: explainQuality(snapshot) };
   return { ...snapshot, trend: computeTrend(previousHistory, snapshot), recommendedAction: recommendQualityAction(snapshot) };
 }
 
