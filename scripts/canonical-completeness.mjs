@@ -1,6 +1,6 @@
 export const completenessStates = ['Missing', 'Partial', 'Complete', 'Strong'];
 
-const missingPattern = /^(?:unknown|missing|not detected yet|none detected|generated placeholder|tbd|todo|n\/?a|na|\[repository owner:[\s\S]*\])$/i;
+const missingPattern = /^(?:unknown|missing|not detected yet|none detected|generated placeholder|tbd|todo|n\/?a|na|\[repository owner:[\s\S]*\]\.?)$/i;
 
 export const canonicalFields = [
   { key: 'manualGoals', label: 'Manual Goals', heading: 'Manual Goals', required: [
@@ -27,13 +27,20 @@ function meaningfulLines(value) {
 }
 
 function normalizeFieldValue(value) {
-  return value.split('\n').map((line) => line.replace(/^[-*]\s+/, '').trim()).join(' ').replace(/\s+/g, ' ').trim();
+  return value
+    .split('\n')
+    .map((line) => line.replace(/^\s*(?:[-*]\s+)?/, '').trim())
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function fieldPattern(label) {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^\\s*(?:[-*]\\s*)?${escaped}\\s*:\\s*(.*)$`, 'i');
+  return new RegExp(`^\\s*(?:[-*]\\s*)?${escaped}\\s*:\\s*(?<value>.*)$`, 'i');
 }
+
+const manualStrategyContinuationBoundary = /^(?:[A-Z]|\s*[-*]\s*[A-Z])[A-Za-z0-9 &'/-]+\s*:/;
 
 function manualStrategyFieldEvidence(markdown, field) {
   const section = mdSection(markdown, field.heading);
@@ -45,10 +52,10 @@ function manualStrategyFieldEvidence(markdown, field) {
   for (let index = 0; index < lines.length; index += 1) {
     const patternMatch = patterns.map((pattern) => lines[index].match(pattern)).find(Boolean);
     if (!patternMatch) continue;
-    const valueLines = [patternMatch[1] ?? ''];
+    const valueLines = [patternMatch.groups?.value ?? patternMatch[1] ?? ''];
     for (let next = index + 1; next < lines.length; next += 1) {
       const nextLine = lines[next];
-      if (/^\s*(?:[-*]\s*)?[A-Z][A-Za-z0-9 &'/-]+\s*:/.test(nextLine) || /^#{1,6}\s+/.test(nextLine)) break;
+      if (manualStrategyContinuationBoundary.test(nextLine) || /^#{1,6}\s+/.test(nextLine)) break;
       if (nextLine.trim()) valueLines.push(nextLine);
     }
     const value = normalizeFieldValue(valueLines.join('\n'));
