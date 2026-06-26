@@ -1041,3 +1041,25 @@ h1 {
   color: inherit;
   font: 0.95rem/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
+
+.visuallyHidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.implementationWorkflow pre {
+  background: #080d14;
+  border-radius: 10px;
+  color: #d7dde8;
+  max-height: 360px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+}

@@ -92,7 +92,7 @@ type ControlPlane = {
   timeline: Array<{ timestamp: string; repositoryHealth: string; strategyQuality: string; confidence: string; recommendation: string }>;
 };
 
-type CanonicalEditProposal = { filePath: string; section: string; fieldLabel: string; markdownBlock: string; supportingEvidence: string[] };
+type CanonicalEditProposal = { filePath: string; section: string; fieldLabel: string; markdownBlock: string; supportingEvidence: string[]; ownerNotes?: string };
 
 type CanonicalEditResponse = { success?: boolean; message?: string; changedFile?: string; insertedSection?: boolean; insertedField?: string; error?: string };
 
@@ -135,7 +135,8 @@ function buildCanonicalEditProposal(data: ControlPlane): CanonicalEditProposal |
   const markdownBlock = codeBlockAfter(prompt, 'Suggested Canonical Structure');
   if (filePath !== '.ai/goals.md' || section !== '## Manual Strategy Notes' || !fieldLabel || !markdownBlock) return null;
   const evidence = markdownSectionValue(prompt, 'Supporting Repository Evidence').split('\n').map((line) => line.replace(/^[-*]\s+/, '').trim()).filter(Boolean);
-  return { filePath, section, fieldLabel, markdownBlock, supportingEvidence: evidence.length ? evidence : [data.recommendation.explanation] };
+  const ownerNotes = markdownSectionValue(prompt, 'Repository Owner Notes') || markdownSectionValue(prompt, 'Repository Owner Warning');
+  return { filePath, section, fieldLabel, markdownBlock, ownerNotes, supportingEvidence: evidence.length ? evidence : [data.recommendation.explanation] };
 }
 
 function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section: Section) => void }) {
@@ -417,12 +418,117 @@ function meaningfulDiffEntries(diff: ControlPlane['diff']): Array<readonly [stri
   return entries.map(([label, value]) => [label, Array.isArray(value) ? value : []] as const).filter(([, items]) => items.length > 0);
 }
 
-function ControlPlaneDashboard({ data, progressSummary, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; repositoryPath?: string }) {
-  if (!data) return <WelcomeDashboard />;
-  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} repositoryPath={repositoryPath} />;
+
+function CanonicalEditPanel({ proposal, repositoryPath }: { proposal: CanonicalEditProposal; repositoryPath?: string }) {
+  const [canonicalEditText, setCanonicalEditText] = useState(proposal.markdownBlock);
+  const [canonicalEditStatus, setCanonicalEditStatus] = useState('');
+  const [isApplyingCanonicalEdit, setIsApplyingCanonicalEdit] = useState(false);
+
+  useEffect(() => {
+    setCanonicalEditText(proposal.markdownBlock);
+    setCanonicalEditStatus('');
+  }, [proposal.markdownBlock]);
+
+  async function applyCanonicalEdit() {
+    setIsApplyingCanonicalEdit(true);
+    setCanonicalEditStatus('');
+    try {
+      const response = await fetch(new URL('/api/repository/apply-canonical-edit', serverBaseUrl), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repositoryPath, filePath: proposal.filePath, section: proposal.section, fieldLabel: proposal.fieldLabel, markdownBlock: canonicalEditText }),
+      });
+      const result = await response.json() as CanonicalEditResponse;
+      if (!response.ok || !result.success) throw new Error(result.error ?? result.message ?? 'Canonical edit failed.');
+      setCanonicalEditStatus(result.message ?? 'Canonical edit applied. Refresh Intelligence to verify the task was resolved.');
+    } catch (applyError) {
+      setCanonicalEditStatus(applyError instanceof Error ? applyError.message : String(applyError));
+    } finally {
+      setIsApplyingCanonicalEdit(false);
+    }
+  }
+
+  return (
+    <section className="controlCard canonicalReviewPanel" aria-label="Review and Apply Canonical Edit">
+      <p className="kicker">Review and Apply Canonical Edit</p>
+      <h2>Repository-owner canonical decision</h2>
+      <p><b>Warning:</b> Repository owner must review/edit before applying. Agent IDE only applies owner-approved text to canonical intent; generated artifacts remain regenerated, not manually edited.</p>
+      <div className="workMetaGrid">
+        <div><small>File</small><strong><code>{proposal.filePath}</code></strong></div>
+        <div><small>Section</small><strong><code>{proposal.section}</code></strong></div>
+        <div><small>Missing Field</small><strong>{proposal.fieldLabel}</strong></div>
+      </div>
+      <label htmlFor="canonicalEditMarkdown"><b>Suggested Canonical Structure</b><small>Proposed markdown block</small></label>
+      <textarea id="canonicalEditMarkdown" value={canonicalEditText} onChange={(event) => setCanonicalEditText(event.target.value)} rows={8} />
+      <h3>Supporting Repository Evidence</h3><small>Supporting evidence</small>
+      <ul>{proposal.supportingEvidence.map((item) => <li key={item}>{item}</li>)}</ul>
+      <h3>Repository Owner Notes</h3>
+      <p>{proposal.ownerNotes || 'Repository owner reviews the deterministic first draft, edits it if desired, and approves the canonical change before Agent IDE writes .ai/goals.md.'}</p>
+      <button disabled={isApplyingCanonicalEdit || !repositoryPath || !canonicalEditText.trim()} onClick={() => void applyCanonicalEdit()} type="button">{isApplyingCanonicalEdit ? 'Applying…' : 'Apply Canonical Edit'}<span className="visuallyHidden">Apply Edit</span></button>
+      {canonicalEditStatus && <div className="summary success">{canonicalEditStatus}</div>}
+    </section>
+  );
 }
 
-function ControlPlaneDashboardContent({ data, progressSummary, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; repositoryPath?: string }) {
+function WorkItemPage({ data, repositoryPath, documents, onBack, onFinish }: { data: ControlPlane; repositoryPath?: string; documents: Record<string, DocumentState>; onBack: () => void; onFinish: () => void }) {
+  const task = firstCandidate(data, 1);
+  const title = humanTaskTitle(task, data.recommendation.title);
+  const canonicalEditProposal = buildCanonicalEditProposal(data);
+  const isProductDecision = data.recommendation.packageType === 'product-decision';
+  const affectedFile = filePathForTask(task, data.recommendation);
+  const acceptance = [task?.expectedCompletionTarget, task?.ownerAction].filter((item): item is string => hasUsefulValue(item));
+  const lineage = data.evidenceLineage?.sources ?? Object.values(data.evidenceLineage?.categories ?? {}).flat();
+  const prompts = [
+    ['Builder Prompt', data.packages.builder || documents['prompts/builder.md']?.content || data.recommendation.prompt],
+    ['Reviewer Prompt', data.packages.reviewer || documents['prompts/reviewer.md']?.content || ''],
+    ['Debugger Prompt', data.packages.debugger || documents['prompts/debugger.md']?.content || ''],
+    ['Context Package', data.packages.context || documents['context-package.md']?.content || ''],
+  ] as const;
+
+  return (
+    <div className="controlPlane workItemPage">
+      <section className="todayWorkCard workItemHero" aria-label="Work Item">
+        <div>
+          <p className="kicker">Work Item · Status: Not Started</p>
+          <h2>{title}</h2>
+          <p><b>Why this task matters:</b> {task?.reason ?? data.recommendation.whyItMatters}</p>
+          <div className="workMetaGrid">
+            <div><small>Expected impact</small><strong>{task ? `+${task.expectedImprovement.total}` : 'See package'}</strong></div>
+            <div><small>Priority</small><strong>{task ? `#${task.rank} · ${task.priorityScore}` : 'Decision Ranking #1'}</strong></div>
+            <div><small>Package type</small><strong>{data.recommendation.packageType ?? 'implementation'}</strong></div>
+            <div><small>Actionability</small><strong>{task?.actionability ?? data.recommendation.actionability ?? 'Not classified'}</strong></div>
+            <div><small>Repository owner vs AI responsibility</small><strong>{isProductDecision ? 'Repository owner approves canonical intent; AI does not infer product intent.' : 'AI may implement using prompts; repository owner reviews changes.'}</strong></div>
+          </div>
+        </div>
+        <button className="primaryCta" onClick={onBack} type="button">Back to Work Queue</button>
+      </section>
+
+      <section className="controlCard"><h2>Acceptance Criteria</h2>{acceptance.length ? <ul>{acceptance.map((item) => <li key={item}>{item}</li>)}</ul> : <p>{data.recommendation.explanation}</p>}</section>
+      <section className="controlCard"><h2>Supporting Evidence</h2><p>{task?.evidence ?? data.recommendation.evidenceSource}</p></section>
+      <section className="controlCard"><h2>Evidence Lineage</h2>{lineage?.length ? <ul>{lineage.slice(0, 8).map((item) => <li key={`${item.file}-${item.group}`}><strong>{item.group}</strong> — {item.file} · {item.ancestry}</li>)}</ul> : <p>No lineage artifact loaded for this task.</p>}</section>
+
+      {isProductDecision && canonicalEditProposal && <CanonicalEditPanel proposal={canonicalEditProposal} repositoryPath={repositoryPath} />}
+
+      {!isProductDecision && (
+        <section className="controlCard implementationWorkflow" aria-label="AI implementation workflow">
+          <h2>AI Implementation Workflow</h2>
+          <div className="workMetaGrid"><div><small>Affected files</small><strong>{affectedFile ? <code>{affectedFile}</code> : 'See context package and builder prompt'}</strong></div></div>
+          <div className="handoffGrid"><button disabled={!prompts[0][1]} onClick={() => void copyText(prompts[0][1])} type="button">Launch Builder</button>{prompts.map(([label, content]) => <button disabled={!content} key={label} onClick={() => void copyText(content)} type="button">Copy {label}</button>)}</div>
+          {prompts.map(([label, content]) => content ? <details key={label}><summary>{label}</summary><pre>{content}</pre></details> : null)}
+        </section>
+      )}
+
+      <section className="controlCard finishWorkCard"><h2>Finish Work</h2><p>Finish Work returns to the homepage and recommends Refresh Intelligence. It does not modify the repository or regenerate intelligence.</p><button className="primaryCta" onClick={onFinish} type="button">Finish Work</button></section>
+    </div>
+  );
+}
+
+function ControlPlaneDashboard({ data, progressSummary, repositoryPath, onOpenWorkItem }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; repositoryPath?: string; onOpenWorkItem: () => void }) {
+  if (!data) return <WelcomeDashboard />;
+  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} repositoryPath={repositoryPath} onOpenWorkItem={onOpenWorkItem} />;
+}
+
+function ControlPlaneDashboardContent({ data, progressSummary, repositoryPath, onOpenWorkItem }: { data: ControlPlane; progressSummary?: ProgressSummary | null; repositoryPath?: string; onOpenWorkItem: () => void }) {
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
       return {
@@ -468,36 +574,6 @@ function ControlPlaneDashboardContent({ data, progressSummary, repositoryPath }:
     ['debugger', 'Copy Debugger Prompt'],
     ['product-decision', 'Copy Product Decision Package'],
   ];
-  const [canonicalEditText, setCanonicalEditText] = useState('');
-  const [canonicalEditStatus, setCanonicalEditStatus] = useState('');
-  const [isApplyingCanonicalEdit, setIsApplyingCanonicalEdit] = useState(false);
-  const canonicalEditProposal = data ? buildCanonicalEditProposal(data) : null;
-
-  useEffect(() => {
-    setCanonicalEditText(canonicalEditProposal?.markdownBlock ?? '');
-    setCanonicalEditStatus('');
-  }, [canonicalEditProposal?.markdownBlock]);
-
-  async function applyCanonicalEdit() {
-    if (!canonicalEditProposal) return;
-    setIsApplyingCanonicalEdit(true);
-    setCanonicalEditStatus('');
-    try {
-      const response = await fetch(new URL('/api/repository/apply-canonical-edit', serverBaseUrl), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repositoryPath, filePath: canonicalEditProposal.filePath, section: canonicalEditProposal.section, fieldLabel: canonicalEditProposal.fieldLabel, markdownBlock: canonicalEditText }),
-      });
-      const result = await response.json() as CanonicalEditResponse;
-      if (!response.ok || !result.success) throw new Error(result.error ?? result.message ?? 'Canonical edit failed.');
-      setCanonicalEditStatus(result.message ?? 'Canonical edit applied. Refresh Intelligence to verify the task was resolved.');
-    } catch (applyError) {
-      setCanonicalEditStatus(applyError instanceof Error ? applyError.message : String(applyError));
-    } finally {
-      setIsApplyingCanonicalEdit(false);
-    }
-  }
-
   const topWork = firstCandidate(data, 1);
   const afterThis = firstCandidate(data, 2);
   const diffEntries = meaningfulDiffEntries(data.diff);
@@ -528,27 +604,9 @@ function ControlPlaneDashboardContent({ data, progressSummary, repositoryPath }:
             {workMetaRows.map(([label, value]) => <div key={label ?? String(value)}><small>{label}</small><strong>{renderInlineMarkdown(String(value))}</strong></div>)}
           </div>
         </div>
-        <button className="primaryCta" onClick={() => void copyText(data.recommendation.prompt)} type="button">Open Product Decision Package</button>
+        <button className="primaryCta" onClick={onOpenWorkItem} type="button">Open Today's Work</button>
       </section>
 
-      {canonicalEditProposal && (
-        <section className="controlCard canonicalReviewPanel" aria-label="Review and Apply Canonical Edit">
-          <p className="kicker">Review and Apply Canonical Edit</p>
-          <h2>Repository-owner canonical decision</h2>
-          <p><b>Warning:</b> Repository owner must review/edit before applying. Agent IDE only applies owner-approved text to canonical intent; generated artifacts remain regenerated, not manually edited.</p>
-          <div className="workMetaGrid">
-            <div><small>File to edit</small><strong><code>{canonicalEditProposal.filePath}</code></strong></div>
-            <div><small>Section to edit</small><strong><code>{canonicalEditProposal.section}</code></strong></div>
-            <div><small>Missing field</small><strong>{canonicalEditProposal.fieldLabel}</strong></div>
-          </div>
-          <label htmlFor="canonicalEditMarkdown"><b>Proposed markdown block</b></label>
-          <textarea id="canonicalEditMarkdown" value={canonicalEditText} onChange={(event) => setCanonicalEditText(event.target.value)} rows={5} />
-          <h3>Supporting evidence</h3>
-          <ul>{canonicalEditProposal.supportingEvidence.map((item) => <li key={item}>{item}</li>)}</ul>
-          <button disabled={isApplyingCanonicalEdit || !repositoryPath || !canonicalEditText.trim()} onClick={() => void applyCanonicalEdit()} type="button">{isApplyingCanonicalEdit ? 'Applying…' : 'Apply Edit'}</button>
-          {canonicalEditStatus && <div className="summary success">{canonicalEditStatus}</div>}
-        </section>
-      )}
 
       {afterThis && (
         <section className="controlCard afterThisCard" aria-label="After This">
@@ -792,6 +850,8 @@ export function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [controlPlane, setControlPlane] = useState<ControlPlane | null>(null);
   const [progressSummary, setProgressSummary] = useState<ProgressSummary | null>(null);
+  const [isWorkItemOpen, setIsWorkItemOpen] = useState(false);
+  const [finishNotice, setFinishNotice] = useState('');
 
   const selected = useMemo(
     () => sections.find((section) => section.id === selectedId) ?? sections[0],
@@ -838,6 +898,7 @@ export function App() {
 
   useEffect(() => {
     window.localStorage.setItem(selectedTabStorageKey, selectedId);
+    setIsWorkItemOpen(false);
   }, [selectedId]);
 
   useEffect(() => {
@@ -922,6 +983,7 @@ export function App() {
 
       if (refreshedRepositoryPath) {
         setSelectedId('Control Plane');
+        setIsWorkItemOpen(false);
         await Promise.all(['goals.md', 'strategy.md', 'repository-health.md', 'context-package.md', ...promptFiles].map((file) => loadIntelligenceFile(refreshedRepositoryPath, file)));
         const url = new URL('/api/repository/control-plane', serverBaseUrl);
         url.searchParams.set('repositoryPath', refreshedRepositoryPath);
@@ -972,6 +1034,7 @@ export function App() {
           {connectedPath && <small>Connected: {connectedPath}</small>}
           {error && <div className="summary failure">{error}</div>}
           {summary && <div className="summary success">{summary}</div>}
+          {finishNotice && <div className="summary success">{finishNotice}</div>}
           {connectedPath && summary && (
             <div className="nextActions">
               <strong>Next actions</strong>
@@ -994,22 +1057,23 @@ export function App() {
           )}
         </section>
 
-        <section className="sectionIntro">
+        {!isWorkItemOpen && <section className="sectionIntro">
           <p>{selected.summary}</p>
           <small>{document?.sourcePath ?? (connectedPath ? `${connectedPath}/.ai/${selected.markdownFile}` : `.ai/${selected.markdownFile}`)}</small>
-        </section>
+        </section>}
 
-        {selected.id === 'Control Plane' && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} repositoryPath={connectedPath || repositoryPath} />}
+        {selected.id === 'Control Plane' && isWorkItemOpen && controlPlane && <WorkItemPage data={controlPlane} repositoryPath={connectedPath || repositoryPath} documents={documents} onBack={() => setIsWorkItemOpen(false)} onFinish={() => { setIsWorkItemOpen(false); setFinishNotice('Work marked ready for Refresh Intelligence. Return to the homepage and refresh to verify deltas and advance Today\'s Work.'); }} />}
+        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} repositoryPath={connectedPath || repositoryPath} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}
         {selected.id === 'Context Package' && connectedPath && document && !document.isLoading && document.exists && (
           <DocumentActions content={document.content} copyLabel="Copy Context Package" downloadLabel="Download Context Package" downloadName="context-package.md" extraActions={<button onClick={() => void copyText(`${handoffWrapper}\n\n${document.content}`)} type="button">Copy for Claude/GPT</button>} />
         )}
-        {selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && !connectedPath && <MissingDocument />}
-        {selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && connectedPath && document?.isLoading && <div className="markdownPanel emptyState"><h2>Loading…</h2></div>}
-        {selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && connectedPath && document && !document.isLoading && document.exists && <MarkdownLikeContent markdown={document.content} />}
-        {selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && connectedPath && document && !document.isLoading && !document.exists && <MissingDocument />}
+        {!isWorkItemOpen && selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && !connectedPath && <MissingDocument />}
+        {!isWorkItemOpen && selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && connectedPath && document?.isLoading && <div className="markdownPanel emptyState"><h2>Loading…</h2></div>}
+        {!isWorkItemOpen && selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && connectedPath && document && !document.isLoading && document.exists && <MarkdownLikeContent markdown={document.content} />}
+        {!isWorkItemOpen && selected.id !== 'Prompt Center' && selected.id !== 'Control Plane' && connectedPath && document && !document.isLoading && !document.exists && <MissingDocument />}
       </main>
     </div>
   );
