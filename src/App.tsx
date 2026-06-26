@@ -58,6 +58,7 @@ type ControlPlane = {
   understanding: Array<{ label: string; state: IntelligenceState; source: string }>;
   unknowns: Array<{ label: string; source: string }>;
   recommendation: ControlPlaneRecommendation;
+  evidenceLineage?: { categories?: Record<string, Array<{ file: string; group: string; category: string; ancestry?: string }>>; sources?: Array<{ file: string; group: string; category: string; ancestry?: string }> };
   decisionRanking?: { selectionExplanation: string; selectedIssue?: { id: string; title: string; rank: number; priorityScore: number }; candidates: DecisionCandidate[] } | null;
   diff: Record<string, string | string[]>;
   quality: QualitySnapshot | null;
@@ -510,6 +511,20 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
         </section>
       )}
 
+
+      {data.evidenceLineage && (
+        <section className="controlCard disclosureCard" aria-label="Evidence Lineage">
+          <h2>Evidence Lineage</h2>
+          <p><b>Confidence calculation:</b> canonical and independent evidence groups increase confidence; generated confirmations verify consistency but do not increase confidence.</p>
+          <p><b>Evidence ancestry:</b> generated artifacts descend from canonical owner intent and independent repository evidence.</p>
+          {['Canonical', 'Independent', 'Generated'].map((category) => (
+            <details key={category} open={category !== 'Generated'}>
+              <summary>{category} Sources <span>{data.evidenceLineage?.categories?.[category]?.length ?? 0}</span></summary>
+              <ul>{(data.evidenceLineage?.categories?.[category] ?? []).map((item) => <li key={item.file}><strong>{item.group}</strong><small>{item.file} · {item.ancestry}</small></li>)}</ul>
+            </details>
+          ))}
+        </section>
+      )}
       <section className="controlCard"><h2>Trend</h2><p>{data.quality ? data.quality.trend : 'No intelligence quality trend available yet.'}</p></section>
       <section className="controlCard"><h2>Recent Changes</h2>{diffEntries.length > 0 ? diffEntries.map(([label, items]) => <details key={label}><summary>{label} <span>{items.length}</span></summary><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></details>) : <p>No material intelligence changes detected.</p>}</section>
 

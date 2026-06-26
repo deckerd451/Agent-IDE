@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-26T12:37:54.279Z",
+  "categories": {
+    "Canonical": [
+      {
+        "file": ".ai/goals.md",
+        "category": "Canonical",
+        "group": "Goals",
+        "ancestry": "Repository-local source."
+      },
+      {
+        "file": "README.md",
+        "category": "Canonical",
+        "group": "README",
+        "ancestry": "Repository-local source."
+      }
+    ],
+    "Independent": [
+      {
+        "file": ".ai/architecture.md",
+        "category": "Independent",
+        "group": "Architecture",
+        "ancestry": "Repository-local source."
+      },
+      {
+        "file": ".ai/decisions.md",
+        "category": "Independent",
+        "group": "Decision Log",
+        "ancestry": "Repository-local source."
+      },
+      {
+        "file": ".ai/validation.md",
+        "category": "Independent",
+        "group": "Validation",
+        "ancestry": "Repository-local source."
+      }
+    ],
+    "Generated": [
+      {
+        "file": ".ai/prompts/architect.md",
+        "category": "Generated",
+        "group": "Architect",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
+        "file": ".ai/context-package.md",
+        "category": "Generated",
+        "group": "Context Package",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
+        "file": ".ai/repository-health.md",
+        "category": "Generated",
+        "group": "Repository Health",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      },
+      {
+        "file": ".ai/strategy.md",
+        "category": "Generated",
+        "group": "Strategy",
+        "ancestry": "Generated descendant of canonical and independent repository intelligence."
+      }
+    ]
+  },
+  "sources": [
+    {
+      "file": ".ai/goals.md",
+      "category": "Canonical",
+      "group": "Goals",
+      "ancestry": "Repository-local source."
+    },
+    {
+      "file": "README.md",
+      "category": "Canonical",
+      "group": "README",
+      "ancestry": "Repository-local source."
+    },
+    {
+      "file": ".ai/prompts/architect.md",
+      "category": "Generated",
+      "group": "Architect",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/context-package.md",
+      "category": "Generated",
+      "group": "Context Package",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/repository-health.md",
+      "category": "Generated",
+      "group": "Repository Health",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/strategy.md",
+      "category": "Generated",
+      "group": "Strategy",
+      "ancestry": "Generated descendant of canonical and independent repository intelligence."
+    },
+    {
+      "file": ".ai/architecture.md",
+      "category": "Independent",
+      "group": "Architecture",
+      "ancestry": "Repository-local source."
+    },
+    {
+      "file": ".ai/decisions.md",
+      "category": "Independent",
+      "group": "Decision Log",
+      "ancestry": "Repository-local source."
+    },
+    {
+      "file": ".ai/validation.md",
+      "category": "Independent",
+      "group": "Validation",
+      "ancestry": "Repository-local source."
+    }
+  ]
+}
