@@ -158,7 +158,7 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const lineageConfidence = confidenceFromEvidence(evidenceLineage.sources);
   const confidenceScore = confidenceValue(lineageConfidence.confidence);
   const verification = JSON.parse(docs['intelligence-verification.json'] || 'null');
-  const aiHandoffValidation = JSON.parse(docs['ai-handoff-validation.json'] || 'null') ?? await validateAIHandoff(repositoryPath);
+  const aiHandoffValidation = await validateAIHandoff(repositoryPath);
   const verificationScore = typeof verification?.score === 'number' ? verification.score : 100;
   const verificationFailures = Array.isArray(verification?.failures) ? verification.failures : [];
   const risks = extractRisks(docs, Object.keys(consistencyDocs));

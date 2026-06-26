@@ -211,3 +211,66 @@ test('quality score combines coverage, consistency, freshness, and confidence', 
   assert.ok(weak.overallScore < snapshot.overallScore);
   assert.match(weak.recommendedAction, /validation|confidence|contradiction/i);
 });
+
+test('export quality decreases when decision ranking is absent from Context Package', async () => {
+  const decisionRankingJson = JSON.stringify({
+    selectedIssue: { id: 'ai-handoff-validation', title: 'Run AI Handoff Validation', rank: 1, priorityScore: 10 },
+    candidates: [{ id: 'ai-handoff-validation', title: 'Run AI Handoff Validation', rank: 1, selected: true, packageType: 'validation-experiment', priorityScore: 10, expectedImprovement: { total: 11 } }],
+  });
+  const fullContext = `${baseDocs['context-package.md']}
+## Product Thesis
+Agent IDE creates local repository intelligence.
+
+## Current Focus
+Quality loop
+
+## Canonical Intelligence Ownership
+Human-owned source of truth: .ai/goals.md.
+
+## Strategy
+Current Product Bet: Quality loop. Strategy Confidence: High because evidence sources include goals and validation rationale.
+
+## Core Systems
+Control Plane and local scripts.
+
+## Key Decisions
+- Deterministic only.
+
+## Decision Ranking
+Selected Issue: Run AI Handoff Validation
+Selected Issue ID: ai-handoff-validation
+Package Type/Actionability: validation-experiment
+Priority Score: 10
+Expected Improvement: total: 11
+Deterministic Selection Explanation: Run AI Handoff Validation is ranked #1.
+
+Ranked Candidates:
+1. Run AI Handoff Validation (ai-handoff-validation)
+  - selected: yes
+  - package type/actionability: validation-experiment
+  - priority score: 10
+  - expected improvement: total: 11
+
+## Highest-Priority Issue
+- Title: Run AI Handoff Validation
+
+## Next Implementation Step
+Current Evidence: repository-local evidence supports the next step.
+
+## Validation Summary
+High
+
+## Repository Health Summary
+Recommended Next Step: Run AI Handoff Validation.
+
+## Confidence Explanation
+Confidence uses repository-local evidence lineage and deterministic rationale.
+`;
+  const withRankingDocs = { ...baseDocs, 'context-package.md': fullContext, 'decision-ranking.json': decisionRankingJson, 'intelligence-explanations.json': JSON.stringify({ decisionRanking: {}, recommendation: {} }) };
+  const withoutRankingDocs = { ...withRankingDocs, 'context-package.md': fullContext.replace(/## Decision Ranking[\s\S]*?(?=\n## Highest-Priority Issue)/, '') };
+  const withRanking = await computeQualitySnapshot(await repoWithDocs(withRankingDocs), withRankingDocs);
+  const withoutRanking = await computeQualitySnapshot(await repoWithDocs(withoutRankingDocs), withoutRankingDocs);
+  assert.equal(withRanking.generatedExportQuality.aiHandoffValidation.categories.decisionRanking.status, 'Present');
+  assert.equal(withoutRanking.generatedExportQuality.aiHandoffValidation.categories.decisionRanking.status, 'Missing');
+  assert.ok(withoutRanking.generatedExportQuality.score < withRanking.generatedExportQuality.score);
+});

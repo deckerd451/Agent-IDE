@@ -34,6 +34,16 @@ function evidenceFor(packageText, headings, pattern) {
   if (fallback) return { status: 'Partial', evidence: 'Context Package mentions the category but does not expose a dedicated reconstructable section.' };
   return { status: 'Missing', evidence: `Context Package does not expose ${headings.map((h) => `## ${h}`).join(' or ')}.` };
 }
+function evidenceForDecisionRanking(packageText, ranking) {
+  const text = mdSection(packageText, 'Decision Ranking');
+  if (!meaningful(text)) return { status: 'Missing', evidence: 'Context Package does not expose ## Decision Ranking.' };
+  const hasSelectedIssue = /selected issue/i.test(text) && includesNormalized(text, ranking?.selectedIssue?.title) && includesNormalized(text, ranking?.selectedIssue?.id);
+  const candidates = Array.isArray(ranking?.candidates) ? ranking.candidates : [];
+  const rankedCandidates = candidates.filter((candidate) => includesNormalized(text, candidate.title) && includesNormalized(text, candidate.id));
+  const hasRankedCandidates = /ranked candidates/i.test(text) && (!candidates.length || rankedCandidates.length === candidates.length);
+  if (hasSelectedIssue && hasRankedCandidates) return { status: 'Present', evidence: 'Context Package exposes ## Decision Ranking with selected issue and ranked candidates.' };
+  return { status: 'Partial', evidence: 'Context Package exposes ## Decision Ranking but it is missing the selected issue, selected issue ID, or ranked candidates.' };
+}
 function bullets(items) { return items.length ? items.map((item) => `- ${item}`).join('\n') : '- None detected.'; }
 function includesNormalized(haystack, needle) {
   const n = String(needle ?? '').replace(/^[-*]\s+/, '').trim();
@@ -50,6 +60,7 @@ export async function validateAIHandoff(repositoryPath) {
   const ranking = rankingText ? JSON.parse(rankingText) : null;
   const synthesis = synthesisText ? JSON.parse(synthesisText) : null;
   const evaluated = Object.fromEntries(categories.map(([key, label, headings, pattern]) => [key, { label, ...evidenceFor(contextPackage, headings, pattern) }]));
+  evaluated.decisionRanking = { label: 'Decision ranking', ...evidenceForDecisionRanking(contextPackage, ranking) };
   const contradictions = [];
   const hiddenInformation = [];
   const missingExplanations = [];
@@ -58,6 +69,7 @@ export async function validateAIHandoff(repositoryPath) {
   if (/current product bet/i.test(contextPackage) && evaluated.currentProductBet.status === 'Missing') contradictions.push('Context Package references Current Product Bet without exposing it.');
   if (/architecture|core systems/i.test(contextPackage) && evaluated.architecture.status !== 'Present') contradictions.push('Context Package references architecture but provides insufficient summary.');
   if (ranking?.candidates?.length && evaluated.decisionRanking.status === 'Missing') contradictions.push('Package omits decision ranking.');
+  if (ranking?.candidates?.length && evaluated.decisionRanking.status === 'Partial') contradictions.push('Package decision ranking is not reconstructable.');
   if (ranking?.selectedIssue?.title && !includesNormalized(contextPackage + '\n' + nextPrompt, ranking.selectedIssue.title)) contradictions.push('Decision ranking selected issue is hidden from handoff artifacts.');
   if (quality?.generatedExportQuality?.score >= 70 && evaluated.decisionRanking.status === 'Missing' && ranking?.candidates?.length) contradictions.push('Intelligence quality reports acceptable export quality while handoff hides decision ranking.');
   if (/strategy confidence/i.test(contextPackage) && !/evidence|source|rationale|calculation/i.test(mdSection(contextPackage, 'Strategy'))) contradictions.push('Strategy confidence is surfaced without rationale.');
