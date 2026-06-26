@@ -133,6 +133,11 @@ const rankedCandidatesWithoutExplanation = await validateWithContext(reconstruct
 assert.equal(rankedCandidatesWithoutExplanation.categories.decisionRanking.status, 'Partial');
 assert.ok(rankedCandidatesWithoutExplanation.categories.decisionRanking.evidence.includes('Deterministic Selection Explanation'));
 
+
+const explanationAndCandidatesWithoutSelectedIssue = await validateWithContext(reconstructableDecisionRankingPackage.replace(/Selected Issue:.*\n/, ''));
+assert.equal(explanationAndCandidatesWithoutSelectedIssue.categories.decisionRanking.status, 'Partial');
+assert.ok(explanationAndCandidatesWithoutSelectedIssue.categories.decisionRanking.evidence.includes('Selected Issue'));
+
 const noDecisionRankingHeading = await validateWithContext(reconstructableDecisionRankingPackage.replace(/## Decision Ranking[\s\S]*?(?=\n## Highest-Priority Issue)/, ''));
 assert.equal(noDecisionRankingHeading.categories.decisionRanking.status, 'Missing');
 assert.ok(noDecisionRankingHeading.contradictions.includes('Package omits decision ranking.'));
@@ -143,7 +148,9 @@ const whitespaceAndBulletFormattedDecisionRanking = await validateWithContext(re
 
   - Selected Issue ID: ai-handoff-validation
 
-  - Deterministic Selection Explanation: Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.
+  - Deterministic Selection Explanation:
+    Run AI Handoff Validation is ranked #1 with priority 10 and total expected
+    improvement +11.
 
   - Ranked Candidates:
 

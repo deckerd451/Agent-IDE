@@ -33,7 +33,23 @@ function mdSectionWithPresence(markdown, heading) {
 function meaningful(text) { return Boolean(text?.trim()) && !/no generated content|not detected yet|missing|unknown|none detected|tbd|todo/i.test(text); }
 function fieldValue(text, label) {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return text.match(new RegExp(`^\\s*(?:[-*]\\s*)?${escaped}\\s*:\\s*(.+)$`, 'im'))?.[1]?.trim() ?? '';
+  const match = text.match(new RegExp(`^\\s*(?:[-*]\\s*)?${escaped}\\s*:\\s*(.*)$`, 'im'));
+  if (!match) return '';
+  const inlineValue = match[1]?.trim() ?? '';
+  if (inlineValue) return inlineValue;
+
+  const lines = text.slice((match.index ?? 0) + match[0].length).split('\n');
+  const continuation = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (continuation.length) continuation.push('');
+      continue;
+    }
+    if (/^(?:[-*]\s*)?[A-Z][A-Za-z /-]*:\s*/.test(trimmed) || /^#{1,6}\s+/.test(trimmed) || /^\d+\.\s+/.test(trimmed)) break;
+    continuation.push(trimmed.replace(/^[-*]\s+/, ''));
+  }
+  return continuation.join(' ').replace(/\s+/g, ' ').trim();
 }
 function evidenceFor(packageText, headings, pattern) {
   const sections = headings.map((heading) => ({ heading, text: mdSection(packageText, heading) })).filter((item) => meaningful(item.text));
