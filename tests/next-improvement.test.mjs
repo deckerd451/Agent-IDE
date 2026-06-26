@@ -62,9 +62,9 @@ test('strategy gap produces coherent strategy prompt', () => {
   const selected = choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' });
   assertCoherent(selected, {
     id: 'strategy-quality',
-    title: 'Strengthen Strategy Quality',
+    title: 'Add Current Product Bet',
     category: 'fill strategy manual notes',
-    evidencePattern: /Strategy Confidence: Low/i,
+    evidencePattern: /Missing: Current Product Bet/i,
     problemPattern: /Strategy quality is weak or under-evidenced/i,
     acceptancePattern: /Regenerated strategy no longer reports/i,
   });
@@ -274,9 +274,9 @@ test('manual goals suggested update follows shared missing fields and canonical 
 
 test('strategy manual notes package targets canonical goals sections', () => {
   const prompt = renderPrompt(choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }));
-  assert.match(prompt, /Add text under `\.ai\/goals\.md` in `## Manual Strategy Notes` or another canonical goals section/);
-  assert.match(prompt, /`## Manual Strategy Notes`/);
-  assert.match(prompt, /Strategic bet: \[Repository owner:/);
+  assert.match(prompt, /## Missing Field\n\nCurrent Product Bet/);
+  assert.match(prompt, /## Section\n\n## Manual Strategy Notes/);
+  assert.match(prompt, /- Current Product Bet:\n  \[Repository owner:/);
   assert.doesNotMatch(prompt, /`\.ai\/strategy\.md` `## Manual Strategy Notes`/);
 });
 
@@ -310,8 +310,8 @@ test('generated Product Decision Package keeps manual strategy edits on canonica
   assert.equal(result.selectedIssue.id, 'strategy-quality');
   assert.equal(result.selectedIssue.packageType, 'product-decision');
   assert.match(prompt, /Repository owner edits: `\.ai\/goals\.md`\nEverything else will be regenerated/);
-  assert.match(prompt, /Add text under `\.ai\/goals\.md` in `## Manual Strategy Notes` or another canonical goals section/);
-  assert.match(prompt, /`## Manual Strategy Notes`/);
+  assert.match(prompt, /## Missing Field\n\nCurrent Product Bet/);
+  assert.match(prompt, /## Section\n\n## Manual Strategy Notes/);
   assert.doesNotMatch(prompt, /\.ai\/strategy\.md/);
 });
 

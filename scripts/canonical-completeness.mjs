@@ -64,6 +64,47 @@ export function evaluateCanonicalCompleteness(goalsMarkdown = '') {
   return { score, state, fields };
 }
 
+export const canonicalStrategyFields = [
+  { key: 'currentProductBet', label: 'Current Product Bet', heading: 'Manual Strategy Notes', headings: ['Current Product Bet', 'Strategic Bet'], manualUpdate: '- Current Product Bet:\n  [Repository owner: describe the primary product hypothesis currently being tested.]', why: 'This field records the primary product hypothesis currently being tested and is required to strengthen repository strategy quality.' },
+  { key: 'strategicDifferentiator', label: 'Strategic Differentiator', heading: 'Manual Strategy Notes', headings: ['Strategic Differentiator', 'Product Differentiator', 'Differentiator'], manualUpdate: '- Strategic Differentiator:\n  [Repository owner: describe what makes this repository strategy meaningfully different.]', why: 'This field records what the product strategy should optimize around or emphasize differently from alternatives.' },
+  { key: 'whatNotToBuild', label: 'What Not To Build', heading: 'Manual Strategy Notes', headings: ['What Not To Build'], manualUpdate: '- What Not To Build:\n  [Repository owner: describe explicit product boundaries or non-goals.]', why: 'This field records product boundaries so generated implementation work avoids unsupported directions.' },
+  { key: 'repositoryPrinciples', label: 'Repository Principles', heading: 'Manual Strategy Notes', headings: ['Repository Principles', 'Principles'], optional: true, manualUpdate: '- Repository Principles:\n  [Repository owner: describe durable principles that should guide repository decisions.]', why: 'This optional field records durable repository-level decision principles for future work.' },
+  { key: 'strategyEvidence', label: 'Strategy Evidence', heading: 'Manual Strategy Notes', headings: ['Strategy Evidence', 'Strategy Evidence Sources', 'Evidence Sources'], manualUpdate: '- Strategy Evidence:\n  [Repository owner: cite repository-local files, decisions, or docs that support the strategy.]', why: 'This field records repository-local evidence supporting the strategy so future generated intelligence can trace owner intent.' },
+];
+
+export function evaluateCanonicalStrategyCompleteness(goalsMarkdown = '') {
+  const requiredFields = canonicalStrategyFields.map((field) => {
+    const evidence = fieldEvidence(goalsMarkdown, field.headings);
+    const classification = evidence.length === 0 ? 'Missing' : evidence.length === 1 ? 'Present' : 'Present';
+    return {
+      key: field.key,
+      label: field.label,
+      canonicalFile: '.ai/goals.md',
+      canonicalSection: `## ${field.heading}`,
+      optional: Boolean(field.optional),
+      classification,
+      state: classification,
+      present: evidence.length > 0,
+      evidence: evidence.map((item) => `${item.heading}: ${item.line}`),
+      manualUpdate: field.manualUpdate,
+      why: field.why,
+    };
+  });
+  const requiredOnly = requiredFields.filter((field) => !field.optional);
+  const presentCount = requiredOnly.filter((field) => field.present).length;
+  const percent = Math.round((presentCount / requiredOnly.length) * 100);
+  const classification = presentCount === 0 ? 'Missing' : presentCount < requiredOnly.length ? 'Partial' : 'Present';
+  return {
+    canonicalFile: '.ai/goals.md',
+    canonicalSection: '## Manual Strategy Notes',
+    requiredFields,
+    missing: requiredOnly.filter((field) => !field.present).map((field) => field.label),
+    percent,
+    classification,
+    threshold: 'Missing = no required canonical strategy fields present; Partial = some required fields present; Present = all required fields present. Repository Principles is optional.',
+  };
+}
+
 export function manualGoalsExplanationFromCompleteness(completeness) {
   const manualGoals = completeness?.fields?.manualGoals;
   if (!manualGoals) return null;

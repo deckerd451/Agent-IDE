@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { evaluateCanonicalCompleteness } from '../scripts/canonical-completeness.mjs';
+import { evaluateCanonicalCompleteness, evaluateCanonicalStrategyCompleteness } from '../scripts/canonical-completeness.mjs';
 import { computeQualitySnapshot } from '../scripts/intelligence-quality.mjs';
 import { chooseNextImprovement, renderPrompt } from '../scripts/next-improvement.mjs';
 
@@ -51,6 +51,23 @@ test('canonical completeness percentage averages deterministic canonical fields'
   const snapshot = evaluateCanonicalCompleteness(completeGoals);
   assert.equal(snapshot.state, 'Complete');
   assert.equal(snapshot.score, 100);
+});
+
+
+test('canonical strategy completeness classifies required strategy fields deterministically without changing canonical score', () => {
+  const result = evaluateCanonicalStrategyCompleteness(`# Goals
+
+## Current Product Bet
+Test package guidance.
+
+## What Not To Build
+Cloud scoring.
+`);
+  assert.equal(result.classification, 'Partial');
+  assert.deepEqual(result.missing, ['Strategic Differentiator', 'Strategy Evidence']);
+  assert.equal(result.requiredFields.find((field) => field.label === 'Repository Principles').optional, true);
+  assert.equal(result.requiredFields.find((field) => field.label === 'Current Product Bet').classification, 'Present');
+  assert.equal(evaluateCanonicalCompleteness('').score, 0);
 });
 
 test('intelligence quality incorporates canonical completeness fields', async () => {

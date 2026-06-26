@@ -1,6 +1,6 @@
 import { readFile, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { evaluateCanonicalCompleteness } from './canonical-completeness.mjs';
+import { evaluateCanonicalCompleteness, evaluateCanonicalStrategyCompleteness } from './canonical-completeness.mjs';
 import { synthesizeEvidenceFromDocs } from './evidence-synthesis.mjs';
 import { classifyEvidenceSource, persistEvidenceLineage, confidenceFromEvidence } from './evidence-lineage.mjs';
 import { validateAIHandoff } from './ai-handoff-validation.mjs';
@@ -117,6 +117,7 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const exportCoverageItems = { contextPackagePresent: Boolean(docs['context-package.md']?.trim()), promptsPresent };
   const coverageItems = { ...canonicalCoverageItems, ...exportCoverageItems };
   const canonicalCompleteness = evaluateCanonicalCompleteness(docs['goals.md'] ?? '');
+  canonicalCompleteness.strategyFields = evaluateCanonicalStrategyCompleteness(docs['goals.md'] ?? '');
   const synthesisDocs = Object.fromEntries(Object.entries(docs).map(([file, text]) => [file === 'goals.md' ? '.ai/goals.md' : file.startsWith('.') || file === 'README.md' ? file : `.ai/${file}`, text]));
   const evidenceSynthesis = synthesizeEvidenceFromDocs(synthesisDocs, docs['goals.md'] ?? '');
   const evidenceLineage = await persistEvidenceLineage(repositoryPath, Object.keys(synthesisDocs));

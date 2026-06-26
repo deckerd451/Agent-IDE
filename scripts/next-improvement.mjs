@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { explainDecisionRanking, explainRecommendation, renderExplanationMarkdown } from './intelligence-explanations.mjs';
-import { canonicalManualGoalsSuggestedUpdate } from './canonical-completeness.mjs';
+import { canonicalManualGoalsSuggestedUpdate, evaluateCanonicalStrategyCompleteness } from './canonical-completeness.mjs';
 import { renderSynthesisMarkdown } from './evidence-synthesis.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md'];
@@ -17,6 +17,22 @@ async function readJson(repositoryPath, file) {
 }
 function manualGoalsCompletenessExplanation(quality) {
   return quality?.explanations?.completeness?.fields?.manualGoals ?? null;
+}
+function strategyCompletenessExplanation(quality, goals = '') {
+  return quality?.canonicalIntelligenceQuality?.strategyFields ?? evaluateCanonicalStrategyCompleteness(goals);
+}
+function firstMissingStrategyField(strategyCompleteness) {
+  return (strategyCompleteness?.requiredFields ?? []).find((field) => !field.optional && !field.present) ?? null;
+}
+function strategyEvidenceForField(selected) {
+  const synthesisField = selected.strategyEvidenceSynthesis?.fields?.[selected.strategyField?.key];
+  const lineage = synthesisField?.lineage;
+  return {
+    synthesisField,
+    supportingEvidence: synthesisField?.allEvidence?.length ? synthesisField.allEvidence : synthesisField?.evidence ?? [],
+    confidence: synthesisField?.confidence ?? 'None',
+    lineage,
+  };
 }
 function mdSection(markdown, heading) {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -187,11 +203,14 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
     const source = contradictions[0] ?? duplicates[0] ?? firstLine(audit.match(/.*(?:contradiction|duplicate canonical).*/i)?.[0] ?? audit);
     issues.push(selectedIssue({ id: 'consistency-cleanup', category: contradictions.length || /contradiction/i.test(source) ? 'contradiction normalization' : 'duplicate generated sections', severity: 'high', actionability: 'code-fixable', source, title: 'Clean Up Intelligence Contradictions', evidence: source, reason: 'Conflicting repository intelligence makes the next implementation package unsafe and ambiguous.', recommendedAction: 'Resolve only the contradiction or duplicate intelligence section cited in Current Evidence.' }));
   }
+  const strategyCompleteness = strategyCompletenessExplanation(quality);
+  const missingStrategyField = firstMissingStrategyField(strategyCompleteness);
   const strategyScore = score(quality?.canonicalIntelligenceQuality?.score);
   const strategyConfidence = firstLine(mdSection(strategy, 'Strategy Confidence'), 'Unknown');
   if (strategyScore < 70 || /low|weak|unknown|missing/i.test(strategyConfidence) || /strategy.*(?:weak|missing|warning|leakage)/i.test(risks.join('\n'))) {
+    const field = missingStrategyField ?? { label: 'Current Product Bet', canonicalFile: '.ai/goals.md', canonicalSection: '## Manual Strategy Notes', why: 'This field records the primary product hypothesis currently being tested and is required to strengthen repository strategy quality.', manualUpdate: '- Current Product Bet:\n  [Repository owner: describe the primary product hypothesis currently being tested.]', key: 'currentProductBet', classification: 'Missing' };
     const evidence = /low|weak|unknown|missing/i.test(strategyConfidence) ? `Strategy Confidence: ${strategyConfidence}` : healthRecommendation(health);
-    issues.push(selectedIssue({ id: 'strategy-quality', category: 'fill strategy manual notes', severity: 'medium', actionability: 'manual', source: evidence, title: 'Strengthen Strategy Quality', evidence, reason: 'Weak strategy quality reduces confidence that generated implementation work matches product intent.', recommendedAction: 'Update the appropriate manual section of \`.ai/goals.md\` with evidence-backed repository intent.' }));
+    issues.push({ ...selectedIssue({ id: 'strategy-quality', category: 'fill strategy manual notes', severity: 'medium', actionability: 'manual', source: `${evidence} Missing: ${field.label}.`, title: `Add ${field.label}`, evidence: `${evidence} Missing: ${field.label}.`, reason: `${field.label} is ${field.classification ?? 'Missing'} in .ai/goals.md. ${field.why}`, recommendedAction: `Add ${field.label} to .ai/goals.md under ${field.canonicalSection}.` }), strategyField: field, strategyCompleteness, strategyEvidenceSynthesis: quality?.canonicalIntelligenceQuality?.evidenceSynthesis });
   }
   const validationConfidence = quality?.confidence?.validationConfidence ?? '';
   if (score(quality?.confidence?.score) < 55 || /low|weak|unknown|missing/i.test(validationConfidence) || risks.some((r) => /validation.*(?:low|weak|no deterministic|missing)/i.test(r))) {
@@ -230,16 +249,31 @@ function suggestedManualUpdate(selected) {
     ].join('\n');
   }
   if (selected.id === 'strategy-quality') {
+    const field = selected.strategyField;
     return [
-      'Add text under `.ai/goals.md` in `## Manual Strategy Notes` or another canonical goals section, such as `## Current Product Bet`, `## Strategic Bet`, `## Product Differentiator`, `## Long-Term Vision`, or `## Success Criteria`:',
+      '## File',
+      '',
+      field?.canonicalFile ?? '.ai/goals.md',
+      '',
+      '## Section',
+      '',
+      field?.canonicalSection ?? '## Manual Strategy Notes',
+      '',
+      '## Missing Field',
+      '',
+      field?.label ?? 'Current Product Bet',
+      '',
+      '## Why This Field Matters',
+      '',
+      field?.why ?? 'This field is required to strengthen repository strategy quality.',
+      '',
+      '## Suggested Canonical Structure',
       '',
       '```md',
-      '- Strategic bet: [Repository owner: describe the product strategy this repository should support.]',
-      '- Differentiator: [Repository owner: describe what this project should optimize for or avoid.]',
-      '- Evidence: [Repository owner: cite repository-local files, decisions, or docs that justify the strategy.]',
+      field?.manualUpdate ?? '- Current Product Bet:\n  [Repository owner: describe the primary product hypothesis currently being tested.]',
       '```',
       '',
-      'Do not edit automatically. The repository owner should review, accept, or edit this text before saving it.',
+      'Do not invent repository strategy. The repository owner should replace the bracketed placeholder with actual owner intent before saving it.',
     ].join('\n');
   }
   return 'Record the product-owner decision in the appropriate manual section of `.ai/goals.md`. Do not edit generated artifacts. Do not edit automatically; the repository owner should review, accept, or edit the final text.';
@@ -254,6 +288,35 @@ function suggestedCanonicalWording(selected) {
 
 function renderList(items, empty = 'None detected.') {
   return items?.length ? items.map((item) => `- ${item}`).join('\n') : `- ${empty}`;
+}
+
+function renderStrategyDeterministicEvaluation(selected) {
+  if (selected.id !== 'strategy-quality') return '';
+  const field = selected.strategyField;
+  const completeness = selected.strategyCompleteness;
+  const evidence = strategyEvidenceForField(selected);
+  const support = evidence.supportingEvidence ?? [];
+  const lineageSources = evidence.lineage?.sources ?? [];
+  return [
+    '## Deterministic Strategy Field Evaluation',
+    '',
+    `- Evaluated canonical file: ${field?.canonicalFile ?? '.ai/goals.md'}`,
+    `- Evaluated section: ${field?.canonicalSection ?? '## Manual Strategy Notes'}`,
+    `- Missing strategy field: ${field?.label ?? 'Current Product Bet'}`,
+    `- Field classification: ${field?.classification ?? 'Missing'}`,
+    `- Strategy completeness classification: ${completeness?.classification ?? 'Unknown'} (${completeness?.percent ?? 'Unknown'}%)`,
+    `- Canonical owner source: ${field?.canonicalFile ?? '.ai/goals.md'} ${field?.canonicalSection ?? '## Manual Strategy Notes'}`,
+    `- Evidence confidence: ${evidence.confidence}`,
+    `- Rule threshold: ${completeness?.threshold ?? 'Unknown'}`,
+    '',
+    '## Supporting Repository Evidence',
+    '',
+    support.length ? support.map((item) => `- ${item.source ?? item.file}: ${item.heading}${item.wording ? ` — ${item.wording}` : ''}`).join('\n') : '- No repository-local supporting evidence detected for this exact field. The task is still deterministic because the canonical field is missing from the owner source.',
+    '',
+    '## Evidence Lineage',
+    '',
+    lineageSources.length ? lineageSources.map((item) => `- ${item.group}: ${item.file} (${item.category})`).join('\n') : '- No supporting lineage sources detected.',
+  ].join('\n');
 }
 
 function renderManualGoalsDeterministicEvaluation(selected) {
@@ -297,7 +360,7 @@ function renderImplementationPackage(selected, details, ranking) {
 function renderProductDecisionPackage(selected, details, ranking) {
   return `# ${selected.title}\n\n## Decision Instructions\nThis is a product-owner decision task, not a Codex implementation task.\nUse repository-local evidence to decide or record the missing product, strategy, or manual-intelligence information.\nDo not send this package to Codex as implementation work.\nDo not edit files automatically; the repository owner should review, accept, or edit the suggested manual update in \`.ai/goals.md\`.
 Repository owner edits: \`.ai/goals.md\`
-Everything else will be regenerated.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}${renderManualGoalsDeterministicEvaluation(selected)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n${suggestedCanonicalWording(selected)}## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n${selected.id === 'missing-manual-goals' ? '- Suggested Manual Update exactly matches the canonical Deterministic Evaluation missing fields.\n' : ''}- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct manual section of \`.ai/goals.md\`.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
+Everything else will be regenerated.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}${renderManualGoalsDeterministicEvaluation(selected)}${renderStrategyDeterministicEvaluation(selected)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n${suggestedCanonicalWording(selected)}## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n${selected.id === 'missing-manual-goals' ? '- Suggested Manual Update exactly matches the canonical Deterministic Evaluation missing fields.\n' : ''}- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct manual section of \`.ai/goals.md\`.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
 }
 
 function renderValidationPackage(selected, details, ranking) {
