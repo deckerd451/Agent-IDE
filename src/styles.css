@@ -924,3 +924,108 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+.todayWorkCard {
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.2), transparent 22rem),
+    linear-gradient(135deg, rgba(20, 31, 48, 0.96), rgba(13, 19, 30, 0.9));
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  border-radius: 24px;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.28);
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 28px;
+}
+
+.todayWorkCard h2 {
+  color: #f7f9fc;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  letter-spacing: -0.05em;
+  line-height: 1.02;
+  margin: 0 0 12px;
+}
+
+.todayWorkCard p,
+.afterThisCard p,
+.quickAiActions p,
+.progressSummaryCard p {
+  color: #aeb8c9;
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+
+.workMetaGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin-top: 18px;
+}
+
+.workMetaGrid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.workMetaGrid div {
+  background: rgba(7, 11, 18, 0.5);
+  border: 1px solid #273246;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.workMetaGrid small {
+  color: #7f8ca3;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 7px;
+  text-transform: uppercase;
+}
+
+.workMetaGrid strong {
+  color: #f4f7fb;
+  display: block;
+  font-size: 0.98rem;
+  line-height: 1.4;
+}
+
+.primaryCta {
+  align-self: start;
+  background: #d7dde8;
+  border: 0;
+  border-radius: 14px;
+  color: #0b1018;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 14px 18px;
+  white-space: nowrap;
+}
+
+.afterThisCard {
+  border-color: rgba(168, 239, 201, 0.32);
+}
+
+.quickAiActions {
+  border-color: rgba(215, 221, 232, 0.32);
+}
+
+.progressSummaryCard {
+  border-color: rgba(168, 239, 201, 0.42);
+}
+
+.disclosureCard > .dashboardGrid,
+.disclosureCard > .answerGrid,
+.disclosureCard > section {
+  margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+  .todayWorkCard {
+    grid-template-columns: 1fr;
+  }
+
+  .primaryCta {
+    width: 100%;
+  }
+}
