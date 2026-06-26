@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
+import { evaluateCanonicalStrategyCompleteness } from '../scripts/canonical-completeness.mjs';
 import { applyCanonicalEdit } from '../scripts/server.mjs';
 
 async function repoWithGoals(markdown) {
@@ -59,4 +60,15 @@ test('refuses paths outside repository', async () => {
   const dir = await repoWithGoals('# Goals\n\n## Manual Strategy Notes\n');
   await assert.rejects(edit(dir, { filePath: '../outside.md' }), /only target \.ai\/goals\.md|outside/);
   assert.ok(resolve(dir));
+});
+
+
+test('field inserted by applyCanonicalEdit is recognized by strategy completeness evaluation', async () => {
+  const dir = await repoWithGoals('# Goals\n\n## Manual Strategy Notes\n');
+  await edit(dir, { markdownBlock: '- Current Product Bet: Owner-approved bet.' });
+  const goals = await readFile(join(dir, '.ai/goals.md'), 'utf8');
+  const result = evaluateCanonicalStrategyCompleteness(goals);
+  const field = result.requiredFields.find((item) => item.key === 'currentProductBet');
+  assert.equal(field.classification, 'Present');
+  assert.equal(field.present, true);
 });
