@@ -39,7 +39,7 @@ test('missing manual goals produces coherent manual-goals prompt', () => {
     category: 'missing manual goals',
     evidencePattern: /Manual Goals are missing/i,
     problemPattern: /missing populated Manual Goals/i,
-    acceptancePattern: /Manual Goals are populated/i,
+    acceptancePattern: /missing Manual Goals fields identified by the deterministic evaluation have been completed/i,
   });
   assert.doesNotMatch(prompt, /severe backlog noise/i);
 });
@@ -211,10 +211,65 @@ test('manual issue generates Product Decision Package', () => {
 });
 
 test('missing manual goals package includes suggested Manual Goals text', () => {
-  const prompt = renderPrompt(choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } }));
+  const prompt = renderPrompt(choice({ quality: {
+    ...healthyQuality,
+    canonicalIntelligenceQuality: { score: 75, fields: { manualGoals: { state: 'Partial', percent: 75, missing: ['Long-term vision'] } } },
+    explanations: { completeness: { fields: { manualGoals: {
+      requiredFields: [
+        { label: 'Product intent', found: true, manualUpdate: '- Product intent: [Repository owner: describe the product purpose this repository should serve.]' },
+        { label: 'Current focus', found: true, manualUpdate: '- Current focus: [Repository owner: describe the current product priority.]' },
+        { label: 'Success criteria', found: true, manualUpdate: '- Success criteria: [Repository owner: describe how success should be judged.]' },
+        { label: 'Long-term vision', found: false, manualUpdate: '- Long-term vision: [Repository owner: describe the long-term vision for this product.]' },
+      ],
+      computed: { percent: 75 },
+      classification: 'Partial',
+      missing: ['Long-term vision'],
+    } } } },
+  } }));
   assert.match(prompt, /`\.ai\/goals\.md` `## Manual Goals`/);
-  assert.match(prompt, /Product intent: \[Repository owner:/);
+  assert.match(prompt, /Long-term vision: \[Repository owner:/);
+  assert.doesNotMatch(prompt, /Product intent: \[Repository owner:/);
   assert.match(prompt, /Do not edit automatically/);
+});
+
+test('manual goals suggested update follows shared missing fields and canonical order', () => {
+  const fields = [
+    { label: 'Product intent', manualUpdate: '- Product intent: [Repository owner: describe the product purpose this repository should serve.]' },
+    { label: 'Current focus', manualUpdate: '- Current focus: [Repository owner: describe the current product priority.]' },
+    { label: 'Success criteria', manualUpdate: '- Success criteria: [Repository owner: describe how success should be judged.]' },
+    { label: 'Long-term vision', manualUpdate: '- Long-term vision: [Repository owner: describe the long-term vision for this product.]' },
+  ];
+  const cases = [
+    ['one missing field', ['Product intent']],
+    ['two missing fields', ['Success criteria', 'Long-term vision']],
+    ['three missing fields', ['Product intent', 'Success criteria', 'Long-term vision']],
+    ['all fields missing', fields.map((field) => field.label)],
+    ['no fields missing', []],
+  ];
+  for (const [, missing] of cases) {
+    const prompt = renderPrompt({
+      id: 'missing-manual-goals',
+      category: 'missing manual goals',
+      severity: 'high',
+      actionability: 'manual',
+      packageType: 'product-decision',
+      source: 'Manual Goals Partial.',
+      title: 'Complete Manual Repository Intent Notes',
+      evidence: 'Manual Goals Partial.',
+      reason: 'Manual Goals completeness is below the deterministic threshold.',
+      recommendedAction: 'Complete only the incomplete Manual Goals fields in `.ai/goals.md`.',
+      completenessExplanation: {
+        requiredFields: fields.map((field) => ({ ...field, found: !missing.includes(field.label) })),
+        missing,
+        computed: { percent: missing.length ? 100 - missing.length * 25 : 100 },
+        classification: missing.length ? 'Partial' : 'Complete',
+        threshold: 'Complete = 100%.',
+      },
+    });
+    const suggested = prompt.match(/## Suggested Manual Update\n([\s\S]*?)\n\n## Acceptance Criteria/)?.[1] ?? '';
+    const labels = [...suggested.matchAll(/^-\s*([^:\n]+):/gm)].map((match) => match[1]);
+    assert.deepEqual(labels, fields.map((field) => field.label).filter((label) => missing.includes(label)));
+  }
 });
 
 test('strategy manual notes package targets canonical goals sections', () => {
@@ -288,10 +343,10 @@ test('manual goals package includes shared Deterministic Evaluation details', as
     canonicalIntelligenceQuality: { score: 50, fields: { manualGoals: { state: 'Partial', percent: 50, missing: ['Success criteria', 'Long-term vision'] } } },
     explanations: { completeness: { fields: { manualGoals: {
       requiredFields: [
-        { label: 'Product intent', found: true },
-        { label: 'Current focus', found: true },
-        { label: 'Success criteria', found: false },
-        { label: 'Long-term vision', found: false },
+        { label: 'Product intent', found: true, manualUpdate: '- Product intent: [Repository owner: describe the product purpose this repository should serve.]' },
+        { label: 'Current focus', found: true, manualUpdate: '- Current focus: [Repository owner: describe the current product priority.]' },
+        { label: 'Success criteria', found: false, manualUpdate: '- Success criteria: [Repository owner: describe how success should be judged.]' },
+        { label: 'Long-term vision', found: false, manualUpdate: '- Long-term vision: [Repository owner: describe the long-term vision for this product.]' },
       ],
       computed: { percent: 50 },
       classification: 'Partial',
@@ -310,6 +365,10 @@ test('manual goals package includes shared Deterministic Evaluation details', as
   assert.match(result.prompt, /Current focus/);
   assert.match(result.prompt, /Success criteria/);
   assert.match(result.prompt, /Long-term vision/);
+  assert.match(result.prompt, /Success criteria: \[Repository owner:/);
+  assert.match(result.prompt, /Long-term vision: \[Repository owner:/);
+  assert.doesNotMatch(result.prompt, /Product intent: \[Repository owner:/);
+  assert.doesNotMatch(result.prompt, /Current focus: \[Repository owner:/);
 });
 
 test('missing manual goals explanation renders unavailable warning', () => {
