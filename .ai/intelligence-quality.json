@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-06-26T13:42:25.342Z",
-  "overallScore": 93,
+  "timestamp": "2026-06-26T13:59:09.453Z",
+  "overallScore": 92,
   "canonicalIntelligenceQuality": {
     "score": 90,
     "completenessScore": 83,
@@ -129,7 +129,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:42:25.343Z",
+            "generatedAt": "2026-06-26T13:59:09.458Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -160,7 +160,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:42:25.343Z",
+            "generatedAt": "2026-06-26T13:59:09.459Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -253,7 +253,7 @@
           ],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:42:25.344Z",
+            "generatedAt": "2026-06-26T13:59:09.476Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -352,7 +352,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:42:25.344Z",
+            "generatedAt": "2026-06-26T13:59:09.476Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -445,7 +445,7 @@
           ],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:42:25.345Z",
+            "generatedAt": "2026-06-26T13:59:09.479Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -544,7 +544,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:42:25.345Z",
+            "generatedAt": "2026-06-26T13:59:09.480Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -575,7 +575,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:42:25.345Z",
+            "generatedAt": "2026-06-26T13:59:09.480Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -606,7 +606,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:42:25.345Z",
+            "generatedAt": "2026-06-26T13:59:09.480Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -630,7 +630,7 @@
     },
     "evidenceLineage": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-26T13:42:25.346Z",
+      "generatedAt": "2026-06-26T13:59:09.481Z",
       "categories": {
         "Canonical": [
           {
@@ -675,6 +675,12 @@
             "file": ".ai/intelligence-audit.md",
             "category": "Independent",
             "group": "Intelligence Audit",
+            "ancestry": "Repository-local source."
+          },
+          {
+            "file": ".ai/ai-handoff-validation.json",
+            "category": "Independent",
+            "group": "Validation",
             "ancestry": "Repository-local source."
           },
           {
@@ -887,6 +893,12 @@
           "ancestry": "Repository-local source."
         },
         {
+          "file": ".ai/ai-handoff-validation.json",
+          "category": "Independent",
+          "group": "Validation",
+          "ancestry": "Repository-local source."
+        },
+        {
           "file": ".ai/validation.md",
           "category": "Independent",
           "group": "Validation",
@@ -900,10 +912,103 @@
     "sourceOfTruth": "goals.md"
   },
   "generatedExportQuality": {
-    "score": 100,
+    "score": 96,
     "coverageScore": 100,
     "freshnessScore": 100,
-    "promptsFreshnessOnly": true
+    "promptsFreshnessOnly": true,
+    "aiHandoffReadinessScore": 88,
+    "aiHandoffValidation": {
+      "schemaVersion": 1,
+      "generatedAt": "2026-06-26T13:59:08.613Z",
+      "overallScore": 88,
+      "status": "Ready",
+      "categories": {
+        "repositoryExplanation": {
+          "label": "Repository explanation",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Product Thesis."
+        },
+        "productThesis": {
+          "label": "Product thesis",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Product Thesis."
+        },
+        "currentProductBet": {
+          "label": "Current product bet",
+          "status": "Partial",
+          "evidence": "Context Package mentions the category but does not expose a dedicated reconstructable section."
+        },
+        "currentFocus": {
+          "label": "Current focus",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Current Focus."
+        },
+        "strategy": {
+          "label": "Strategy",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Strategy."
+        },
+        "architecture": {
+          "label": "Architecture",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Core Systems."
+        },
+        "decisionRanking": {
+          "label": "Decision ranking",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Decision Ranking."
+        },
+        "highestPriorityIssue": {
+          "label": "Highest-priority issue",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Decision Ranking."
+        },
+        "nextImplementationStep": {
+          "label": "Next implementation step",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Next Implementation Step."
+        },
+        "validationStatus": {
+          "label": "Validation status",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Validation Summary."
+        },
+        "canonicalOwnership": {
+          "label": "Canonical ownership",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Canonical Intelligence Ownership."
+        },
+        "confidenceExplanation": {
+          "label": "Confidence explanation",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Confidence Explanation."
+        }
+      },
+      "recoverableInformation": [
+        "Repository explanation",
+        "Product thesis",
+        "Current product bet",
+        "Current focus",
+        "Strategy",
+        "Architecture",
+        "Decision ranking",
+        "Highest-priority issue",
+        "Next implementation step",
+        "Validation status",
+        "Canonical ownership",
+        "Confidence explanation"
+      ],
+      "hiddenInformation": [],
+      "contradictions": [],
+      "missingExplanations": [
+        "Decision ranking rationale",
+        "Recommendation rationale"
+      ],
+      "suggestedImprovements": [
+        "Add decision ranking rationale to generated explanations.",
+        "Add recommendation rationale to generated explanations."
+      ]
+    }
   },
   "coverage": {
     "score": 100,
@@ -932,7 +1037,7 @@
   },
   "freshness": {
     "score": 100,
-    "lastRefresh": "2026-06-26T13:42:25.342Z",
+    "lastRefresh": "2026-06-26T13:59:09.453Z",
     "filesChanged": 0,
     "staleDocuments": [],
     "canonicalStaleDocuments": [],
@@ -1002,6 +1107,98 @@
   "recentRegressions": [],
   "recentImprovements": [],
   "explanations": {
+    "aiHandoffValidation": {
+      "schemaVersion": 1,
+      "generatedAt": "2026-06-26T13:59:08.613Z",
+      "overallScore": 88,
+      "status": "Ready",
+      "categories": {
+        "repositoryExplanation": {
+          "label": "Repository explanation",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Product Thesis."
+        },
+        "productThesis": {
+          "label": "Product thesis",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Product Thesis."
+        },
+        "currentProductBet": {
+          "label": "Current product bet",
+          "status": "Partial",
+          "evidence": "Context Package mentions the category but does not expose a dedicated reconstructable section."
+        },
+        "currentFocus": {
+          "label": "Current focus",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Current Focus."
+        },
+        "strategy": {
+          "label": "Strategy",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Strategy."
+        },
+        "architecture": {
+          "label": "Architecture",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Core Systems."
+        },
+        "decisionRanking": {
+          "label": "Decision ranking",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Decision Ranking."
+        },
+        "highestPriorityIssue": {
+          "label": "Highest-priority issue",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Decision Ranking."
+        },
+        "nextImplementationStep": {
+          "label": "Next implementation step",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Next Implementation Step."
+        },
+        "validationStatus": {
+          "label": "Validation status",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Validation Summary."
+        },
+        "canonicalOwnership": {
+          "label": "Canonical ownership",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Canonical Intelligence Ownership."
+        },
+        "confidenceExplanation": {
+          "label": "Confidence explanation",
+          "status": "Present",
+          "evidence": "Context Package exposes ## Confidence Explanation."
+        }
+      },
+      "recoverableInformation": [
+        "Repository explanation",
+        "Product thesis",
+        "Current product bet",
+        "Current focus",
+        "Strategy",
+        "Architecture",
+        "Decision ranking",
+        "Highest-priority issue",
+        "Next implementation step",
+        "Validation status",
+        "Canonical ownership",
+        "Confidence explanation"
+      ],
+      "hiddenInformation": [],
+      "contradictions": [],
+      "missingExplanations": [
+        "Decision ranking rationale",
+        "Recommendation rationale"
+      ],
+      "suggestedImprovements": [
+        "Add decision ranking rationale to generated explanations.",
+        "Add recommendation rationale to generated explanations."
+      ]
+    },
     "completeness": {
       "id": "canonical-completeness",
       "title": "Canonical Completeness Evaluation",
@@ -1526,7 +1723,7 @@
     "quality": {
       "id": "intelligence-quality",
       "title": "Intelligence Quality Evaluation",
-      "score": 93,
+      "score": 92,
       "components": {
         "canonicalCompleteness": {
           "score": 83,

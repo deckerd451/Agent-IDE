@@ -13,6 +13,7 @@ const sourceFiles = {
   validation: 'validation.md',
   backlog: 'backlog.md',
   health: 'repository-health.md',
+  next: 'next-improvement-prompt.md',
 };
 
 async function readAiFile(fileName) {
@@ -71,6 +72,15 @@ const content = [
   '## Key Decisions',
   firstMatchingSection(docs.decisions, ['Active Decisions', 'Key Decisions', 'Manual Decisions']),
   '',
+  '## Decision Ranking',
+  firstMatchingSection(docs.next, ['Decision Ranking']),
+  '',
+  '## Highest-Priority Issue',
+  firstMatchingSection(docs.next, ['Selected Issue']),
+  '',
+  '## Next Implementation Step',
+  firstMatchingSection(docs.next, ['Goal', 'Decision Needed', 'Experiment', 'Current Evidence']),
+  '',
   '## Validation Summary',
   [
     firstMatchingSection(docs.validation, ['Overall Status', 'Confidence']),
@@ -87,6 +97,9 @@ const content = [
     firstMatchingSection(docs.health, ['Risks']),
     firstMatchingSection(docs.health, ['Recommended Next Step']),
   ].join('\n\n'),
+  '',
+  '## Confidence Explanation',
+  'Confidence is derived from repository-local canonical, independent, and generated evidence lineage. See Repository Health Evidence Lineage and Intelligence Quality confidence fields for the deterministic calculation.',
   '',
 ].join('\n');
 

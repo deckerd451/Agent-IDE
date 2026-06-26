@@ -54,12 +54,15 @@ type QualitySnapshot = {
 
 type DecisionCandidate = { rank: number; id: string; title: string; category: string; severity: string; actionability: string; priorityScore: number; expectedImprovement: { total: number; repositoryHealth: number; canonicalCompleteness: number; quality: number; verification: number; handoffReadiness: number }; reason: string; evidence: string; selected: boolean };
 
+type AIHandoffValidation = { overallScore: number; status: string; recoverableInformation: string[]; hiddenInformation: string[]; contradictions: string[]; missingExplanations: string[]; suggestedImprovements: string[] };
+
 type ControlPlane = {
   status: Record<string, string>;
   understanding: Array<{ label: string; state: IntelligenceState; source: string }>;
   unknowns: Array<{ label: string; source: string }>;
   recommendation: ControlPlaneRecommendation;
   evidenceLineage?: { categories?: Record<string, Array<{ file: string; group: string; category: string; ancestry?: string }>>; sources?: Array<{ file: string; group: string; category: string; ancestry?: string }> };
+  aiHandoffValidation?: AIHandoffValidation | null;
   decisionRanking?: { selectionExplanation: string; selectedIssue?: { id: string; title: string; rank: number; priorityScore: number }; candidates: DecisionCandidate[] } | null;
   diff: Record<string, string | string[]>;
   quality: QualitySnapshot | null;
@@ -69,7 +72,8 @@ type ControlPlane = {
     completeness?: { title: string; score: number; classification: string; fields: Record<string, { title: string; rule: string; classification: string; computed: { percent: number }; evidence: string[]; reason: string[]; recommendation: string }> };
     quality?: { title: string; score: number; deductions: Array<{ rule: string; points: number; evidence: string }> };
     recommendation?: { title: string; rule: string; reason: string; candidateIssues: Array<{ title: string; priority: number; evidence?: string }>; selected?: { title: string; priority: number } };
-    decisionRanking?: { title: string; rule: string; reason: string; candidateOrdering: Array<{ rank: number; title: string; priorityScore: number; selected: boolean; expectedImprovement: { total: number } }>; selected?: { title: string } };
+    aiHandoffValidation?: AIHandoffValidation | null;
+  decisionRanking?: { title: string; rule: string; reason: string; candidateOrdering: Array<{ rank: number; title: string; priorityScore: number; selected: boolean; expectedImprovement: { total: number } }>; selected?: { title: string } };
     evidenceSynthesis?: { title: string; rule: string; strength: string; supportedFields: number; missingFields: number; fields: Record<string, { label: string; suggestedWording?: string | null; confidence: string; sources: string[]; selectionRule: string }> };
   } | null;
   evidence: Array<{ file: string; section: string; line: number; evidence: string; confidence: string }>;
@@ -413,6 +417,20 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
             <div><h2>Recent improvements</h2>{data.quality.recentImprovements.length ? <ul>{data.quality.recentImprovements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No recent improvements detected.</p>}</div>
           </div>
           <p><b>Recommended action:</b> {data.quality.recommendedAction}</p>
+        </section>
+      )}
+
+      {data.aiHandoffValidation && (
+        <section className="controlCard qualityCard" aria-label="AI Handoff Validation">
+          <div className="qualityHeader"><div><small>AI Handoff Validation</small><strong>{data.aiHandoffValidation.overallScore}/100</strong></div><span className={stateClass(data.aiHandoffValidation.status === 'Ready' ? 'Present' : 'Needs Attention')}>{data.aiHandoffValidation.status}</span></div>
+          <div className="answerGrid">
+            <div><h2>Recoverable information</h2>{data.aiHandoffValidation.recoverableInformation.length ? <ul>{data.aiHandoffValidation.recoverableInformation.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div>
+            <div><h2>Hidden information</h2>{data.aiHandoffValidation.hiddenInformation.length ? <ul>{data.aiHandoffValidation.hiddenInformation.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No hidden required handoff information detected.</p>}</div>
+            <div><h2>Contradictions</h2>{data.aiHandoffValidation.contradictions.length ? <ul>{data.aiHandoffValidation.contradictions.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No handoff contradictions detected.</p>}</div>
+            <div><h2>Missing explanations</h2>{data.aiHandoffValidation.missingExplanations.length ? <ul>{data.aiHandoffValidation.missingExplanations.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No missing explanations detected.</p>}</div>
+          </div>
+          <h2>Suggested improvements</h2>
+          {data.aiHandoffValidation.suggestedImprovements.length ? <ul>{data.aiHandoffValidation.suggestedImprovements.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No suggested handoff improvements.</p>}
         </section>
       )}
 

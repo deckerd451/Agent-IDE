@@ -3,6 +3,7 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { canonicalManualGoalsUpdateLines, canonicalManualGoalsSuggestedUpdate } from './canonical-completeness.mjs';
 import { classifyEvidenceSource, confidenceFromEvidence } from './evidence-lineage.mjs';
+import { validateAIHandoff } from './ai-handoff-validation.mjs';
 
 export const expectedVerifiedArtifacts = [
   'strategy.md',
@@ -19,6 +20,7 @@ export const expectedVerifiedArtifacts = [
   'intelligence-diff.json',
   'intelligence-timeline.json',
   'intelligence-explanations.json',
+  'ai-handoff-validation.json',
   'prompts/architect.md',
   'prompts/builder.md',
   'prompts/reviewer.md',
@@ -132,11 +134,17 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
     readFile(join(aiDir, 'intelligence-explanations.json'), 'utf8').catch(() => ''),
     readFile(join(aiDir, 'decision-ranking.json'), 'utf8').catch(() => ''),
   ]);
+  const handoffValidation = await validateAIHandoff(repositoryPath);
   const quality = qualityText ? JSON.parse(qualityText) : null;
   const explanations = explanationText ? JSON.parse(explanationText) : null;
   const decisionRanking = rankingText ? JSON.parse(rankingText) : null;
   const lineage = JSON.parse(await readFile(join(aiDir, 'evidence-lineage.json'), 'utf8').catch(() => 'null'));
   const synthesisPersisted = JSON.parse(await readFile(join(aiDir, 'evidence-synthesis.json'), 'utf8').catch(() => 'null'));
+  const enforceHandoffValidation = expectedArtifacts.includes('ai-handoff-validation.json');
+  if (enforceHandoffValidation && handoffValidation.contradictions?.length) failures.push(...handoffValidation.contradictions.map((item) => `AI Handoff contradiction: ${item}`));
+  if (enforceHandoffValidation && handoffValidation.overallScore < 60) failures.push(`AI Handoff readiness too low: ${handoffValidation.overallScore}/100.`);
+  if (enforceHandoffValidation && quality?.generatedExportQuality?.score >= 70 && handoffValidation.overallScore < 60) failures.push('AI Handoff validation contradicts Intelligence Quality export score.');
+
   if (lineage?.sources?.length) {
     for (const item of lineage.sources) {
       const actual = classifyEvidenceSource(item.file);
