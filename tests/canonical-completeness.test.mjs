@@ -74,11 +74,12 @@ test('intelligence quality incorporates canonical completeness fields', async ()
   const quality = await computeQualitySnapshot(process.cwd(), docs, null, []);
   assert.equal(quality.canonicalIntelligenceQuality.completenessScore, 100);
   assert.equal(quality.canonicalIntelligenceQuality.fields.manualGoals.percent, 100);
+  assert.equal(quality.canonicalIntelligenceQuality.strategyFields.requiredFields.find((field) => field.key === 'currentProductBet').classification, 'Missing');
 });
 
 test('product decision package identifies incomplete Manual Goals fields below threshold', () => {
   const quality = { coverage: { goalsPresent: true }, canonicalIntelligenceQuality: { score: 50, fields: { manualGoals: { state: 'Partial', percent: 50, missing: ['Success criteria', 'Long-term vision'] } } }, consistency: { contradictions: [], duplicatedSections: [] }, confidence: { score: 90 }, generatedExportQuality: { score: 100 }, freshness: { canonicalStaleDocuments: [] } };
-  const selected = chooseNextImprovement({ health: '# Repository Health\n\n## Risks\n- Manual Goals Partial (50%). Missing: Success criteria, Long-term vision.\n', quality, strategy: '# Strategy\n\n## Strategy Confidence\nHigh\n', contextPackage: 'ready' });
+  const selected = chooseNextImprovement({ health: '# Repository Health\n\n## Risks\n- Manual Goals Partial (50%). Missing: Success criteria, Long-term vision.\n', quality, strategy: '# Strategy\n\n## Strategy Confidence\nHigh\n', contextPackage: 'ready', goals: '' });
   assert.equal(selected.id, 'missing-manual-goals');
   const prompt = renderPrompt(selected);
   assert.match(prompt, /Success criteria, Long-term vision/);

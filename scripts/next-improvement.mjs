@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { explainDecisionRanking, explainRecommendation, renderExplanationMarkdown } from './intelligence-explanations.mjs';
-import { canonicalManualGoalsSuggestedUpdate, canonicalStrategyFields, evaluateCanonicalStrategyCompleteness } from './canonical-completeness.mjs';
+import { canonicalManualGoalsSuggestedUpdate, evaluateCanonicalStrategyCompleteness } from './canonical-completeness.mjs';
 import { renderSynthesisMarkdown } from './evidence-synthesis.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md'];
@@ -52,8 +52,9 @@ function packageTypeForActionability(actionability) {
   return 'implementation';
 }
 
-function selectedIssue({ id, category, severity = 'high', actionability = issueActionability(id, source), source, title, evidence, reason, recommendedAction }) {
-  return { id, kind: id, category, severity, actionability, packageType: packageTypeForActionability(actionability), source, title, evidence: evidence || source, reason, recommendedAction };
+function selectedIssue({ id, category, severity = 'high', actionability, source, title, evidence, reason, recommendedAction }) {
+  const resolvedActionability = actionability ?? issueActionability(id, source);
+  return { id, kind: id, category, severity, actionability: resolvedActionability, packageType: packageTypeForActionability(resolvedActionability), source, title, evidence: evidence || source, reason, recommendedAction };
 }
 
 function issueActionability(id, source = '') {
@@ -176,11 +177,11 @@ const issueDetails = {
   },
 };
 
-export function chooseNextImprovement({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '' }) {
-  return chooseNextImprovementWithCandidates({ health, quality, audit, backlog, strategy, contextPackage }).selectedIssue;
+export function chooseNextImprovement({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '' }) {
+  return chooseNextImprovementWithCandidates({ health, quality, audit, backlog, strategy, contextPackage, goals }).selectedIssue;
 }
 
-export function chooseNextImprovementWithCandidates({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '' }) {
+export function chooseNextImprovementWithCandidates({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '' }) {
   const risks = healthRisks(health);
   const coverage = quality?.coverage ?? {};
   const issues = [];
@@ -203,13 +204,12 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
     const source = contradictions[0] ?? duplicates[0] ?? firstLine(audit.match(/.*(?:contradiction|duplicate canonical).*/i)?.[0] ?? audit);
     issues.push(selectedIssue({ id: 'consistency-cleanup', category: contradictions.length || /contradiction/i.test(source) ? 'contradiction normalization' : 'duplicate generated sections', severity: 'high', actionability: 'code-fixable', source, title: 'Clean Up Intelligence Contradictions', evidence: source, reason: 'Conflicting repository intelligence makes the next implementation package unsafe and ambiguous.', recommendedAction: 'Resolve only the contradiction or duplicate intelligence section cited in Current Evidence.' }));
   }
-  const strategyCompleteness = strategyCompletenessExplanation(quality);
+  const strategyCompleteness = strategyCompletenessExplanation(quality, goals);
   const missingStrategyField = firstMissingStrategyField(strategyCompleteness);
   const strategyScore = score(quality?.canonicalIntelligenceQuality?.score);
   const strategyConfidence = firstLine(mdSection(strategy, 'Strategy Confidence'), 'Unknown');
-  if (strategyScore < 70 || /low|weak|unknown|missing/i.test(strategyConfidence) || /strategy.*(?:weak|missing|warning|leakage)/i.test(risks.join('\n'))) {
-    const fallbackStrategyField = canonicalStrategyFields.find((field) => field.key === 'currentProductBet');
-    const field = missingStrategyField ?? { ...fallbackStrategyField, canonicalFile: '.ai/goals.md', canonicalSection: `## ${fallbackStrategyField?.heading ?? 'Manual Strategy Notes'}`, classification: 'Missing' };
+  if (missingStrategyField && (strategyScore < 70 || /low|weak|unknown|missing/i.test(strategyConfidence) || /strategy.*(?:weak|missing|warning|leakage)/i.test(risks.join('\n')))) {
+    const field = missingStrategyField;
     const evidence = /low|weak|unknown|missing/i.test(strategyConfidence) ? `Strategy Confidence: ${strategyConfidence}` : healthRecommendation(health);
     issues.push({ ...selectedIssue({ id: 'strategy-quality', category: 'fill strategy manual notes', severity: 'medium', actionability: 'manual', source: `${evidence} Missing: ${field.label}.`, title: `Add ${field.label}`, evidence: `${evidence} Missing: ${field.label}.`, reason: `${field.label} is ${field.classification ?? 'Missing'} in .ai/goals.md. ${field.why}`, recommendedAction: `Add ${field.label} to .ai/goals.md under ${field.canonicalSection}.` }), strategyField: field, strategyCompleteness, strategyEvidenceSynthesis: quality?.canonicalIntelligenceQuality?.evidenceSynthesis });
   }
@@ -380,8 +380,8 @@ export function renderPrompt(choice) {
 
 export async function generateNextImprovement(repositoryPath = process.cwd()) {
   const resolved = resolve(repositoryPath);
-  const [health, quality, audit, backlog, strategy, contextPackage] = await Promise.all([readText(resolved, 'repository-health.md'), readJson(resolved, 'intelligence-quality.json'), readText(resolved, 'intelligence-audit.md'), readText(resolved, 'backlog.md'), readText(resolved, 'strategy.md'), readText(resolved, 'context-package.md')]);
-  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ health, quality, audit, backlog, strategy, contextPackage });
+  const [goals, health, quality, audit, backlog, strategy, contextPackage] = await Promise.all([readText(resolved, 'goals.md'), readText(resolved, 'repository-health.md'), readJson(resolved, 'intelligence-quality.json'), readText(resolved, 'intelligence-audit.md'), readText(resolved, 'backlog.md'), readText(resolved, 'strategy.md'), readText(resolved, 'context-package.md')]);
+  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage });
   selectedIssue.explanation = explainRecommendation(selectedIssue, candidates);
   decisionRanking.explanation = explainDecisionRanking(decisionRanking);
   const prompt = renderPrompt({ selectedIssue, decisionRanking });

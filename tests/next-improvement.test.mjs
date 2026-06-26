@@ -5,10 +5,20 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { chooseNextImprovement, chooseNextImprovementWithCandidates, generateNextImprovement, renderPrompt } from '../scripts/next-improvement.mjs';
 
+
+const missingCurrentProductBetStrategyFields = {
+  classification: 'Missing',
+  percent: 0,
+  requiredFields: [
+    { key: 'currentProductBet', label: 'Current Product Bet', classification: 'Missing', present: false, canonicalFile: '.ai/goals.md', canonicalSection: '## Manual Strategy Notes', manualUpdate: `- Current Product Bet:
+  [Repository owner: describe the primary product hypothesis currently being tested.]`, why: 'This field records the primary product hypothesis currently being tested and is required to strengthen repository strategy quality.' },
+  ],
+};
+
 const healthyQuality = {
   coverage: { goalsPresent: true, strategyPresent: true, architecturePresent: true, decisionsPresent: true, validationPresent: true, backlogPresent: true, repositoryHealthPresent: true, agentsPresent: true, codePresent: true },
   consistency: { contradictions: [], duplicatedSections: [] },
-  canonicalIntelligenceQuality: { score: 92 },
+  canonicalIntelligenceQuality: { score: 92, strategyFields: { classification: 'Present', percent: 100, requiredFields: [] } },
   generatedExportQuality: { score: 94 },
   confidence: { score: 88, validationConfidence: 'High' },
   freshness: { canonicalStaleDocuments: [] },
@@ -59,7 +69,7 @@ test('backlog noise produces coherent backlog prompt', () => {
 });
 
 test('strategy gap produces coherent strategy prompt', () => {
-  const selected = choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' });
+  const selected = choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50, strategyFields: missingCurrentProductBetStrategyFields } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' });
   assertCoherent(selected, {
     id: 'strategy-quality',
     title: 'Add Current Product Bet',
@@ -87,7 +97,7 @@ test('no prompt contains title/evidence/category mismatch', () => {
   const scenarios = [
     choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } }),
     choice({ backlog: `# Backlog\n\n## Prioritized Backlog\n${Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n')}\n` }),
-    choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }),
+    choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50, strategyFields: missingCurrentProductBetStrategyFields } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }),
     choice(),
   ];
 
@@ -106,7 +116,7 @@ test('no prompt contains title/evidence/category mismatch', () => {
 test('strategy manual gap does not beat code-fixable backlog issue', () => {
   const manyItems = Array.from({ length: 26 }, (_, index) => `- Noisy backlog item ${index + 1}`).join('\n');
   const selected = choice({
-    quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } },
+    quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50, strategyFields: missingCurrentProductBetStrategyFields } },
     strategy: '# Strategy\n\n## Strategy Confidence\nLow\n',
     backlog: `# Backlog\n\n## Prioritized Backlog\n${manyItems}\n`,
   });
@@ -273,7 +283,7 @@ test('manual goals suggested update follows shared missing fields and canonical 
 });
 
 test('strategy manual notes package targets canonical goals sections', () => {
-  const prompt = renderPrompt(choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }));
+  const prompt = renderPrompt(choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50, strategyFields: missingCurrentProductBetStrategyFields } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }));
   assert.match(prompt, /## Missing Field\n\nCurrent Product Bet/);
   assert.match(prompt, /## Section\n\n## Manual Strategy Notes/);
   assert.match(prompt, /- Current Product Bet:\n  \[Repository owner:/);
@@ -283,7 +293,7 @@ test('strategy manual notes package targets canonical goals sections', () => {
 test('product decision packages never recommend generated artifacts as manual edit targets', () => {
   for (const selected of [
     choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } }),
-    choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50 } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }),
+    choice({ quality: { ...healthyQuality, canonicalIntelligenceQuality: { score: 50, strategyFields: missingCurrentProductBetStrategyFields } }, strategy: '# Strategy\n\n## Strategy Confidence\nLow\n' }),
   ]) {
     const prompt = renderPrompt(selected);
     assert.equal(selected.packageType, 'product-decision');
