@@ -57,6 +57,7 @@ type DecisionCandidate = { rank: number; id: string; title: string; category: st
 type AIHandoffValidation = { overallScore: number; status: string; recoverableInformation: string[]; hiddenInformation: string[]; contradictions: string[]; missingExplanations: string[]; suggestedImprovements: string[] };
 
 type ProgressSummary = {
+  hasBaseline: boolean;
   completedTask: string;
   repositoryQualityDelta: string;
   confidenceDelta: string;
@@ -308,7 +309,7 @@ function stateClass(state: IntelligenceState) {
 }
 
 function formatDelta(before?: number | string, after?: number | string) {
-  if (before === undefined || before === null || after === undefined || after === null) return 'No baseline';
+  if (before === undefined || before === null || after === undefined || after === null) return '';
   const beforeNumber = typeof before === 'number' ? before : Number.parseFloat(String(before));
   const afterNumber = typeof after === 'number' ? after : Number.parseFloat(String(after));
   if (Number.isFinite(beforeNumber) && Number.isFinite(afterNumber)) {
@@ -317,6 +318,45 @@ function formatDelta(before?: number | string, after?: number | string) {
     return `${delta > 0 ? '+' : ''}${delta.toFixed(Number.isInteger(delta) ? 0 : 1)}`;
   }
   return String(before) === String(after) ? 'No change' : `${before} → ${after}`;
+}
+
+
+function humanTaskTitle(candidate?: DecisionCandidate | null, fallback = 'Review Next Task') {
+  if (!candidate) return fallback;
+  const missingFields = missingFieldsForTask(candidate);
+  if (candidate.id === 'missing-manual-goals' && missingFields.length === 1) return `Add ${missingFields[0]}`;
+  if (candidate.id === 'missing-manual-goals' && missingFields.length > 1) return 'Complete Manual Goals';
+  if (candidate.id === 'strategy-quality') return 'Define Current Product Bet';
+  if (candidate.id === 'ai-handoff-validation') return 'Run AI Handoff Validation';
+  return candidate.title
+    .replace(/Repository Intent Notes/gi, 'Goals')
+    .replace(/Strengthen Strategy Quality/gi, 'Define Current Product Bet')
+    .replace(/Complete Manual/gi, 'Complete Manual')
+    .trim();
+}
+
+function missingFieldsForTask(candidate?: DecisionCandidate | null) {
+  const text = `${candidate?.ownerAction ?? ''} ${candidate?.reason ?? ''} ${candidate?.evidence ?? ''}`;
+  const explicit = text.match(/(?:fields?|Missing):\s*([^.]*)/i)?.[1] ?? '';
+  return explicit.split(/,| and /).map((field) => field.trim()).filter(Boolean);
+}
+
+function filePathForTask(candidate: DecisionCandidate | null | undefined, recommendation: ControlPlaneRecommendation) {
+  const text = `${candidate?.ownerAction ?? ''} ${candidate?.reason ?? ''} ${candidate?.evidence ?? ''} ${recommendation.explanation} ${recommendation.prompt}`;
+  return text.match(/`([^`]+\.(?:md|json|mjs|js|ts|tsx|css))`/)?.[1] ?? null;
+}
+
+function actionForTask(candidate: DecisionCandidate | null | undefined, recommendation: ControlPlaneRecommendation, quality?: QualitySnapshot | null) {
+  const filePath = filePathForTask(candidate, recommendation);
+  const fields = missingFieldsForTask(candidate);
+  if (filePath && fields.length === 1) return `Add the "${fields[0]}" field to \`${filePath}\`.`;
+  if (filePath && fields.length > 1) return `Add the missing fields (${fields.map((field) => `"${field}"`).join(', ')}) to \`${filePath}\`.`;
+  if (filePath && candidate?.id === 'strategy-quality') return `Add product strategy notes to \`${filePath}\`.`;
+  return candidate?.ownerAction ?? quality?.recommendedAction ?? recommendation.explanation;
+}
+
+function hasUsefulValue(value?: string | null) {
+  return Boolean(value && !/^(not specified|none detected|none|n\/?a)$/i.test(value.trim()));
 }
 
 function firstCandidate(data: ControlPlane | null, rank: number) {
@@ -329,6 +369,7 @@ function buildProgressSummary(previous: ControlPlane | null, current: ControlPla
   const previousIssues = new Set(previous?.decisionRanking?.candidates?.map((candidate) => candidate.title) ?? []);
   const currentIssues = new Set(current.decisionRanking?.candidates?.map((candidate) => candidate.title) ?? []);
   return {
+    hasBaseline: Boolean(previous),
     completedTask: previousTop && previousTop.title !== currentTop?.title ? previousTop.title : 'No completed task detected',
     repositoryQualityDelta: formatDelta(previous?.quality?.overallScore, current.quality?.overallScore),
     confidenceDelta: formatDelta(previous?.quality?.confidence.score, current.quality?.confidence.score),
@@ -399,20 +440,31 @@ function ControlPlaneDashboard({ data, progressSummary }: { data: ControlPlane |
   const topWork = firstCandidate(data, 1);
   const afterThis = firstCandidate(data, 2);
   const diffEntries = meaningfulDiffEntries(data.diff);
+  const taskTitle = humanTaskTitle(topWork, data.recommendation.title);
+  const taskAction = actionForTask(topWork, data.recommendation, data.quality);
+  const taskFile = filePathForTask(topWork, data.recommendation);
+  const workMetaRows = [
+    ['What you need to do', taskAction],
+    ['File to edit', taskFile ? `\`${taskFile}\`` : null],
+    ['Expected impact', topWork ? `+${topWork.expectedImprovement.total}` : 'See package'],
+    ['Suggested next step', hasUsefulValue(topWork?.expectedCompletionTarget) ? topWork?.expectedCompletionTarget : null],
+    ['Actionability', topWork?.actionability ?? data.recommendation.actionability ?? null],
+  ].filter(([, value]) => hasUsefulValue(value));
+  const afterThisRows = [
+    ['Expected impact', `+${afterThis?.expectedImprovement.total ?? 0}`],
+    ['Why this matters', afterThis?.reason],
+    ['Dependency', afterThis?.dependency],
+  ].filter(([, value]) => hasUsefulValue(value));
 
   return (
     <div className="controlPlane compactDashboard">
       <section className="todayWorkCard" aria-label="Today's Work">
         <div>
           <p className="kicker">Today's Work</p>
-          <h2>{topWork?.title ?? data.recommendation.title}</h2>
-          <p>{topWork?.reason ?? data.recommendation.whyItMatters}</p>
+          <h2>{taskTitle}</h2>
+          <p><b>Why this matters:</b> {topWork?.reason ?? data.recommendation.whyItMatters}</p>
           <div className="workMetaGrid">
-            <div><small>Owner action</small><strong>{topWork?.ownerAction ?? data.quality?.recommendedAction ?? data.recommendation.explanation}</strong></div>
-            <div><small>Estimated improvement</small><strong>{topWork ? `+${topWork.expectedImprovement.total}` : 'See package'}</strong></div>
-            <div><small>Expected completion</small><strong>{topWork?.expectedCompletionTarget ?? 'Not specified'}</strong></div>
-            <div><small>Package type</small><strong>{data.recommendation.packageType ?? topWork?.category ?? 'Implementation'}</strong></div>
-            <div><small>Actionability</small><strong>{topWork?.actionability ?? data.recommendation.actionability ?? 'Available'}</strong></div>
+            {workMetaRows.map(([label, value]) => <div key={label ?? String(value)}><small>{label}</small><strong>{renderInlineMarkdown(String(value))}</strong></div>)}
           </div>
         </div>
         <button className="primaryCta" onClick={() => void copyText(data.recommendation.prompt)} type="button">Open Product Decision Package</button>
@@ -421,11 +473,9 @@ function ControlPlaneDashboard({ data, progressSummary }: { data: ControlPlane |
       {afterThis && (
         <section className="controlCard afterThisCard" aria-label="After This">
           <p className="kicker">After This</p>
-          <h2>{afterThis.title}</h2>
+          <h2>{humanTaskTitle(afterThis, afterThis.title)}</h2>
           <div className="workMetaGrid compact">
-            <div><small>Expected improvement</small><strong>+{afterThis.expectedImprovement.total}</strong></div>
-            <div><small>Why it is next</small><strong>{afterThis.reason}</strong></div>
-            <div><small>Dependency</small><strong>{afterThis.dependency ?? 'None detected'}</strong></div>
+            {afterThisRows.map(([label, value]) => <div key={label ?? String(value)}><small>{label}</small><strong>{value}</strong></div>)}
           </div>
         </section>
       )}
@@ -435,14 +485,16 @@ function ControlPlaneDashboard({ data, progressSummary }: { data: ControlPlane |
       {progressSummary && (
         <section className="controlCard progressSummaryCard" aria-label="Refresh progress summary">
           <h2>Refresh Progress</h2>
-          <div className="qualityGrid">
-            <div><small>Completed task</small><strong>{progressSummary.completedTask}</strong></div>
-            <div><small>Repository quality delta</small><strong>{progressSummary.repositoryQualityDelta}</strong></div>
-            <div><small>Confidence delta</small><strong>{progressSummary.confidenceDelta}</strong></div>
-            <div><small>Verification delta</small><strong>{progressSummary.verificationDelta}</strong></div>
-            <div><small>Current top priority</small><strong>{progressSummary.currentTopPriority}</strong></div>
-          </div>
-          <div className="answerGrid"><div><h2>Newly resolved issues</h2>{progressSummary.newlyResolvedIssues.length ? <ul>{progressSummary.newlyResolvedIssues.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div><div><h2>Newly introduced issues</h2>{progressSummary.newlyIntroducedIssues.length ? <ul>{progressSummary.newlyIntroducedIssues.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div></div>
+          {!progressSummary.hasBaseline ? <p>This is your first refresh. Progress will be tracked after your next completed task.</p> : <>
+            <div className="qualityGrid">
+              <div><small>Completed task</small><strong>{progressSummary.completedTask}</strong></div>
+              <div><small>Repository quality delta</small><strong>{progressSummary.repositoryQualityDelta}</strong></div>
+              <div><small>Confidence delta</small><strong>{progressSummary.confidenceDelta}</strong></div>
+              <div><small>Verification delta</small><strong>{progressSummary.verificationDelta}</strong></div>
+              <div><small>Current top priority</small><strong>{humanTaskTitle(topWork, progressSummary.currentTopPriority)}</strong></div>
+            </div>
+            <div className="answerGrid"><div><h2>Newly resolved tasks</h2>{progressSummary.newlyResolvedIssues.length ? <ul>{progressSummary.newlyResolvedIssues.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div><div><h2>New tasks</h2>{progressSummary.newlyIntroducedIssues.length ? <ul>{progressSummary.newlyIntroducedIssues.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div></div>
+          </>}
         </section>
       )}
 
