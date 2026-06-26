@@ -84,7 +84,7 @@ test('product decision package identifies incomplete Manual Goals fields below t
   assert.match(prompt, /Success criteria, Long-term vision/);
 });
 
-test('canonical strategy completeness recognizes owner-authored bullet fields under Manual Strategy Notes', () => {
+test('canonical strategy completeness recognizes inline owner-authored bullet values under Manual Strategy Notes', () => {
   const result = evaluateCanonicalStrategyCompleteness(`# Goals
 
 ## Manual Strategy Notes
@@ -97,7 +97,34 @@ test('canonical strategy completeness recognizes owner-authored bullet fields un
   assert.match(field.evidence[0], /Between Events experience/);
 });
 
-test('canonical strategy completeness keeps placeholder Current Product Bet incomplete', () => {
+test('canonical strategy completeness recognizes multiline owner-authored bullet values under Manual Strategy Notes', () => {
+  const result = evaluateCanonicalStrategyCompleteness(`# Goals
+
+## Manual Strategy Notes
+
+- Current Product Bet:
+  The primary product bet is the Between Events experience: helping users know who they should reconnect with today.
+`);
+  const field = result.requiredFields.find((item) => item.key === 'currentProductBet');
+  assert.equal(field.classification, 'Present');
+  assert.equal(field.present, true);
+  assert.match(field.evidence[0], /Between Events experience/);
+});
+
+test('canonical strategy completeness keeps inline placeholder Current Product Bet incomplete', () => {
+  const result = evaluateCanonicalStrategyCompleteness(`# Goals
+
+## Manual Strategy Notes
+
+- Current Product Bet: [Repository owner: describe the primary product hypothesis currently being tested.]
+`);
+  const field = result.requiredFields.find((item) => item.key === 'currentProductBet');
+  assert.equal(field.classification, 'Partial');
+  assert.equal(field.present, false);
+  assert.deepEqual(result.missing, ['Current Product Bet', 'Strategic Differentiator', 'What Not To Build', 'Strategy Evidence']);
+});
+
+test('canonical strategy completeness keeps multiline placeholder Current Product Bet incomplete', () => {
   const result = evaluateCanonicalStrategyCompleteness(`# Goals
 
 ## Manual Strategy Notes
