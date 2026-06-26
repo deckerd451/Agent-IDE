@@ -1,6 +1,6 @@
 export const completenessStates = ['Missing', 'Partial', 'Complete', 'Strong'];
 
-const missingPattern = /^(?:unknown|missing|not detected yet|none detected|generated placeholder|tbd|todo|n\/a|na)$/i;
+const missingPattern = /^(?:unknown|missing|not detected yet|none detected|generated placeholder|tbd|todo|n\/?a|na|\[repository owner:[\s\S]*\])$/i;
 
 export const canonicalFields = [
   { key: 'manualGoals', label: 'Manual Goals', heading: 'Manual Goals', required: [
@@ -24,6 +24,37 @@ export function mdSection(markdown, heading) {
 
 function meaningfulLines(value) {
   return value.split('\n').map((line) => line.replace(/^[-*]\s+/, '').trim()).filter((line) => line && !/^#+\s+/.test(line) && !missingPattern.test(line));
+}
+
+function normalizeFieldValue(value) {
+  return value.split('\n').map((line) => line.replace(/^[-*]\s+/, '').trim()).join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function fieldPattern(label) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^\\s*(?:[-*]\\s*)?${escaped}\\s*:\\s*(.*)$`, 'i');
+}
+
+function manualStrategyFieldEvidence(markdown, field) {
+  const section = mdSection(markdown, field.heading);
+  if (!section) return { evidence: [], placeholders: [] };
+  const aliases = [field.label, ...(field.aliases ?? [])];
+  const patterns = aliases.map(fieldPattern);
+  const lines = section.split('\n');
+  const found = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const patternMatch = patterns.map((pattern) => lines[index].match(pattern)).find(Boolean);
+    if (!patternMatch) continue;
+    const valueLines = [patternMatch[1] ?? ''];
+    for (let next = index + 1; next < lines.length; next += 1) {
+      const nextLine = lines[next];
+      if (/^\s*(?:[-*]\s*)?[A-Z][A-Za-z0-9 &'/-]+\s*:/.test(nextLine) || /^#{1,6}\s+/.test(nextLine)) break;
+      if (nextLine.trim()) valueLines.push(nextLine);
+    }
+    const value = normalizeFieldValue(valueLines.join('\n'));
+    found.push({ heading: field.heading, line: `${field.label}: ${value}`, value, placeholder: !value || missingPattern.test(value) });
+  }
+  return { evidence: found.filter((item) => !item.placeholder), placeholders: found.filter((item) => item.placeholder) };
 }
 
 function fieldEvidence(markdown, headings, patterns = []) {
@@ -65,17 +96,17 @@ export function evaluateCanonicalCompleteness(goalsMarkdown = '') {
 }
 
 export const canonicalStrategyFields = [
-  { key: 'currentProductBet', label: 'Current Product Bet', heading: 'Manual Strategy Notes', headings: ['Current Product Bet', 'Strategic Bet'], manualUpdate: '- Current Product Bet:\n  [Repository owner: describe the primary product hypothesis currently being tested.]', why: 'This field records the primary product hypothesis currently being tested and is required to strengthen repository strategy quality.' },
-  { key: 'strategicDifferentiator', label: 'Strategic Differentiator', heading: 'Manual Strategy Notes', headings: ['Strategic Differentiator', 'Product Differentiator', 'Differentiator'], manualUpdate: '- Strategic Differentiator:\n  [Repository owner: describe what makes this repository strategy meaningfully different.]', why: 'This field records what the product strategy should optimize around or emphasize differently from alternatives.' },
-  { key: 'whatNotToBuild', label: 'What Not To Build', heading: 'Manual Strategy Notes', headings: ['What Not To Build'], manualUpdate: '- What Not To Build:\n  [Repository owner: describe explicit product boundaries or non-goals.]', why: 'This field records product boundaries so generated implementation work avoids unsupported directions.' },
-  { key: 'repositoryPrinciples', label: 'Repository Principles', heading: 'Manual Strategy Notes', headings: ['Repository Principles', 'Principles'], optional: true, manualUpdate: '- Repository Principles:\n  [Repository owner: describe durable principles that should guide repository decisions.]', why: 'This optional field records durable repository-level decision principles for future work.' },
-  { key: 'strategyEvidence', label: 'Strategy Evidence', heading: 'Manual Strategy Notes', headings: ['Strategy Evidence', 'Strategy Evidence Sources', 'Evidence Sources'], manualUpdate: '- Strategy Evidence:\n  [Repository owner: cite repository-local files, decisions, or docs that support the strategy.]', why: 'This field records repository-local evidence supporting the strategy so future generated intelligence can trace owner intent.' },
+  { key: 'currentProductBet', label: 'Current Product Bet', heading: 'Manual Strategy Notes', aliases: ['Strategic Bet'], manualUpdate: '- Current Product Bet:\n  [Repository owner: describe the primary product hypothesis currently being tested.]', why: 'This field records the primary product hypothesis currently being tested and is required to strengthen repository strategy quality.' },
+  { key: 'strategicDifferentiator', label: 'Strategic Differentiator', heading: 'Manual Strategy Notes', aliases: ['Product Differentiator', 'Differentiator'], manualUpdate: '- Strategic Differentiator:\n  [Repository owner: describe what makes this repository strategy meaningfully different.]', why: 'This field records what the product strategy should optimize around or emphasize differently from alternatives.' },
+  { key: 'whatNotToBuild', label: 'What Not To Build', heading: 'Manual Strategy Notes', aliases: [], manualUpdate: '- What Not To Build:\n  [Repository owner: describe explicit product boundaries or non-goals.]', why: 'This field records product boundaries so generated implementation work avoids unsupported directions.' },
+  { key: 'repositoryPrinciples', label: 'Repository Principles', heading: 'Manual Strategy Notes', aliases: ['Principles'], optional: true, manualUpdate: '- Repository Principles:\n  [Repository owner: describe durable principles that should guide repository decisions.]', why: 'This optional field records durable repository-level decision principles for future work.' },
+  { key: 'strategyEvidence', label: 'Strategy Evidence', heading: 'Manual Strategy Notes', aliases: ['Strategy Evidence Sources', 'Evidence Sources'], manualUpdate: '- Strategy Evidence:\n  [Repository owner: cite repository-local files, decisions, or docs that support the strategy.]', why: 'This field records repository-local evidence supporting the strategy so future generated intelligence can trace owner intent.' },
 ];
 
 export function evaluateCanonicalStrategyCompleteness(goalsMarkdown = '') {
   const requiredFields = canonicalStrategyFields.map((field) => {
-    const evidence = fieldEvidence(goalsMarkdown, field.headings);
-    const classification = evidence.length === 0 ? 'Missing' : evidence.length === 1 ? 'Present' : 'Present';
+    const { evidence, placeholders } = manualStrategyFieldEvidence(goalsMarkdown, field);
+    const classification = evidence.length > 0 ? 'Present' : placeholders.length > 0 ? 'Partial' : 'Missing';
     return {
       key: field.key,
       label: field.label,
@@ -86,6 +117,7 @@ export function evaluateCanonicalStrategyCompleteness(goalsMarkdown = '') {
       state: classification,
       present: evidence.length > 0,
       evidence: evidence.map((item) => `${item.heading}: ${item.line}`),
+      placeholders: placeholders.map((item) => `${item.heading}: ${item.line}`),
       manualUpdate: field.manualUpdate,
       why: field.why,
     };

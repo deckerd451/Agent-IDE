@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { explainDecisionRanking, explainRecommendation, renderExplanationMarkdown } from './intelligence-explanations.mjs';
-import { canonicalManualGoalsSuggestedUpdate, evaluateCanonicalStrategyCompleteness } from './canonical-completeness.mjs';
+import { canonicalManualGoalsSuggestedUpdate, canonicalStrategyFields, evaluateCanonicalStrategyCompleteness } from './canonical-completeness.mjs';
 import { renderSynthesisMarkdown } from './evidence-synthesis.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md'];
@@ -208,7 +208,8 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
   const strategyScore = score(quality?.canonicalIntelligenceQuality?.score);
   const strategyConfidence = firstLine(mdSection(strategy, 'Strategy Confidence'), 'Unknown');
   if (strategyScore < 70 || /low|weak|unknown|missing/i.test(strategyConfidence) || /strategy.*(?:weak|missing|warning|leakage)/i.test(risks.join('\n'))) {
-    const field = missingStrategyField ?? { label: 'Current Product Bet', canonicalFile: '.ai/goals.md', canonicalSection: '## Manual Strategy Notes', why: 'This field records the primary product hypothesis currently being tested and is required to strengthen repository strategy quality.', manualUpdate: '- Current Product Bet:\n  [Repository owner: describe the primary product hypothesis currently being tested.]', key: 'currentProductBet', classification: 'Missing' };
+    const fallbackStrategyField = canonicalStrategyFields.find((field) => field.key === 'currentProductBet');
+    const field = missingStrategyField ?? { ...fallbackStrategyField, canonicalFile: '.ai/goals.md', canonicalSection: `## ${fallbackStrategyField?.heading ?? 'Manual Strategy Notes'}`, classification: 'Missing' };
     const evidence = /low|weak|unknown|missing/i.test(strategyConfidence) ? `Strategy Confidence: ${strategyConfidence}` : healthRecommendation(health);
     issues.push({ ...selectedIssue({ id: 'strategy-quality', category: 'fill strategy manual notes', severity: 'medium', actionability: 'manual', source: `${evidence} Missing: ${field.label}.`, title: `Add ${field.label}`, evidence: `${evidence} Missing: ${field.label}.`, reason: `${field.label} is ${field.classification ?? 'Missing'} in .ai/goals.md. ${field.why}`, recommendedAction: `Add ${field.label} to .ai/goals.md under ${field.canonicalSection}.` }), strategyField: field, strategyCompleteness, strategyEvidenceSynthesis: quality?.canonicalIntelligenceQuality?.evidenceSynthesis });
   }

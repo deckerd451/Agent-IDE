@@ -57,11 +57,10 @@ test('canonical completeness percentage averages deterministic canonical fields'
 test('canonical strategy completeness classifies required strategy fields deterministically without changing canonical score', () => {
   const result = evaluateCanonicalStrategyCompleteness(`# Goals
 
-## Current Product Bet
-Test package guidance.
+## Manual Strategy Notes
 
-## What Not To Build
-Cloud scoring.
+- Current Product Bet: Test package guidance.
+- What Not To Build: Cloud scoring.
 `);
   assert.equal(result.classification, 'Partial');
   assert.deepEqual(result.missing, ['Strategic Differentiator', 'Strategy Evidence']);
@@ -83,4 +82,47 @@ test('product decision package identifies incomplete Manual Goals fields below t
   assert.equal(selected.id, 'missing-manual-goals');
   const prompt = renderPrompt(selected);
   assert.match(prompt, /Success criteria, Long-term vision/);
+});
+
+test('canonical strategy completeness recognizes owner-authored bullet fields under Manual Strategy Notes', () => {
+  const result = evaluateCanonicalStrategyCompleteness(`# Goals
+
+## Manual Strategy Notes
+
+- Current Product Bet: The primary product bet is the Between Events experience: helping users know who they should reconnect with today.
+`);
+  const field = result.requiredFields.find((item) => item.key === 'currentProductBet');
+  assert.equal(field.classification, 'Present');
+  assert.equal(field.present, true);
+  assert.match(field.evidence[0], /Between Events experience/);
+});
+
+test('canonical strategy completeness keeps placeholder Current Product Bet incomplete', () => {
+  const result = evaluateCanonicalStrategyCompleteness(`# Goals
+
+## Manual Strategy Notes
+
+- Current Product Bet:
+  [Repository owner: describe the primary product hypothesis currently being tested.]
+`);
+  const field = result.requiredFields.find((item) => item.key === 'currentProductBet');
+  assert.equal(field.classification, 'Partial');
+  assert.equal(field.present, false);
+  assert.deepEqual(result.missing, ['Current Product Bet', 'Strategic Differentiator', 'What Not To Build', 'Strategy Evidence']);
+});
+
+test('canonical strategy completeness does not count strategy fields outside Manual Strategy Notes', () => {
+  const result = evaluateCanonicalStrategyCompleteness(`# Goals
+
+## Current Product Bet
+
+Between Events experience.
+
+## Manual Strategy Notes
+
+- Strategic Differentiator: Relationship memory.
+`);
+  const field = result.requiredFields.find((item) => item.key === 'currentProductBet');
+  assert.equal(field.classification, 'Missing');
+  assert.equal(field.present, false);
 });
