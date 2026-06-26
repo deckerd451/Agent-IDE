@@ -2,6 +2,7 @@ import { readFile, writeFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { evaluateCanonicalCompleteness } from './canonical-completeness.mjs';
 import { synthesizeEvidenceFromDocs } from './evidence-synthesis.mjs';
+import { classifyEvidenceSource, persistEvidenceLineage, confidenceFromEvidence } from './evidence-lineage.mjs';
 import { explainCompleteness, explainQuality, explainCompletenessSynchronization, explainEvidenceSynthesis } from './intelligence-explanations.mjs';
 
 export const canonicalIntelligenceFiles = ['goals.md'];
@@ -12,8 +13,10 @@ export const qualityFiles = [...canonicalIntelligenceFiles, ...derivedArtifactFi
 
 export function classifyIntelligenceSource(file) {
   const normalizedFile = file.replace(/^\.ai\//, '').replace(/\\/g, '/');
-  if (canonicalIntelligenceFiles.includes(normalizedFile)) return 'canonical';
-  if (derivedArtifactFiles.includes(normalizedFile) || /^(prompts|exports|snapshots|timeline|diff)(?:\/|$)/.test(normalizedFile)) return 'derived';
+  const lineage = classifyEvidenceSource(normalizedFile.startsWith('.ai/') || normalizedFile === 'README.md' ? normalizedFile : `.ai/${normalizedFile}`);
+  if (lineage === 'Canonical') return 'canonical';
+  if (lineage === 'Generated') return 'derived';
+  if (lineage === 'Independent') return 'supporting';
   return 'unknown';
 }
 
@@ -115,6 +118,7 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const canonicalCompleteness = evaluateCanonicalCompleteness(docs['goals.md'] ?? '');
   const synthesisDocs = Object.fromEntries(Object.entries(docs).map(([file, text]) => [file === 'goals.md' ? '.ai/goals.md' : file.startsWith('.') || file === 'README.md' ? file : `.ai/${file}`, text]));
   const evidenceSynthesis = synthesizeEvidenceFromDocs(synthesisDocs, docs['goals.md'] ?? '');
+  const evidenceLineage = await persistEvidenceLineage(repositoryPath, Object.keys(synthesisDocs));
   const canonicalCoverageScore = canonicalCompleteness.score;
   const intelligenceCoverageScore = percent(Object.values(coverageDocs).filter((value) => value?.trim()).length, Object.keys(coverageDocs).length);
   const exportCoverageScore = percent(Object.values(exportCoverageItems).filter(Boolean).length, Object.values(exportCoverageItems).length);
@@ -150,7 +154,8 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const strategyConfidence = firstLine(mdSection(docs['strategy.md'] ?? '', 'Strategy Confidence'), 'Unknown');
   const validationConfidence = firstLine(mdSection(docs['validation.md'] ?? '', 'Confidence'), 'Unknown');
   const existingConfidence = (docs['repository-health.md'] ?? '').match(/^Confidence:\s*(.+)$/im)?.[1]?.trim() ?? 'Unknown';
-  const confidenceScore = Math.round((confidenceValue(existingConfidence) + confidenceValue(strategyConfidence) + confidenceValue(validationConfidence)) / 3);
+  const lineageConfidence = confidenceFromEvidence(evidenceLineage.sources);
+  const confidenceScore = confidenceValue(lineageConfidence.confidence);
   const verification = JSON.parse(docs['intelligence-verification.json'] || 'null');
   const verificationScore = typeof verification?.score === 'number' ? verification.score : 100;
   const verificationFailures = Array.isArray(verification?.failures) ? verification.failures : [];
@@ -164,7 +169,7 @@ export async function computeQualitySnapshot(repositoryPath, docs, previousQuali
   const canonicalIntelligenceQualityScore = Math.round(canonicalCoverageScore * 0.5 + consistencyScore * 0.2 + canonicalFreshnessScore * 0.1 + confidenceScore * 0.15 + riskScore * 0.05);
   const generatedExportQualityScore = Math.round(exportCoverageScore * 0.55 + exportFreshnessScore * 0.35 + (promptsPresent && docs['context-package.md']?.trim() ? 100 : 50) * 0.1);
   const overallScore = Math.round(canonicalIntelligenceQualityScore * 0.75 + generatedExportQualityScore * 0.1 + verificationScore * 0.15);
-  const snapshot = { timestamp: now.toISOString(), overallScore, canonicalIntelligenceQuality: { score: canonicalIntelligenceQualityScore, completenessScore: canonicalCompleteness.score, completenessState: canonicalCompleteness.state, fields: canonicalCompleteness.fields, evidenceSynthesis, coverageScore: canonicalCoverageScore, consistencyScore, freshnessScore: canonicalFreshnessScore, sourceOfTruth: 'goals.md' }, generatedExportQuality: { score: generatedExportQualityScore, coverageScore: exportCoverageScore, freshnessScore: exportFreshnessScore, promptsFreshnessOnly: true }, coverage: { score: coverageScore, ...coverageItems }, consistency: { score: consistencyScore, productThesisConsistent: !thesisContradictory, currentFocusConsistent: !focusContradictory, northStarConsistent: !northStarContradictory, validationConsistent, strategyConsistent, strategyReferencesSupportedByEvidence: strategyEvidence, duplicatedSections: duplicates, contradictions }, freshness: { score: freshnessScore, lastRefresh: now.toISOString(), filesChanged: previousQuality ? Number(drift.productThesisChanged) + Number(drift.strategyChanged) + Number(drift.architectureChanged) + Number(drift.backlogGrew || drift.backlogShrank) + drift.newRisks.length + drift.removedRisks.length : 0, staleDocuments, canonicalStaleDocuments, derivedStaleDocuments, manualNotesPreserved }, confidence: { score: confidenceScore, existingConfidence, strategyConfidence, validationConfidence, overallRepositoryConfidence: confidenceScore >= 80 ? 'High' : confidenceScore >= 55 ? 'Medium' : 'Low' }, verification: { score: verificationScore, status: verification?.status ?? 'Missing', failures: verificationFailures }, drift, risks, backlogCount, fingerprints: current.fingerprints, recentRegressions, recentImprovements };
+  const snapshot = { timestamp: now.toISOString(), overallScore, canonicalIntelligenceQuality: { score: canonicalIntelligenceQualityScore, completenessScore: canonicalCompleteness.score, completenessState: canonicalCompleteness.state, fields: canonicalCompleteness.fields, evidenceSynthesis, evidenceLineage, coverageScore: canonicalCoverageScore, consistencyScore, freshnessScore: canonicalFreshnessScore, sourceOfTruth: 'goals.md' }, generatedExportQuality: { score: generatedExportQualityScore, coverageScore: exportCoverageScore, freshnessScore: exportFreshnessScore, promptsFreshnessOnly: true }, coverage: { score: coverageScore, ...coverageItems }, consistency: { score: consistencyScore, productThesisConsistent: !thesisContradictory, currentFocusConsistent: !focusContradictory, northStarConsistent: !northStarContradictory, validationConsistent, strategyConsistent, strategyReferencesSupportedByEvidence: strategyEvidence, duplicatedSections: duplicates, contradictions }, freshness: { score: freshnessScore, lastRefresh: now.toISOString(), filesChanged: previousQuality ? Number(drift.productThesisChanged) + Number(drift.strategyChanged) + Number(drift.architectureChanged) + Number(drift.backlogGrew || drift.backlogShrank) + drift.newRisks.length + drift.removedRisks.length : 0, staleDocuments, canonicalStaleDocuments, derivedStaleDocuments, manualNotesPreserved }, confidence: { score: confidenceScore, existingConfidence, strategyConfidence, validationConfidence, lineageConfidence, confidenceCalculation: lineageConfidence.rule, overallRepositoryConfidence: lineageConfidence.confidence }, verification: { score: verificationScore, status: verification?.status ?? 'Missing', failures: verificationFailures }, drift, risks, backlogCount, fingerprints: current.fingerprints, recentRegressions, recentImprovements };
   snapshot.explanations = { completeness: explainCompleteness(docs['goals.md'] ?? ''), evidenceSynthesis: explainEvidenceSynthesis(evidenceSynthesis), quality: explainQuality(snapshot), completenessSynchronization: explainCompletenessSynchronization({ completeness: canonicalCompleteness, evidenceSynthesis }) };
   return { ...snapshot, trend: computeTrend(previousHistory, snapshot), recommendedAction: recommendQualityAction(snapshot) };
 }

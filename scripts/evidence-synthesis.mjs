@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 import { evaluateCanonicalCompleteness, mdSection } from './canonical-completeness.mjs';
+import { buildLineageModel, confidenceFromEvidence } from './evidence-lineage.mjs';
 
 export const synthesisFields = [
   { key: 'productThesis', label: 'Product Thesis', headings: ['Product Thesis', 'Product Purpose'] },
@@ -55,18 +56,24 @@ export function synthesizeEvidenceFromDocs(docs = {}, goalsMarkdown = docs['.ai/
     const groups = [...grouped.values()].sort((a, b) => b.evidence.length - a.evidence.length || a.wording.localeCompare(b.wording));
     const selected = groups[0] ?? null;
     const conflict = groups.length > 1;
-    const sourceCount = new Set(selected?.evidence.map((item) => item.file) ?? []).size;
-    const confidence = !selected ? 'None' : conflict ? (sourceCount >= 2 ? 'Medium' : 'Low') : sourceCount >= 3 ? 'High' : sourceCount === 2 ? 'Medium' : 'Low';
+    const lineage = buildLineageModel(selected?.evidence.map((item) => item.file) ?? []);
+    const confidenceCalculation = confidenceFromEvidence(lineage.sources);
+    const sourceCount = confidenceCalculation.independentGroupCount;
+    const confidence = !selected ? 'None' : confidenceCalculation.confidence;
     fields[field.key] = {
       key: field.key,
       label: field.label,
+      state: complete ? 'Canonical' : selected ? 'Repository Inferred' : 'Missing',
+      canonical: complete,
       missing: !complete,
       suggestedWording: selected?.wording ?? null,
       evidence: selected?.evidence ?? [],
       allEvidence: evidence,
+      lineage,
+      confidenceCalculation,
       confidence,
-      selectionRule: selected ? `Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is ${confidence} from ${sourceCount} supporting source${sourceCount === 1 ? '' : 's'}${conflict ? ' with conflicting repository evidence present' : ''}.` : 'No matching repository-local evidence found.',
-      reason: selected ? `${sourceCount} deterministic repository-local source${sourceCount === 1 ? '' : 's'} contain selected wording${conflict ? '; other conflicting wording was detected' : ''}.` : 'No deterministic repository-local source contains this concept.',
+      selectionRule: selected ? `Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is ${confidence} from ${sourceCount} independent evidence group${sourceCount === 1 ? '' : 's'}${conflict ? ' with conflicting repository evidence present' : ''}. Generated confirmations do not increase confidence.` : 'No matching repository-local evidence found.',
+      reason: selected ? `${sourceCount} independent evidence group${sourceCount === 1 ? '' : 's'} contain selected wording${conflict ? '; other conflicting wording was detected' : ''}.` : 'No deterministic repository-local source contains this concept.',
     };
   }
   const supported = Object.values(fields).filter((field) => field.missing && field.suggestedWording).length;
@@ -77,7 +84,7 @@ export function synthesizeEvidenceFromDocs(docs = {}, goalsMarkdown = docs['.ai/
 
 export function renderSynthesisMarkdown(field) {
   if (!field?.suggestedWording) return 'Missing field.';
-  return ['Suggested Canonical Wording', '', field.label, '', field.suggestedWording, '', 'Repository-local evidence', '', ...field.evidence.map((item) => `- ${item.source}: ${item.wording}`), '', 'Confidence', '', field.confidence, '', 'Repository owner action', '', '- Review', '- Accept', '- Edit', '- Reject'].join('\n');
+  return ['Suggested Canonical Wording', '', field.label, '', field.suggestedWording, '', 'Canonical State', '', field.state ?? (field.canonical ? 'Canonical' : 'Repository Inferred'), '', 'Independent evidence', '', ...(field.confidenceCalculation?.independentGroups ?? []).map((item) => `- ${item}`), '', 'Generated confirmations', '', ...((field.confidenceCalculation?.generatedConfirmations?.length ? field.confidenceCalculation.generatedConfirmations : ['None']).map((item) => `- ${item}`)), '', 'Repository-local evidence', '', ...field.evidence.map((item) => `- ${item.source}: ${item.wording}`), '', 'Confidence', '', field.confidence, '', 'Repository owner action', '', '- Review', '- Accept', '- Edit', '- Reject'].join('\n');
 }
 
 export async function readEvidenceDocs(repositoryPath = process.cwd()) {
@@ -91,6 +98,8 @@ export async function persistEvidenceSynthesis(repositoryPath = process.cwd()) {
   const synthesis = synthesizeEvidenceFromDocs(docs, docs['.ai/goals.md']);
   await mkdir(join(repositoryPath, '.ai'), { recursive: true });
   await writeFile(join(repositoryPath, '.ai/evidence-synthesis.json'), `${JSON.stringify(synthesis, null, 2)}\n`);
+  const { persistEvidenceLineage } = await import('./evidence-lineage.mjs');
+  await persistEvidenceLineage(repositoryPath, Object.keys(docs));
   return synthesis;
 }
 

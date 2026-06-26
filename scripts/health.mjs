@@ -2,6 +2,7 @@ import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { evaluateCanonicalCompleteness, formatCompletenessState } from './canonical-completeness.mjs';
 import { synthesizeEvidenceFromDocs } from './evidence-synthesis.mjs';
+import { persistEvidenceLineage, confidenceFromEvidence } from './evidence-lineage.mjs';
 import { explainHealth } from './intelligence-explanations.mjs';
 
 const root = process.cwd();
@@ -218,7 +219,9 @@ const validation = docs['validation.md'].text;
 const strategy = docs['strategy.md'].text;
 
 const canonicalCompleteness = evaluateCanonicalCompleteness(goals);
-const evidenceSynthesis = synthesizeEvidenceFromDocs({ 'README.md': await readIfExists(join(root, 'README.md')), '.ai/goals.md': goals, '.ai/strategy.md': strategy, '.ai/decisions.md': docs['decisions.md'].text, '.ai/context-package.md': docs['context-package.md']?.text ?? '', '.ai/architecture.md': architecture, '.ai/validation.md': validation, '.ai/repository-health.md': docs['repository-health.md']?.text ?? '' }, goals);
+const evidenceDocsForSynthesis = { 'README.md': await readIfExists(join(root, 'README.md')), '.ai/goals.md': goals, '.ai/strategy.md': strategy, '.ai/decisions.md': docs['decisions.md'].text, '.ai/context-package.md': docs['context-package.md']?.text ?? '', '.ai/architecture.md': architecture, '.ai/validation.md': validation, '.ai/repository-health.md': docs['repository-health.md']?.text ?? '' };
+const evidenceSynthesis = synthesizeEvidenceFromDocs(evidenceDocsForSynthesis, goals);
+const evidenceLineage = await persistEvidenceLineage(root, Object.keys(evidenceDocsForSynthesis));
 const manualGoalsCompleteness = canonicalCompleteness.fields.manualGoals;
 
 const signals = {
@@ -281,7 +284,7 @@ if (signals.strategyPresent && !signals.successDefinition) risks.push('Strategy 
 risks.push(...strategyQualityWarnings);
 
 const overallHealth = calculateOverallHealth(risks);
-const confidence = calculateConfidence(docs, signals, risks);
+const confidence = confidenceFromEvidence(evidenceLineage.sources).confidence;
 const healthExplanations = explainHealth({ risks, canonicalCompleteness });
 
 const content = [
@@ -293,6 +296,13 @@ const content = [
   '',
   '## Intelligence Completeness',
   formatCompleteness(docs, canonicalCompleteness, evidenceSynthesis),
+  '',
+  '## Evidence Lineage',
+  `- Canonical Sources: ${evidenceLineage.categories.Canonical.map((item) => item.group).join(', ') || 'None'}`,
+  `- Independent Evidence: ${evidenceLineage.categories.Independent.map((item) => item.group).join(', ') || 'None'}`,
+  `- Generated Evidence: ${evidenceLineage.categories.Generated.map((item) => item.group).join(', ') || 'None'}`,
+  '- Confidence calculation: Canonical and independent evidence groups increase confidence; generated confirmations verify consistency but do not increase confidence.',
+  '- Evidence ancestry: Generated artifacts descend from canonical owner intent plus independent repository evidence.',
   '',
   '## Quality Signals',
   `- Product thesis ${signals.productThesis ? 'present' : 'missing'}`,
@@ -331,6 +341,8 @@ const content = [
     `### Evidence Synthesis: ${field.label}`,
     `- Sources: ${field.evidence.map((item) => item.source).join('; ')}`,
     `- Confidence: ${field.confidence}`,
+    `- Independent evidence: ${field.confidenceCalculation?.independentGroups?.join(', ') || 'None'}`,
+    `- Generated confirmations: ${field.confidenceCalculation?.generatedConfirmations?.join(', ') || 'None'}`,
     `- Suggested Canonical Wording: ${field.suggestedWording}`,
     `- Selection rule: ${field.selectionRule}`,
   ].join('\n')), ...(healthExplanations.length ? healthExplanations.map((item) => [

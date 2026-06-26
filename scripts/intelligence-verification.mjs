@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { canonicalManualGoalsSuggestedUpdate } from './canonical-completeness.mjs';
+import { classifyEvidenceSource, confidenceFromEvidence } from './evidence-lineage.mjs';
 
 export const expectedVerifiedArtifacts = [
   'strategy.md',
@@ -97,6 +98,16 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
   const quality = qualityText ? JSON.parse(qualityText) : null;
   const explanations = explanationText ? JSON.parse(explanationText) : null;
   const decisionRanking = rankingText ? JSON.parse(rankingText) : null;
+  const lineage = JSON.parse(await readFile(join(aiDir, 'evidence-lineage.json'), 'utf8').catch(() => 'null'));
+  const synthesisPersisted = JSON.parse(await readFile(join(aiDir, 'evidence-synthesis.json'), 'utf8').catch(() => 'null'));
+  if (lineage?.sources?.length) {
+    for (const item of lineage.sources) {
+      const actual = classifyEvidenceSource(item.file);
+      if (actual !== item.category) failures.push(`Evidence lineage mismatch: ${item.file} persisted as ${item.category} but canonical classifier returns ${actual}.`);
+    }
+    const generatedIndependent = lineage.sources.filter((item) => classifyEvidenceSource(item.file) === 'Generated' && item.category !== 'Generated');
+    if (generatedIndependent.length) failures.push(`Evidence lineage invalid: generated artifacts counted as independent evidence (${generatedIndependent.map((item) => item.file).join(', ')}).`);
+  }
   const healthManual = health.match(/^-\s*Manual Goals:\s*(Missing|Partial|Complete|Strong)\s*\((\d+)%\)/im);
   const qualityManual = quality?.canonicalIntelligenceQuality?.fields?.manualGoals;
   if (healthManual && qualityManual && (healthManual[1] !== qualityManual.state || Number(healthManual[2]) !== Number(qualityManual.percent))) {
@@ -114,6 +125,14 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
   const evidenceSynthesis = quality?.canonicalIntelligenceQuality?.evidenceSynthesis;
   const explanationSynthesis = explanations?.evidenceSynthesis;
   if (evidenceSynthesis && explanationSynthesis) {
+    const qualityConfidence = quality?.confidence?.lineageConfidence;
+    if (qualityConfidence && lineage?.sources?.length) {
+      const expectedConfidence = confidenceFromEvidence(lineage.sources);
+      if (qualityConfidence.confidence !== expectedConfidence.confidence || Number(qualityConfidence.independentGroupCount) !== Number(expectedConfidence.independentGroupCount)) failures.push('Confidence calculation mismatch: Intelligence Quality differs from Evidence Lineage.');
+      const healthConfidence = health.match(/^Confidence:\s*(.+)$/im)?.[1]?.trim();
+      if (healthConfidence && healthConfidence !== expectedConfidence.confidence) failures.push('Confidence calculation mismatch: Repository Health differs from Evidence Lineage.');
+    }
+    if (synthesisPersisted && JSON.stringify(synthesisPersisted.fields ?? {}) !== JSON.stringify(evidenceSynthesis.fields ?? {})) failures.push('Evidence Synthesis mismatch: persisted synthesis differs from Intelligence Quality.');
     if (evidenceSynthesis.strength !== explanationSynthesis.strength || Number(evidenceSynthesis.supportedFields) !== Number(explanationSynthesis.supportedFields)) failures.push('Evidence Synthesis mismatch: Intelligence Quality and Intelligence Explanations differ.');
     for (const [key, field] of Object.entries(evidenceSynthesis.fields ?? {})) {
       const explanationField = explanationSynthesis.fields?.[key];

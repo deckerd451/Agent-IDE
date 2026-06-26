@@ -9,11 +9,12 @@ test('single-source synthesis uses exact repository wording with low confidence'
   const result = synthesizeEvidenceFromDocs({ '.ai/goals.md': goalsMissing, '.ai/strategy.md': '# Strategy\n\n## Current Product Bet\nCompleteness-aware intelligence makes generated packages safer.\n' }, goalsMissing);
   const field = result.fields.currentProductBet;
   assert.equal(field.suggestedWording, 'Completeness-aware intelligence makes generated packages safer.');
-  assert.equal(field.confidence, 'Low');
+  assert.equal(field.confidence, 'None');
+  assert.deepEqual(field.confidenceCalculation.generatedConfirmations, ['Strategy']);
   assert.equal(field.evidence.length, 1);
 });
 
-test('multi-source synthesis computes high confidence for matching wording', () => {
+test('multi-source synthesis ignores generated duplicate outputs for confidence', () => {
   const docs = {
     '.ai/goals.md': goalsMissing,
     'README.md': '# Repo\n\n## North Star Metric\nUseful handoffs accepted by repository owners.\n',
@@ -21,7 +22,9 @@ test('multi-source synthesis computes high confidence for matching wording', () 
     '.ai/context-package.md': '# Context\n\n## North Star Metric\nUseful handoffs accepted by repository owners.\n',
   };
   const result = synthesizeEvidenceFromDocs(docs, goalsMissing);
-  assert.equal(result.fields.northStarMetric.confidence, 'High');
+  assert.equal(result.fields.northStarMetric.confidence, 'Low');
+  assert.deepEqual(result.fields.northStarMetric.confidenceCalculation.independentGroups, ['README']);
+  assert.deepEqual(result.fields.northStarMetric.confidenceCalculation.generatedConfirmations, ['Context Package', 'Strategy']);
   assert.equal(result.fields.northStarMetric.suggestedWording, 'Useful handoffs accepted by repository owners.');
 });
 
