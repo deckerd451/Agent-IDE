@@ -13,6 +13,9 @@ async function readJson(repositoryPath, file) {
   if (!text.trim()) return null;
   try { return JSON.parse(text); } catch { return null; }
 }
+function manualGoalsCompletenessExplanation(quality) {
+  return quality?.explanations?.completeness?.fields?.manualGoals ?? null;
+}
 function mdSection(markdown, heading) {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = markdown.match(new RegExp(`^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'));
@@ -120,7 +123,7 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
   if (manualNeedsDecision) {
     const missing = manualCompleteness?.missing?.length ? ` Missing: ${manualCompleteness.missing.join(', ')}.` : '';
     const evidence = manualGoalsRisk ?? (manualCompleteness ? `Manual Goals are ${manualCompleteness.state} (${manualCompleteness.percent}%).${missing}` : 'Manual Goals are missing from \`.ai/goals.md\`.');
-    issues.push(selectedIssue({ id: 'missing-manual-goals', category: 'missing manual goals', severity: 'high', actionability: 'manual', source: evidence, title: 'Complete Manual Repository Intent Notes', evidence, reason: `Manual Goals completeness is below the deterministic threshold.${missing}`, recommendedAction: `Complete only the incomplete Manual Goals fields in \`.ai/goals.md\`.${missing}` }));
+    issues.push({ ...selectedIssue({ id: 'missing-manual-goals', category: 'missing manual goals', severity: 'high', actionability: 'manual', source: evidence, title: 'Complete Manual Repository Intent Notes', evidence, reason: `Manual Goals completeness is below the deterministic threshold.${missing}`, recommendedAction: `Complete only the incomplete Manual Goals fields in \`.ai/goals.md\`.${missing}` }), completenessExplanation: manualGoalsCompletenessExplanation(quality) });
   }
   if (missingCanonical || risks.some((r) => /missing intelligence file|architecture has no/i.test(r))) {
     const risk = risks.find((r) => /missing intelligence file|architecture has no/i.test(r)) ?? `Missing repository intelligence: ${missingCanonical?.replace(/Present$/, '')}`;
@@ -187,6 +190,36 @@ function suggestedManualUpdate(selected) {
   return 'Record the product-owner decision in the appropriate manual section of \`.ai/goals.md\`. Do not edit generated artifacts. Do not edit automatically; the repository owner should review, accept, or edit the final text.';
 }
 
+
+function renderList(items, empty = 'None detected.') {
+  return items?.length ? items.map((item) => `- ${item}`).join('\n') : `- ${empty}`;
+}
+
+function renderManualGoalsDeterministicEvaluation(selected) {
+  if (selected.id !== 'missing-manual-goals') return '';
+  const explanation = selected.completenessExplanation;
+  if (!explanation) return '## Deterministic Evaluation\n\nExplanation unavailable: canonical completeness explanation was not generated.';
+  const requiredFields = (explanation.requiredFields ?? []).map((field) => field.label);
+  const detectedFields = (explanation.requiredFields ?? []).filter((field) => field.found).map((field) => field.label);
+  const missingFields = explanation.missing ?? (explanation.requiredFields ?? []).filter((field) => !field.found).map((field) => field.label);
+  return [
+    '## Deterministic Evaluation',
+    '',
+    '- Evaluated canonical file: .ai/goals.md',
+    '- Evaluated section: ## Manual Goals',
+    '- Required fields:',
+    renderList(requiredFields),
+    '- Detected fields:',
+    renderList(detectedFields),
+    '- Missing fields:',
+    renderList(missingFields, 'None.'),
+    `- Completeness percentage: ${explanation.computed?.percent ?? 'Unknown'}%`,
+    `- Classification: ${explanation.classification ?? 'Unknown'}`,
+    `- Rule threshold: ${explanation.threshold ?? 'Unknown'}`,
+    `- Why this issue was selected: ${selected.reason}`,
+  ].join('\n');
+}
+
 function renderSelectedIssue(selected) {
   return `- ID: ${selected.id}\n- Category: ${selected.category}\n- Severity: ${selected.severity}\n- Actionability: ${selected.actionability}\n- Package Type: ${selected.packageType ?? packageTypeForActionability(selected.actionability)}\n- Source: ${selected.source}\n- Title: ${selected.title}\n- Evidence: ${selected.evidence}\n- Reason: ${selected.reason}\n- Recommended Action: ${selected.recommendedAction}`;
 }
@@ -198,7 +231,7 @@ function renderImplementationPackage(selected, details) {
 function renderProductDecisionPackage(selected, details) {
   return `# ${selected.title}\n\n## Decision Instructions\nThis is a product-owner decision task, not a Codex implementation task.\nUse repository-local evidence to decide or record the missing product, strategy, or manual-intelligence information.\nDo not send this package to Codex as implementation work.\nDo not edit files automatically; the repository owner should review, accept, or edit the suggested manual update in \`.ai/goals.md\`.
 Repository owner edits: \`.ai/goals.md\`
-Everything else will be regenerated.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct manual section of \`.ai/goals.md\`.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
+Everything else will be regenerated.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderManualGoalsDeterministicEvaluation(selected)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct manual section of \`.ai/goals.md\`.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
 }
 
 function renderValidationPackage(selected, details) {

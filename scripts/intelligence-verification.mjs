@@ -103,6 +103,19 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
   if (packageText && explanations?.recommendation?.selected?.title && !packageText.includes(explanations.recommendation.selected.title)) {
     failures.push('Explanation contradiction: selected recommendation is not referenced by generated package.');
   }
+  if (/^- Package Type: product-decision$/im.test(packageText) && /^- ID: missing-manual-goals$/im.test(packageText)) {
+    if (!explanationManual) failures.push('Product Decision Package warning: canonical completeness explanation was not generated.');
+    if (!/## Deterministic Evaluation/i.test(packageText)) failures.push('Product Decision Package missing Deterministic Evaluation section.');
+    if (explanationManual) {
+      const packagePercent = packageText.match(/Completeness percentage:\s*(\d+)%/i)?.[1];
+      const packageClassification = packageText.match(/Classification:\s*(Missing|Partial|Complete|Strong)/i)?.[1];
+      if (packagePercent && Number(packagePercent) !== Number(explanationManual.computed?.percent)) failures.push(`Product Decision Package explanation mismatch: package Manual Goals ${packagePercent}% vs explanation ${explanationManual.computed?.percent}%.`);
+      if (packageClassification && packageClassification !== explanationManual.classification) failures.push(`Product Decision Package explanation mismatch: package Manual Goals ${packageClassification} vs explanation ${explanationManual.classification}.`);
+      for (const missing of explanationManual.missing ?? []) {
+        if (!packageText.includes(missing)) failures.push(`Product Decision Package explanation mismatch: missing field not shown: ${missing}.`);
+      }
+    }
+  }
   const verifiedCount = artifacts.filter((item) => item.status === 'Verified').length;
   const score = artifacts.length ? Math.round((verifiedCount / artifacts.length) * 100) : 100;
   const metadata = {

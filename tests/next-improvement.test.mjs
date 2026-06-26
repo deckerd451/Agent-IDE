@@ -273,3 +273,47 @@ test('validation-experiment issue generates clearly labeled validation package',
   assert.match(prompt, /## Validation Instructions/);
   assert.match(prompt, /Run this Validation Experiment/);
 });
+
+test('manual goals package includes shared Deterministic Evaluation details', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'agent-ide-manual-eval-'));
+  await mkdir(join(dir, '.ai'), { recursive: true });
+  await writeFile(join(dir, '.ai/goals.md'), '# Goals\n\n## Manual Goals\n- Product intent: Local repository intelligence.\n- Current focus: Deterministic packages.\n');
+  await writeFile(join(dir, '.ai/repository-health.md'), '# Repository Health\n\n## Risks\n- Manual Goals Partial (50%). Missing: Success criteria, Long-term vision.\n');
+  await writeFile(join(dir, '.ai/intelligence-audit.md'), '# Intelligence Audit\n');
+  await writeFile(join(dir, '.ai/backlog.md'), '# Backlog\n\n## Prioritized Backlog\n- Useful work.\n');
+  await writeFile(join(dir, '.ai/strategy.md'), '# Strategy\n\n## Strategy Confidence\nHigh\n');
+  await writeFile(join(dir, '.ai/context-package.md'), '# Context Package\nReady.\n');
+  await writeFile(join(dir, '.ai/intelligence-quality.json'), JSON.stringify({
+    ...healthyQuality,
+    canonicalIntelligenceQuality: { score: 50, fields: { manualGoals: { state: 'Partial', percent: 50, missing: ['Success criteria', 'Long-term vision'] } } },
+    explanations: { completeness: { fields: { manualGoals: {
+      requiredFields: [
+        { label: 'Product intent', found: true },
+        { label: 'Current focus', found: true },
+        { label: 'Success criteria', found: false },
+        { label: 'Long-term vision', found: false },
+      ],
+      computed: { percent: 50 },
+      classification: 'Partial',
+      threshold: 'Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = multiple evidence lines for every required field.',
+      missing: ['Success criteria', 'Long-term vision'],
+    } } } },
+  }, null, 2));
+
+  const result = await generateNextImprovement(dir);
+  assert.equal(result.selectedIssue.completenessExplanation.classification, 'Partial');
+  assert.match(result.prompt, /## Deterministic Evaluation/);
+  assert.match(result.prompt, /Evaluated canonical file: \.ai\/goals\.md/);
+  assert.match(result.prompt, /Completeness percentage: 50%/);
+  assert.match(result.prompt, /Classification: Partial/);
+  assert.match(result.prompt, /Product intent/);
+  assert.match(result.prompt, /Current focus/);
+  assert.match(result.prompt, /Success criteria/);
+  assert.match(result.prompt, /Long-term vision/);
+});
+
+test('missing manual goals explanation renders unavailable warning', () => {
+  const prompt = renderPrompt(choice({ quality: { ...healthyQuality, coverage: { ...healthyQuality.coverage, goalsPresent: false } } }));
+  assert.match(prompt, /## Deterministic Evaluation/);
+  assert.match(prompt, /Explanation unavailable: canonical completeness explanation was not generated\./);
+});
