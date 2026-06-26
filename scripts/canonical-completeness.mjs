@@ -64,6 +64,41 @@ export function evaluateCanonicalCompleteness(goalsMarkdown = '') {
   return { score, state, fields };
 }
 
+export function manualGoalsExplanationFromCompleteness(completeness) {
+  const manualGoals = completeness?.fields?.manualGoals;
+  if (!manualGoals) return null;
+  const requiredFields = manualGoals.requirements?.map((req) => ({
+    key: req.key,
+    label: req.label,
+    found: req.complete,
+    state: req.state,
+    evidence: req.evidence,
+    manualUpdate: req.manualUpdate,
+    reason: req.complete ? `${req.label} detected.` : `${req.label} not detected.`,
+  })) ?? [];
+  const missing = requiredFields.filter((req) => !req.found).map((req) => req.label);
+  return {
+    requiredFields,
+    missing,
+    computed: { percent: manualGoals.percent, found: requiredFields.filter((req) => req.found).length, total: requiredFields.length },
+    classification: manualGoals.state,
+    threshold: 'Missing = 0%; Partial = >0% and <100%; Complete = 100%; Strong = multiple evidence lines for every required field.',
+  };
+}
+
+export function canonicalManualGoalsUpdateLines(explanation) {
+  const missing = new Set(explanation?.missing ?? []);
+  return (explanation?.requiredFields ?? [])
+    .filter((field) => missing.has(field.label))
+    .map((field) => field.manualUpdate)
+    .filter(Boolean);
+}
+
+export function canonicalManualGoalsSuggestedUpdate(explanation) {
+  const updateLines = canonicalManualGoalsUpdateLines(explanation);
+  return updateLines.length ? updateLines.join('\n') : 'No Manual Goals fields require updates.';
+}
+
 export function formatCompletenessState(item) {
   return `${item.state} (${item.percent ?? item.score}%)`;
 }

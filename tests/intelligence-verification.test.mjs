@@ -91,3 +91,20 @@ test('verification detects product decision package and explanation mismatch', a
   assert.ok(metadata.failures.some((failure) => /Product intent suggested but deterministic evaluation marks it complete/.test(failure)));
   assert.ok(metadata.failures.some((failure) => /missing field not suggested: Success criteria/.test(failure)));
 });
+
+test('verification detects suggested manual update saying none while canonical fields are missing', async () => {
+  const dir = await fixture('agent-ide-verification-contradiction-');
+  await writeFile(join(dir, '.ai/repository-health.md'), '# Repository Health\n\n## Quality Signals\n- Manual Goals Partial (75%)\n');
+  await writeFile(join(dir, '.ai/intelligence-quality.json'), JSON.stringify({ canonicalIntelligenceQuality: { fields: { manualGoals: { state: 'Partial', percent: 75 } } } }));
+  await writeFile(join(dir, '.ai/intelligence-explanations.json'), JSON.stringify({ completeness: { fields: { manualGoals: {
+    classification: 'Partial', computed: { percent: 75 }, missing: ['Long-term vision'],
+    requiredFields: [{ label: 'Long-term vision', found: false, manualUpdate: '- Long-term vision: [Repository owner: describe the long-term vision for this product.]' }],
+  } } } }));
+  await writeFile(join(dir, '.ai/next-improvement-prompt.md'), '# Complete Manual Repository Intent Notes\n\n## Selected Issue\n- ID: missing-manual-goals\n- Package Type: product-decision\n\n## Deterministic Evaluation\n- Missing fields:\n- Long-term vision\n- Completeness percentage: 75%\n- Classification: Partial\n\n## Suggested Manual Update\nNo Manual Goals fields require updates.\n');
+
+  const metadata = await verifyIntelligence(dir, { persist: false, expectedArtifacts: ['repository-health.md', 'intelligence-quality.json', 'intelligence-explanations.json', 'next-improvement-prompt.md'] });
+  assert.equal(metadata.status, 'Failed');
+  assert.ok(metadata.failures.some((failure) => /Product Decision Package contradiction: Suggested Manual Update does not match canonical completeness evaluation\./.test(failure)));
+  assert.equal(metadata.failureCount, metadata.failures.length);
+  assert.equal(metadata.failureReason, metadata.failures[0]);
+});

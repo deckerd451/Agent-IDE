@@ -20,3 +20,10 @@ test('Control Plane renders package labels based on packageType', async () => {
   }
   assert.doesNotMatch(source, /Builder Prompt/);
 });
+
+test('Control Plane separates verification status, score, count, and reason', async () => {
+  const source = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  for (const expected of ['Verification Status', 'Verification Score', 'Pass/Fail State', 'Failures', 'Failure Reason', '⚠ Failed']) {
+    assert.match(source, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+});

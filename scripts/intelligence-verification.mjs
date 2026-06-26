@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { canonicalManualGoalsSuggestedUpdate } from './canonical-completeness.mjs';
 
 export const expectedVerifiedArtifacts = [
   'strategy.md',
@@ -140,6 +141,10 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
       }
       const missing = new Set(explanationManual.missing ?? []);
       const suggestedManualUpdate = mdSection(packageText, 'Suggested Manual Update');
+      const expectedSuggested = canonicalManualGoalsSuggestedUpdate(explanationManual);
+      if (suggestedManualUpdate.includes('No Manual Goals fields require updates.') && missing.size > 0) failures.push('Product Decision Package contradiction: Suggested Manual Update does not match canonical completeness evaluation.');
+      if (missing.size === 0 && suggestedManualUpdate !== 'No Manual Goals fields require updates.') failures.push('Product Decision Package contradiction: Suggested Manual Update recommends fields even though canonical completeness has no missing Manual Goals fields.');
+      if (missing.size > 0 && !suggestedManualUpdate.includes(expectedSuggested)) failures.push('Product Decision Package contradiction: Suggested Manual Update does not match canonical completeness evaluation.');
       const suggestedLabels = new Set([...suggestedManualUpdate.matchAll(/^-\s*([^:\n]+):/gm)].map((match) => match[1].trim()));
       for (const field of explanationManual.requiredFields ?? []) {
         if (suggestedLabels.has(field.label) && !missing.has(field.label)) failures.push(`Product Decision Package manual update mismatch: ${field.label} suggested but deterministic evaluation marks it complete.`);
@@ -155,6 +160,8 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
     refreshStartedAt: refreshStartedAt?.toISOString() ?? null,
     status: statusFromFailures(failures),
     score,
+    failureCount: failures.length,
+    failureReason: failures[0] ?? null,
     summary: failures.length ? `${failures.length} verification failure${failures.length === 1 ? '' : 's'} detected.` : 'All displayed intelligence verified.',
     failures,
     artifacts,
