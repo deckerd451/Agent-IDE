@@ -1,7 +1,7 @@
 # Repository Health
 
-Last Audit: 2026-06-25T23:59:05.067Z
-Overall Health: Needs Attention
+Last Audit: 2026-06-26T13:41:13.480Z
+Overall Health: Healthy
 Confidence: High
 
 ## Intelligence Completeness
@@ -16,15 +16,25 @@ Confidence: High
 - Architect Prompt: Present
 
 ### Canonical Intelligence
-- Overall: Partial (79%)
-- Manual Goals: Partial (75%)
-  - Missing: Long-term vision
+- Overall: Partial (83%)
+- Manual Goals: Complete (100%)
 - Product Thesis: Complete (100%)
 - Current Focus: Complete (100%)
 - Success Criteria: Strong (100%)
 - Current Product Bet: Missing (0%)
   - Missing: Current Product Bet
 - What Not To Build: Complete (100%)
+
+### Evidence Synthesis
+- Evidence Synthesis: Strong
+- Canonical fields supported by repository evidence: 2 / 2
+
+## Evidence Lineage
+- Canonical Sources: Goals, README
+- Independent Evidence: Architecture, Decision Log, Validation
+- Generated Evidence: Context Package, Repository Health, Strategy
+- Confidence calculation: Canonical and independent evidence groups increase confidence; generated confirmations verify consistency but do not increase confidence.
+- Evidence ancestry: Generated artifacts descend from canonical owner intent plus independent repository evidence.
 
 ## Quality Signals
 - Product thesis present
@@ -48,23 +58,36 @@ Confidence: High
 - Validation confidence Medium
 - Xcode validation metadata not detected
 - Canonical editing target .ai/goals.md
-- Manual sections not detected in canonical goals
-- Canonical Intelligence Partial (79%)
-- Manual Goals Partial (75%)
+- Manual sections preserved in canonical goals
+- Canonical Intelligence Partial (83%)
+- Manual Goals Complete (100%)
+- Evidence Synthesis Strong
+- Canonical fields supported by repository evidence 2 / 2
 - Generated artifacts are regenerated, not manually edited.
 
 ## Risks
-- Manual Goals Partial (75%). Missing: Long-term vision.
+- No repository health risks detected.
 
 ## Repository Intelligence Explanation
-### Finding: Manual Goals Partial (75%). Missing: Long-term vision.
-- Rule: Manual Goals completeness < 100%
-- Computed: 75%
-- Threshold: Complete or Strong Manual Goals required for no finding.
-- Result: Partial
-- Evidence: Product intent found; Current focus found; Success criteria found; Long-term vision missing
+### Evidence Synthesis: Current Product Bet
+- Sources: Strategy
+- Confidence: None
+- Independent evidence: None
+- Generated confirmations: Strategy
+- Suggested Canonical Wording: The repository is currently focused on making repository understanding the primary surface of Agent IDE.
+- Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
+
+### Evidence Synthesis: Strategic Differentiator
+- Sources: Strategy
+- Confidence: None
+- Independent evidence: None
+- Generated confirmations: Strategy
+- Suggested Canonical Wording: Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
+- Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
+
+- No repository health findings require explanation.
 
 ## Recommended Next Step
-Manual Goals Partial (75%). Missing: Long-term vision. Update only the incomplete canonical fields in .ai/goals.md.
+Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
 
 ## Manual Health Notes

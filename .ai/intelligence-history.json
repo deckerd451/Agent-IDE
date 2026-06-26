@@ -266,5 +266,106 @@
     "trend": "Stable",
     "regressions": [],
     "improvements": []
+  },
+  {
+    "timestamp": "2026-06-26T13:41:14.396Z",
+    "overallScore": 83,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": [
+      "Removed risk: Manual Goals Partial (75%). Missing: Long-term vision."
+    ]
+  },
+  {
+    "timestamp": "2026-06-26T13:41:14.452Z",
+    "overallScore": 82,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-26T13:41:38.335Z",
+    "overallScore": 83,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-26T13:41:38.400Z",
+    "overallScore": 83,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-26T13:41:38.438Z",
+    "overallScore": 89,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Improving",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-26T13:41:53.935Z",
+    "overallScore": 93,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-26T13:41:54.018Z",
+    "overallScore": 93,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-26T13:42:25.269Z",
+    "overallScore": 92,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-26T13:42:25.342Z",
+    "overallScore": 93,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
   }
 ]

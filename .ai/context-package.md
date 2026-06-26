@@ -1,6 +1,6 @@
 # Context Package
 
-Generated: 2026-06-25T20:51:03.406Z
+Generated: 2026-06-26T13:41:13.955Z
 
 ## Product Thesis
 Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
@@ -136,6 +136,20 @@ Generated decision records should include context, reason, and consequences, and
 - Code: Present
 - Architect Prompt: Present
 
+### Canonical Intelligence
+- Overall: Partial (83%)
+- Manual Goals: Complete (100%)
+- Product Thesis: Complete (100%)
+- Current Focus: Complete (100%)
+- Success Criteria: Strong (100%)
+- Current Product Bet: Missing (0%)
+  - Missing: Current Product Bet
+- What Not To Build: Complete (100%)
+
+### Evidence Synthesis
+- Evidence Synthesis: Strong
+- Canonical fields supported by repository evidence: 2 / 2
+
 - Product thesis present
 - Current focus present
 - Core systems present
@@ -157,9 +171,13 @@ Generated decision records should include context, reason, and consequences, and
 - Validation confidence Medium
 - Xcode validation metadata not detected
 - Canonical editing target .ai/goals.md
-- Manual sections not detected in canonical goals
+- Manual sections preserved in canonical goals
+- Canonical Intelligence Partial (83%)
+- Manual Goals Complete (100%)
+- Evidence Synthesis Strong
+- Canonical fields supported by repository evidence 2 / 2
 - Generated artifacts are regenerated, not manually edited.
 
-- Missing manual goals
+- No repository health risks detected.
 
-Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
+Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
