@@ -326,7 +326,8 @@ function humanTaskTitle(candidate?: DecisionCandidate | null, fallback = 'Review
   const missingFields = missingFieldsForTask(candidate);
   if (candidate.id === 'missing-manual-goals' && missingFields.length === 1) return `Add ${missingFields[0]}`;
   if (candidate.id === 'missing-manual-goals' && missingFields.length > 1) return 'Complete Manual Goals';
-  if (candidate.id === 'strategy-quality') return 'Define Current Product Bet';
+  if (candidate.id === 'strategy-quality' && missingFields.length === 1) return `Add ${missingFields[0]}`;
+  if (candidate.id === 'strategy-quality') return 'Complete Strategy Field';
   if (candidate.id === 'ai-handoff-validation') return 'Run AI Handoff Validation';
   return candidate.title
     .replace(/Repository Intent Notes/gi, 'Goals')
@@ -351,7 +352,7 @@ function actionForTask(candidate: DecisionCandidate | null | undefined, recommen
   const fields = missingFieldsForTask(candidate);
   if (filePath && fields.length === 1) return `Add the "${fields[0]}" field to \`${filePath}\`.`;
   if (filePath && fields.length > 1) return `Add the missing fields (${fields.map((field) => `"${field}"`).join(', ')}) to \`${filePath}\`.`;
-  if (filePath && candidate?.id === 'strategy-quality') return `Add product strategy notes to \`${filePath}\`.`;
+  if (filePath && candidate?.id === 'strategy-quality') return `Add the missing canonical strategy field to \`${filePath}\` in \`## Manual Strategy Notes\` because strategy quality requires owner intent.`;
   return candidate?.ownerAction ?? quality?.recommendedAction ?? recommendation.explanation;
 }
 
