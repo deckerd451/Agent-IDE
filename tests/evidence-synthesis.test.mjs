@@ -45,15 +45,18 @@ test('no evidence reports none and renders placeholder', () => {
   assert.equal(renderSynthesisMarkdown(result.fields.whatNotToBuild), 'Missing field.');
 });
 
-test('product decision package renders evidence synthesis owner actions', () => {
-  const synthesis = synthesizeEvidenceFromDocs({ '.ai/goals.md': goalsMissing, '.ai/strategy.md': '# Strategy\n\n## Success Criteria\nRepository owners accept generated handoff packages.\n' }, goalsMissing);
+test('product decision package separates manual updates from evidence synthesis owner actions', () => {
+  const synthesis = synthesizeEvidenceFromDocs({ '.ai/goals.md': goalsMissing, '.ai/strategy.md': '# Strategy\n\n## Current Product Bet\nCompleteness-aware intelligence makes generated packages safer.\n' }, goalsMissing);
   const selectedIssue = {
     id: 'missing-manual-goals', category: 'missing manual goals', severity: 'high', actionability: 'manual', packageType: 'product-decision', source: 'Manual Goals Partial (25%).', title: 'Complete Manual Repository Intent Notes', evidence: 'Manual Goals Partial (25%).', reason: 'Manual Goals completeness is below the deterministic threshold.', recommendedAction: 'Complete only incomplete fields.',
-    completenessExplanation: { missing: ['Success criteria'], requiredFields: [{ label: 'Success criteria', found: false, manualUpdate: '- Success criteria: [Repository owner: describe how success should be judged.]' }], computed: { percent: 25 }, classification: 'Partial', threshold: 'test' },
+    completenessExplanation: { missing: ['Long-term vision'], requiredFields: [{ label: 'Long-term vision', found: false, manualUpdate: '- Long-term vision: [Repository owner: describe the long-term vision for this product.]' }], computed: { percent: 75 }, classification: 'Partial', threshold: 'test' },
     evidenceSynthesis: synthesis,
   };
   const prompt = renderPrompt({ selectedIssue, decisionRanking: { candidates: [] } });
-  assert.match(prompt, /Suggested Canonical Wording/);
-  assert.match(prompt, /Repository owners accept generated handoff packages\./);
+  const manualUpdate = prompt.match(/## Suggested Manual Update\n([\s\S]*?)\n\n## Suggested Canonical Wording/)?.[1] ?? '';
+  assert.match(manualUpdate, /Long-term vision: \[Repository owner:/);
+  assert.doesNotMatch(manualUpdate, /Current Product Bet/);
+  assert.match(prompt, /## Suggested Canonical Wording/);
+  assert.match(prompt, /Completeness-aware intelligence makes generated packages safer\./);
   assert.match(prompt, /Review\n- Accept\n- Edit\n- Reject/);
 });
