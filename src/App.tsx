@@ -68,6 +68,7 @@ type ControlPlane = {
     quality?: { title: string; score: number; deductions: Array<{ rule: string; points: number; evidence: string }> };
     recommendation?: { title: string; rule: string; reason: string; candidateIssues: Array<{ title: string; priority: number; evidence?: string }>; selected?: { title: string; priority: number } };
     decisionRanking?: { title: string; rule: string; reason: string; candidateOrdering: Array<{ rank: number; title: string; priorityScore: number; selected: boolean; expectedImprovement: { total: number } }>; selected?: { title: string } };
+    evidenceSynthesis?: { title: string; rule: string; strength: string; supportedFields: number; missingFields: number; fields: Record<string, { label: string; suggestedWording?: string | null; confidence: string; sources: string[]; selectionRule: string }> };
   } | null;
   evidence: Array<{ file: string; section: string; line: number; evidence: string; confidence: string }>;
   packages: Record<string, string>;
@@ -471,6 +472,20 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
               <p><b>Selected:</b> {data.explanations.decisionRanking.selected?.title}</p>
               <p><b>Reason:</b> {data.explanations.decisionRanking.reason}</p>
               <ul>{data.explanations.decisionRanking.candidateOrdering.map((issue) => <li key={`${issue.rank}-${issue.title}`}>#{issue.rank} {issue.title}: priority {issue.priorityScore}, expected +{issue.expectedImprovement.total}{issue.selected ? ' (selected)' : ''}</li>)}</ul>
+            </details>
+          )}
+          {data.explanations.evidenceSynthesis && (
+            <details>
+              <summary>{data.explanations.evidenceSynthesis.title}: {data.explanations.evidenceSynthesis.strength} ({data.explanations.evidenceSynthesis.supportedFields} / {data.explanations.evidenceSynthesis.missingFields})</summary>
+              <p><b>Rule:</b> {data.explanations.evidenceSynthesis.rule}</p>
+              {Object.values(data.explanations.evidenceSynthesis.fields).filter((field) => field.suggestedWording).map((field) => (
+                <details key={field.label}>
+                  <summary>{field.label}: {field.confidence}</summary>
+                  <p><b>Suggested canonical wording:</b> {field.suggestedWording}</p>
+                  <p><b>Sources:</b> {field.sources.join(', ')}</p>
+                  <p><b>Selection rule:</b> {field.selectionRule}</p>
+                </details>
+              ))}
             </details>
           )}
           {data.explanations.completeness && (

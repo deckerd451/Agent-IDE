@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { evaluateCanonicalCompleteness, formatCompletenessState } from './canonical-completeness.mjs';
+import { synthesizeEvidenceFromDocs } from './evidence-synthesis.mjs';
 import { explainHealth } from './intelligence-explanations.mjs';
 
 const root = process.cwd();
@@ -167,13 +168,14 @@ function validationConfidence(text) {
   return match?.[1] ?? 'Unknown';
 }
 
-function formatCompleteness(docs, canonicalCompleteness) {
+function formatCompleteness(docs, canonicalCompleteness, evidenceSynthesis) {
   const rows = requiredFiles.map(([label, fileName]) => `- ${label}: ${docs[fileName].exists ? 'Present' : 'Missing'}`);
   rows.push('', '### Canonical Intelligence', `- Overall: ${formatCompletenessState(canonicalCompleteness)}`);
   for (const item of Object.values(canonicalCompleteness.fields)) {
     rows.push(`- ${item.label}: ${formatCompletenessState(item)}`);
     if (item.missing?.length) rows.push(`  - Missing: ${item.missing.join(', ')}`);
   }
+  rows.push('', '### Evidence Synthesis', `- Evidence Synthesis: ${evidenceSynthesis.strength}`, `- Canonical fields supported by repository evidence: ${evidenceSynthesis.supportedFields} / ${evidenceSynthesis.missingFields}`);
   return rows.join('\n');
 }
 
@@ -216,6 +218,7 @@ const validation = docs['validation.md'].text;
 const strategy = docs['strategy.md'].text;
 
 const canonicalCompleteness = evaluateCanonicalCompleteness(goals);
+const evidenceSynthesis = synthesizeEvidenceFromDocs({ 'README.md': await readIfExists(join(root, 'README.md')), '.ai/goals.md': goals, '.ai/strategy.md': strategy, '.ai/decisions.md': docs['decisions.md'].text, '.ai/context-package.md': docs['context-package.md']?.text ?? '', '.ai/architecture.md': architecture, '.ai/validation.md': validation, '.ai/repository-health.md': docs['repository-health.md']?.text ?? '' }, goals);
 const manualGoalsCompleteness = canonicalCompleteness.fields.manualGoals;
 
 const signals = {
@@ -289,7 +292,7 @@ const content = [
   `Confidence: ${confidence}`,
   '',
   '## Intelligence Completeness',
-  formatCompleteness(docs, canonicalCompleteness),
+  formatCompleteness(docs, canonicalCompleteness, evidenceSynthesis),
   '',
   '## Quality Signals',
   `- Product thesis ${signals.productThesis ? 'present' : 'missing'}`,
@@ -316,20 +319,28 @@ const content = [
   `- Manual sections ${signals.manualSections ? 'preserved in canonical goals' : 'not detected in canonical goals'}`,
   `- Canonical Intelligence ${canonicalCompleteness.state} (${canonicalCompleteness.score}%)`,
   `- Manual Goals ${manualGoalsCompleteness.state} (${manualGoalsCompleteness.percent}%)`,
+  `- Evidence Synthesis ${evidenceSynthesis.strength}`,
+  `- Canonical fields supported by repository evidence ${evidenceSynthesis.supportedFields} / ${evidenceSynthesis.missingFields}`,
   '- Generated artifacts are regenerated, not manually edited.',
   '',
   '## Risks',
   risks.length ? risks.map((risk) => `- ${risk}`).join('\n') : '- No repository health risks detected.',
   '',
   '## Repository Intelligence Explanation',
-  healthExplanations.length ? healthExplanations.map((item) => [
+  [...Object.values(evidenceSynthesis.fields).filter((field) => field.missing && field.suggestedWording).map((field) => [
+    `### Evidence Synthesis: ${field.label}`,
+    `- Sources: ${field.evidence.map((item) => item.source).join('; ')}`,
+    `- Confidence: ${field.confidence}`,
+    `- Suggested Canonical Wording: ${field.suggestedWording}`,
+    `- Selection rule: ${field.selectionRule}`,
+  ].join('\n')), ...(healthExplanations.length ? healthExplanations.map((item) => [
     `### Finding: ${item.finding}`,
     `- Rule: ${item.rule}`,
     `- Computed: ${item.computed}`,
     `- Threshold: ${item.threshold}`,
     `- Result: ${item.result}`,
     `- Evidence: ${item.evidence.join('; ')}`,
-  ].join('\n')).join('\n\n') : '- No repository health findings require explanation.',
+  ].join('\n')) : ['- No repository health findings require explanation.'])].join('\n\n'),
   '',
   '## Recommended Next Step',
   recommendationFor(risks),
