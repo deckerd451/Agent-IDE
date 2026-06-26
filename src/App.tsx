@@ -32,8 +32,9 @@ type ControlPlaneRecommendation = {
 };
 
 type VerificationArtifact = { artifact: string; generatedAt: string | null; generatedHash: string | null; displayedHash: string | null; status: 'Verified' | 'Failed'; failures: string[] };
+type VerificationCrossCheck = { check: string; status: 'Verified' | 'Failed'; failures: string[] };
 
-type VerificationSnapshot = { status: 'Verified' | 'Failed'; score: number; failureCount?: number; failureReason?: string | null; summary: string; failures: string[]; artifacts: VerificationArtifact[] };
+type VerificationSnapshot = { status: 'Verified' | 'Failed'; score: number; failureCount?: number; failureReason?: string | null; summary: string; failures: string[]; artifacts: VerificationArtifact[]; crossChecks?: VerificationCrossCheck[] };
 
 type QualitySnapshot = {
   overallScore: number;
@@ -390,6 +391,7 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
           <p>{data.verification.summary}</p>
           <div className="understandingGrid">
             {data.verification.artifacts.map((artifact) => <div className="understandingItem" key={artifact.artifact}><span>{artifact.artifact}</span><strong className={stateClass(artifact.status === 'Verified' ? 'Present' : 'Needs Attention')}>{artifact.status === 'Verified' ? '✓ Verified' : '⚠ Stale'}</strong>{artifact.failures.length > 0 && <small>{artifact.failures.join(' ')}</small>}</div>)}
+            {(data.verification.crossChecks ?? []).map((check) => <div className="understandingItem" key={check.check}><span>{check.check}</span><strong className={stateClass(check.status === 'Verified' ? 'Present' : 'Needs Attention')}>{check.status === 'Verified' ? '✓ Verified' : '⚠ Failed'}</strong>{check.failures.length > 0 && <small>{check.failures.join(' ')}</small>}</div>)}
           </div>
         </section>
       )}
