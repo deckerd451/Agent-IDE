@@ -120,3 +120,54 @@ assert.ok(nearifyReconstructable.overallScore > hiddenDecisionRanking.overallSco
 const partialDecisionRanking = await validateWithContext(reconstructableDecisionRankingPackage.replace(/Deterministic Selection Explanation:.*\n/, ''));
 assert.equal(partialDecisionRanking.categories.decisionRanking.status, 'Partial');
 assert.ok(partialDecisionRanking.contradictions.includes('Package decision ranking is not reconstructable.'));
+
+const emptyDecisionRankingBody = await validateWithContext(reconstructableDecisionRankingPackage.replace(/## Decision Ranking[\s\S]*?(?=\n## Highest-Priority Issue)/, '## Decision Ranking\n\n'));
+assert.equal(emptyDecisionRankingBody.categories.decisionRanking.status, 'Partial');
+assert.ok(emptyDecisionRankingBody.contradictions.includes('Package decision ranking is not reconstructable.'));
+
+const selectedIssueWithoutRankedCandidates = await validateWithContext(reconstructableDecisionRankingPackage.replace(/\nRanked Candidates:[\s\S]*?(?=\n## Highest-Priority Issue)/, '\n'));
+assert.equal(selectedIssueWithoutRankedCandidates.categories.decisionRanking.status, 'Partial');
+assert.ok(selectedIssueWithoutRankedCandidates.categories.decisionRanking.evidence.includes('Ranked Candidates'));
+
+const rankedCandidatesWithoutExplanation = await validateWithContext(reconstructableDecisionRankingPackage.replace(/Deterministic Selection Explanation:.*\n/, ''));
+assert.equal(rankedCandidatesWithoutExplanation.categories.decisionRanking.status, 'Partial');
+assert.ok(rankedCandidatesWithoutExplanation.categories.decisionRanking.evidence.includes('Deterministic Selection Explanation'));
+
+const noDecisionRankingHeading = await validateWithContext(reconstructableDecisionRankingPackage.replace(/## Decision Ranking[\s\S]*?(?=\n## Highest-Priority Issue)/, ''));
+assert.equal(noDecisionRankingHeading.categories.decisionRanking.status, 'Missing');
+assert.ok(noDecisionRankingHeading.contradictions.includes('Package omits decision ranking.'));
+
+const whitespaceAndBulletFormattedDecisionRanking = await validateWithContext(reconstructableDecisionRankingPackage.replace(/## Decision Ranking[\s\S]*?(?=\n## Highest-Priority Issue)/, `## Decision Ranking
+
+  - Selected Issue: Run AI Handoff Validation
+
+  - Selected Issue ID: ai-handoff-validation
+
+  - Deterministic Selection Explanation: Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.
+
+  - Ranked Candidates:
+
+    - 1. Run AI Handoff Validation (ai-handoff-validation)
+      - selected: yes
+
+`));
+assert.equal(whitespaceAndBulletFormattedDecisionRanking.categories.decisionRanking.status, 'Present');
+assert.ok(!whitespaceAndBulletFormattedDecisionRanking.contradictions.includes('Package decision ranking is not reconstructable.'));
+
+// Duplicate Decision Ranking sections intentionally use the first section, matching mdSection's deterministic first-match behavior.
+const duplicateDecisionRankingSections = await validateWithContext(reconstructableDecisionRankingPackage.replace(/## Decision Ranking[\s\S]*?(?=\n## Highest-Priority Issue)/, `## Decision Ranking
+
+Selected Issue: Run AI Handoff Validation
+Deterministic Selection Explanation: First Decision Ranking section is incomplete.
+
+## Decision Ranking
+
+Selected Issue: Run AI Handoff Validation
+Deterministic Selection Explanation: Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.
+
+Ranked Candidates:
+1. Run AI Handoff Validation (ai-handoff-validation)
+
+`));
+assert.equal(duplicateDecisionRankingSections.categories.decisionRanking.status, 'Partial');
+assert.ok(duplicateDecisionRankingSections.categories.decisionRanking.evidence.includes('Ranked Candidates'));

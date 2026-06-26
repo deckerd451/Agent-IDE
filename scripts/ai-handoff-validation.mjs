@@ -25,6 +25,11 @@ export function mdSection(markdown, heading) {
   const match = markdown.match(new RegExp(`^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'));
   return match?.[1]?.trim() ?? '';
 }
+function mdSectionWithPresence(markdown, heading) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = markdown.match(new RegExp(`^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'));
+  return { exists: Boolean(match), text: match?.[1]?.trim() ?? '' };
+}
 function meaningful(text) { return Boolean(text?.trim()) && !/no generated content|not detected yet|missing|unknown|none detected|tbd|todo/i.test(text); }
 function fieldValue(text, label) {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -39,11 +44,10 @@ function evidenceFor(packageText, headings, pattern) {
   return { status: 'Missing', evidence: `Context Package does not expose ${headings.map((h) => `## ${h}`).join(' or ')}.` };
 }
 export function parseDecisionRankingSection(packageText) {
-  const text = mdSection(packageText, 'Decision Ranking');
-  const sectionExists = Boolean(text.trim());
+  const { exists: sectionExists, text } = mdSectionWithPresence(packageText, 'Decision Ranking');
   if (!sectionExists) return { sectionExists: false, text: '', selectedIssue: '', selectedIssueId: '', deterministicSelectionExplanation: '', rankedCandidates: [] };
-  const rankedCandidatesBlock = text.match(/^\s*Ranked Candidates\s*:\s*$([\s\S]*?)(?=^\s*(?:Selection Rules|Tie Breakers)\s*:\s*$|(?![\s\S]))/im)?.[1] ?? '';
-  const rankedCandidates = [...rankedCandidatesBlock.matchAll(/^\s*\d+\.\s+(.+?)(?:\s+\(([^)]+)\))?\s*$/gm)].map((match) => ({ title: match[1].trim(), id: match[2]?.trim() ?? '' }));
+  const rankedCandidatesBlock = text.match(/^\s*(?:[-*]\s*)?Ranked Candidates\s*:\s*$([\s\S]*?)(?=^\s*(?:[-*]\s*)?(?:Selection Rules|Tie Breakers)\s*:\s*$|(?![\s\S]))/im)?.[1] ?? '';
+  const rankedCandidates = [...rankedCandidatesBlock.matchAll(/^\s*(?:[-*]\s*)?\d+\.\s+(.+?)(?:\s+\(([^)]+)\))?\s*$/gm)].map((match) => ({ title: match[1].trim(), id: match[2]?.trim() ?? '' }));
   return {
     sectionExists,
     text,
