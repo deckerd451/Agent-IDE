@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { persistQuality } from './intelligence-quality.mjs';
 import { validateAIHandoff } from './ai-handoff-validation.mjs';
 import { verifyIntelligence } from './intelligence-verification.mjs';
@@ -414,6 +414,75 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   return data;
 }
 
+function isInsidePath(parent, child) {
+  const rel = relative(parent, child);
+  return rel === '' || (rel && !rel.startsWith('..') && !rel.split(sep).includes('..'));
+}
+
+function normalizeCanonicalFilePath(filePath = '') {
+  return filePath.replaceAll('\\', '/').replace(/^\/?/, '');
+}
+
+function sectionRange(markdown, section) {
+  const heading = section.replace(/^##\s*/, '').trim();
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`^##\\s+${escaped}\\s*$`, 'im').exec(markdown);
+  if (!match) return null;
+  const contentStart = match.index + match[0].length;
+  const next = /^##\s+/gim;
+  next.lastIndex = contentStart;
+  const nextMatch = next.exec(markdown);
+  return { heading, start: match.index, contentStart, end: nextMatch?.index ?? markdown.length };
+}
+
+function meaningfulCanonicalText(value) {
+  return value.split('\n').map((line) => line.replace(/^[-*]\s+/, '').trim()).some((line) => line && !/^(unknown|missing|not detected yet|none detected|generated placeholder|tbd|todo|n\/?a)$/i.test(line));
+}
+
+function fieldExists(markdown, fieldLabel) {
+  const escaped = fieldLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (new RegExp(`^\\s*(?:[-*]\\s*)?${escaped}\\s*:`, 'im').test(markdown)) return true;
+  const range = sectionRange(markdown, fieldLabel);
+  return range ? meaningfulCanonicalText(markdown.slice(range.contentStart, range.end)) : false;
+}
+
+export async function applyCanonicalEdit({ repositoryPath, filePath, section, fieldLabel, markdownBlock }) {
+  const resolvedRepository = await validateRepositoryPath(repositoryPath);
+  if (!resolvedRepository) throw new Error('Repository path is not connected.');
+  const normalizedFile = normalizeCanonicalFilePath(filePath);
+  if (normalizedFile !== '.ai/goals.md') throw new Error('Canonical edits may only target .ai/goals.md.');
+  if (!section || section !== '## Manual Strategy Notes') throw new Error('Section cannot be created deterministically.');
+  if (!fieldLabel?.trim()) throw new Error('Field label is required.');
+  if (!markdownBlock?.trim()) throw new Error('Proposed markdown block is empty.');
+  if (!markdownBlock.includes(fieldLabel)) throw new Error('Proposed markdown block does not contain the expected field label.');
+
+  const targetPath = resolve(resolvedRepository, normalizedFile);
+  if (!isInsidePath(resolvedRepository, targetPath)) throw new Error('Target file is outside the selected repository.');
+  if (targetPath !== resolve(resolvedRepository, '.ai/goals.md')) throw new Error('Canonical edits may only target .ai/goals.md.');
+
+  let markdown = await readFile(targetPath, 'utf8').catch((error) => {
+    if (error?.code === 'ENOENT') return '# Goals\n';
+    throw error;
+  });
+  if (fieldExists(markdown, fieldLabel)) throw new Error('Field already exists. Refresh Intelligence instead of applying a duplicate.');
+
+  const block = markdownBlock.trimEnd();
+  let insertedSection = false;
+  const range = sectionRange(markdown, section);
+  if (range) {
+    const before = markdown.slice(0, range.end).replace(/\s*$/, '');
+    const after = markdown.slice(range.end).replace(/^\n*/, '');
+    markdown = `${before}\n\n${block}\n${after ? `\n${after}` : ''}`;
+  } else {
+    insertedSection = true;
+    markdown = `${markdown.replace(/\s*$/, '')}\n\n${section}\n\n${block}\n`;
+  }
+
+  await mkdir(dirname(targetPath), { recursive: true });
+  await writeFile(targetPath, markdown);
+  return { success: true, message: 'Canonical edit applied. Refresh Intelligence to verify the task was resolved.', changedFile: '.ai/goals.md', insertedSection, insertedField: fieldLabel };
+}
+
 function sendJson(response, statusCode, data) {
   response.writeHead(statusCode, {
     'Content-Type': 'application/json',
@@ -570,6 +639,7 @@ const server = createServer(async (request, response) => {
     if (request.method === 'OPTIONS') return sendJson(response, 204, {});
     const url = new URL(request.url ?? '/', `http://${request.headers.host}`);
     if (request.method === 'POST' && url.pathname === '/api/repository/refresh') return handleRefresh(request, response);
+    if (request.method === 'POST' && url.pathname === '/api/repository/apply-canonical-edit') return sendJson(response, 200, await applyCanonicalEdit(await readJson(request)));
     if (request.method === 'GET' && url.pathname === '/api/repository/file') return handleFile(request, response, url);
     if (request.method === 'GET' && url.pathname === '/api/repository/control-plane') {
       const resolvedPath = await validateRepositoryPath(url.searchParams.get('repositoryPath'));

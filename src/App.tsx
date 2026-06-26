@@ -92,6 +92,10 @@ type ControlPlane = {
   timeline: Array<{ timestamp: string; repositoryHealth: string; strategyQuality: string; confidence: string; recommendation: string }>;
 };
 
+type CanonicalEditProposal = { filePath: string; section: string; fieldLabel: string; markdownBlock: string; supportingEvidence: string[] };
+
+type CanonicalEditResponse = { success?: boolean; message?: string; changedFile?: string; insertedSection?: boolean; insertedField?: string; error?: string };
+
 type DocumentState = {
   content: string;
   exists: boolean;
@@ -111,6 +115,28 @@ const promptRoles = [
 const intelligenceFiles = new Set([...sections.map((section) => section.markdownFile), ...promptFiles]);
 const serverBaseUrl = import.meta.env.VITE_AGENT_IDE_SERVER_URL ?? 'http://localhost:5174';
 const selectedTabStorageKey = 'agent-ide:selected-intelligence-tab';
+
+
+function markdownSectionValue(markdown: string, heading: string) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return markdown.match(new RegExp(`^##\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##\\s+|(?![\\s\\S]))`, 'im'))?.[1]?.trim() ?? '';
+}
+
+function codeBlockAfter(markdown: string, heading: string) {
+  return markdownSectionValue(markdown, heading).match(/```(?:md|markdown)?\n([\s\S]*?)```/i)?.[1]?.trim() ?? '';
+}
+
+function buildCanonicalEditProposal(data: ControlPlane): CanonicalEditProposal | null {
+  if (data.recommendation.packageType !== 'product-decision') return null;
+  const prompt = data.recommendation.prompt;
+  const filePath = markdownSectionValue(prompt, 'File') || '.ai/goals.md';
+  const section = markdownSectionValue(prompt, 'Section') || '## Manual Strategy Notes';
+  const fieldLabel = markdownSectionValue(prompt, 'Missing Field');
+  const markdownBlock = codeBlockAfter(prompt, 'Suggested Canonical Structure');
+  if (filePath !== '.ai/goals.md' || section !== '## Manual Strategy Notes' || !fieldLabel || !markdownBlock) return null;
+  const evidence = markdownSectionValue(prompt, 'Supporting Repository Evidence').split('\n').map((line) => line.replace(/^[-*]\s+/, '').trim()).filter(Boolean);
+  return { filePath, section, fieldLabel, markdownBlock, supportingEvidence: evidence.length ? evidence : [data.recommendation.explanation] };
+}
 
 function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section: Section) => void }) {
   return (
@@ -391,8 +417,12 @@ function meaningfulDiffEntries(diff: ControlPlane['diff']): Array<readonly [stri
   return entries.map(([label, value]) => [label, Array.isArray(value) ? value : []] as const).filter(([, items]) => items.length > 0);
 }
 
-function ControlPlaneDashboard({ data, progressSummary }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null }) {
+function ControlPlaneDashboard({ data, progressSummary, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; repositoryPath?: string }) {
   if (!data) return <WelcomeDashboard />;
+  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} repositoryPath={repositoryPath} />;
+}
+
+function ControlPlaneDashboardContent({ data, progressSummary, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; repositoryPath?: string }) {
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
       return {
@@ -438,6 +468,36 @@ function ControlPlaneDashboard({ data, progressSummary }: { data: ControlPlane |
     ['debugger', 'Copy Debugger Prompt'],
     ['product-decision', 'Copy Product Decision Package'],
   ];
+  const [canonicalEditText, setCanonicalEditText] = useState('');
+  const [canonicalEditStatus, setCanonicalEditStatus] = useState('');
+  const [isApplyingCanonicalEdit, setIsApplyingCanonicalEdit] = useState(false);
+  const canonicalEditProposal = data ? buildCanonicalEditProposal(data) : null;
+
+  useEffect(() => {
+    setCanonicalEditText(canonicalEditProposal?.markdownBlock ?? '');
+    setCanonicalEditStatus('');
+  }, [canonicalEditProposal?.markdownBlock]);
+
+  async function applyCanonicalEdit() {
+    if (!canonicalEditProposal) return;
+    setIsApplyingCanonicalEdit(true);
+    setCanonicalEditStatus('');
+    try {
+      const response = await fetch(new URL('/api/repository/apply-canonical-edit', serverBaseUrl), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repositoryPath, filePath: canonicalEditProposal.filePath, section: canonicalEditProposal.section, fieldLabel: canonicalEditProposal.fieldLabel, markdownBlock: canonicalEditText }),
+      });
+      const result = await response.json() as CanonicalEditResponse;
+      if (!response.ok || !result.success) throw new Error(result.error ?? result.message ?? 'Canonical edit failed.');
+      setCanonicalEditStatus(result.message ?? 'Canonical edit applied. Refresh Intelligence to verify the task was resolved.');
+    } catch (applyError) {
+      setCanonicalEditStatus(applyError instanceof Error ? applyError.message : String(applyError));
+    } finally {
+      setIsApplyingCanonicalEdit(false);
+    }
+  }
+
   const topWork = firstCandidate(data, 1);
   const afterThis = firstCandidate(data, 2);
   const diffEntries = meaningfulDiffEntries(data.diff);
@@ -470,6 +530,25 @@ function ControlPlaneDashboard({ data, progressSummary }: { data: ControlPlane |
         </div>
         <button className="primaryCta" onClick={() => void copyText(data.recommendation.prompt)} type="button">Open Product Decision Package</button>
       </section>
+
+      {canonicalEditProposal && (
+        <section className="controlCard canonicalReviewPanel" aria-label="Review and Apply Canonical Edit">
+          <p className="kicker">Review and Apply Canonical Edit</p>
+          <h2>Repository-owner canonical decision</h2>
+          <p><b>Warning:</b> Repository owner must review/edit before applying. Agent IDE only applies owner-approved text to canonical intent; generated artifacts remain regenerated, not manually edited.</p>
+          <div className="workMetaGrid">
+            <div><small>File to edit</small><strong><code>{canonicalEditProposal.filePath}</code></strong></div>
+            <div><small>Section to edit</small><strong><code>{canonicalEditProposal.section}</code></strong></div>
+            <div><small>Missing field</small><strong>{canonicalEditProposal.fieldLabel}</strong></div>
+          </div>
+          <label htmlFor="canonicalEditMarkdown"><b>Proposed markdown block</b></label>
+          <textarea id="canonicalEditMarkdown" value={canonicalEditText} onChange={(event) => setCanonicalEditText(event.target.value)} rows={5} />
+          <h3>Supporting evidence</h3>
+          <ul>{canonicalEditProposal.supportingEvidence.map((item) => <li key={item}>{item}</li>)}</ul>
+          <button disabled={isApplyingCanonicalEdit || !repositoryPath || !canonicalEditText.trim()} onClick={() => void applyCanonicalEdit()} type="button">{isApplyingCanonicalEdit ? 'Applying…' : 'Apply Edit'}</button>
+          {canonicalEditStatus && <div className="summary success">{canonicalEditStatus}</div>}
+        </section>
+      )}
 
       {afterThis && (
         <section className="controlCard afterThisCard" aria-label="After This">
@@ -920,7 +999,7 @@ export function App() {
           <small>{document?.sourcePath ?? (connectedPath ? `${connectedPath}/.ai/${selected.markdownFile}` : `.ai/${selected.markdownFile}`)}</small>
         </section>
 
-        {selected.id === 'Control Plane' && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} />}
+        {selected.id === 'Control Plane' && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} repositoryPath={connectedPath || repositoryPath} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}
