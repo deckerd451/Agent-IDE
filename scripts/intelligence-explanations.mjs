@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { evaluateCanonicalCompleteness } from './canonical-completeness.mjs';
+import { evaluateCanonicalCompleteness, manualGoalsExplanationFromCompleteness } from './canonical-completeness.mjs';
 
 export const explanationSchemaVersion = 1;
 
@@ -139,6 +139,27 @@ export function renderExplanationMarkdown(explanation) {
     lines.push('', 'Candidate Issues', ...explanation.candidateIssues.map((issue) => `- ${issue.title}: Priority ${issue.priority}`), '', `Selected: ${explanation.selected?.title ?? 'None'}`, `Reason: ${explanation.reason}`);
   }
   return lines.join('\n');
+}
+
+
+export function explainCompletenessSynchronization({ completeness, consumers = [] } = {}) {
+  const manualGoals = manualGoalsExplanationFromCompleteness(completeness);
+  const result = manualGoals ? {
+    classification: manualGoals.classification,
+    percent: manualGoals.computed.percent,
+    missing: manualGoals.missing,
+    suggestedManualUpdate: manualGoals.missing.length ? manualGoals.requiredFields.filter((field) => manualGoals.missing.includes(field.label)).map((field) => field.manualUpdate).filter(Boolean) : ['No Manual Goals fields require updates.'],
+  } : null;
+  const defaultConsumers = ['Repository Health', 'Intelligence Quality', 'Decision Ranking', 'Product Decision Packages', 'Suggested Manual Updates', 'Verification', 'Control Plane'];
+  return {
+    id: 'completeness-synchronization',
+    title: 'Completeness Synchronization',
+    canonicalSource: 'scripts/canonical-completeness.mjs',
+    canonicalCompletenessResult: result,
+    consumers: consumers.length ? consumers : defaultConsumers,
+    synchronizationStatus: result ? 'Synchronized' : 'Unavailable',
+    rule: 'All consumers must read Manual Goals missing fields from the canonical completeness evaluation and must not render independent missing-field logic.',
+  };
 }
 
 export async function persistIntelligenceExplanations(repositoryPath, explanation) {

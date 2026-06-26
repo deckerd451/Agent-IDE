@@ -4,9 +4,9 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { persistQuality } from './intelligence-quality.mjs';
 import { verifyIntelligence } from './intelligence-verification.mjs';
-import { generateNextImprovement } from './next-improvement.mjs';
 import { evaluateCanonicalCompleteness } from './canonical-completeness.mjs';
-import { explainCompleteness, explainQuality, persistIntelligenceExplanations, readIntelligenceExplanations } from './intelligence-explanations.mjs';
+import { generateNextImprovement } from './next-improvement.mjs';
+import { explainCompleteness, explainQuality, explainCompletenessSynchronization, persistIntelligenceExplanations, readIntelligenceExplanations } from './intelligence-explanations.mjs';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -400,7 +400,8 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   data.quality = qualityResult.snapshot;
   data.qualityHistory = qualityResult.history;
   data.decisionRanking = nextImprovement.decisionRanking;
-  data.explanations = { completeness: explainCompleteness(await readAiText(repositoryPath, 'goals.md')), quality: explainQuality(data.quality), recommendation: nextImprovement.explanation, decisionRanking: nextImprovement.decisionRanking.explanation };
+  const goalsMarkdown = await readAiText(repositoryPath, 'goals.md');
+  data.explanations = { completeness: explainCompleteness(goalsMarkdown), quality: explainQuality(data.quality), recommendation: nextImprovement.explanation, decisionRanking: nextImprovement.decisionRanking.explanation, completenessSynchronization: explainCompletenessSynchronization({ completeness: evaluateCanonicalCompleteness(goalsMarkdown) }) };
   await persistIntelligenceExplanations(repositoryPath, data.explanations);
   data.verification = await verifyIntelligence(repositoryPath, { refreshStartedAt });
   return data;

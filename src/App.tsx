@@ -33,7 +33,7 @@ type ControlPlaneRecommendation = {
 
 type VerificationArtifact = { artifact: string; generatedAt: string | null; generatedHash: string | null; displayedHash: string | null; status: 'Verified' | 'Failed'; failures: string[] };
 
-type VerificationSnapshot = { status: 'Verified' | 'Failed'; score: number; summary: string; failures: string[]; artifacts: VerificationArtifact[] };
+type VerificationSnapshot = { status: 'Verified' | 'Failed'; score: number; failureCount?: number; failureReason?: string | null; summary: string; failures: string[]; artifacts: VerificationArtifact[] };
 
 type QualitySnapshot = {
   overallScore: number;
@@ -378,7 +378,13 @@ function ControlPlaneDashboard({ data }: { data: ControlPlane | null }) {
 
       {data.verification && (
         <section className="controlCard qualityCard" aria-label="Repository intelligence verification">
-          <div className="qualityHeader"><div><small>Repository Intelligence Verification</small><strong>{data.verification.score}%</strong></div><span className={stateClass(data.verification.status === 'Verified' ? 'Present' : 'Needs Attention')}>{data.verification.status}</span></div>
+          <div className="qualityHeader"><div><small>Verification Status</small><strong>{data.verification.status === 'Verified' ? '✓ Verified' : '⚠ Failed'}</strong></div><span className={stateClass(data.verification.status === 'Verified' ? 'Present' : 'Needs Attention')}>Verification Score {data.verification.score}%</span></div>
+          <div className="qualityGrid">
+            <div><small>Verification Score</small><strong>{data.verification.score}%</strong></div>
+            <div><small>Pass/Fail State</small><strong>{data.verification.status === 'Verified' ? '✓ Verified' : '⚠ Failed'}</strong></div>
+            <div><small>Failures</small><strong>{data.verification.failureCount ?? data.verification.failures.length}</strong></div>
+            <div><small>Failure Reason</small><strong>{data.verification.failureReason ?? data.verification.failures[0] ?? 'None'}</strong></div>
+          </div>
           <p>{data.verification.summary}</p>
           <div className="understandingGrid">
             {data.verification.artifacts.map((artifact) => <div className="understandingItem" key={artifact.artifact}><span>{artifact.artifact}</span><strong className={stateClass(artifact.status === 'Verified' ? 'Present' : 'Needs Attention')}>{artifact.status === 'Verified' ? '✓ Verified' : '⚠ Stale'}</strong>{artifact.failures.length > 0 && <small>{artifact.failures.join(' ')}</small>}</div>)}
