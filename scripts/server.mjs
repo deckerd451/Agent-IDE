@@ -6,7 +6,7 @@ import { persistQuality } from './intelligence-quality.mjs';
 import { verifyIntelligence } from './intelligence-verification.mjs';
 import { evaluateCanonicalCompleteness } from './canonical-completeness.mjs';
 import { generateNextImprovement } from './next-improvement.mjs';
-import { explainCompleteness, explainQuality, explainCompletenessSynchronization, persistIntelligenceExplanations, readIntelligenceExplanations } from './intelligence-explanations.mjs';
+import { explainCompleteness, explainQuality, explainCompletenessSynchronization, explainEvidenceSynthesis, persistIntelligenceExplanations, readIntelligenceExplanations } from './intelligence-explanations.mjs';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -401,7 +401,7 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   data.qualityHistory = qualityResult.history;
   data.decisionRanking = nextImprovement.decisionRanking;
   const goalsMarkdown = await readAiText(repositoryPath, 'goals.md');
-  data.explanations = { completeness: explainCompleteness(goalsMarkdown), quality: explainQuality(data.quality), recommendation: nextImprovement.explanation, decisionRanking: nextImprovement.decisionRanking.explanation, completenessSynchronization: explainCompletenessSynchronization({ completeness: evaluateCanonicalCompleteness(goalsMarkdown) }) };
+  data.explanations = { completeness: explainCompleteness(goalsMarkdown), evidenceSynthesis: explainEvidenceSynthesis(data.quality?.canonicalIntelligenceQuality?.evidenceSynthesis), quality: explainQuality(data.quality), recommendation: nextImprovement.explanation, decisionRanking: nextImprovement.decisionRanking.explanation, completenessSynchronization: explainCompletenessSynchronization({ completeness: evaluateCanonicalCompleteness(goalsMarkdown) }) };
   await persistIntelligenceExplanations(repositoryPath, data.explanations);
   data.verification = await verifyIntelligence(repositoryPath, { refreshStartedAt });
   return data;

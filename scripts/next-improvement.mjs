@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { explainDecisionRanking, explainRecommendation, renderExplanationMarkdown } from './intelligence-explanations.mjs';
 import { canonicalManualGoalsSuggestedUpdate } from './canonical-completeness.mjs';
+import { renderSynthesisMarkdown } from './evidence-synthesis.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md'];
 const constraints = ['local-first','deterministic','no LLM calls','no cloud','no telemetry','preserve manual sections','keep changes small and reviewable'];
@@ -174,7 +175,7 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
   if (manualNeedsDecision) {
     const missing = manualCompleteness?.missing?.length ? ` Missing: ${manualCompleteness.missing.join(', ')}.` : '';
     const evidence = manualGoalsRisk ?? (manualCompleteness ? `Manual Goals are ${manualCompleteness.state} (${manualCompleteness.percent}%).${missing}` : 'Manual Goals are missing from \`.ai/goals.md\`.');
-    issues.push({ ...selectedIssue({ id: 'missing-manual-goals', category: 'missing manual goals', severity: 'high', actionability: 'manual', source: evidence, title: 'Complete Manual Repository Intent Notes', evidence, reason: `Manual Goals completeness is below the deterministic threshold.${missing}`, recommendedAction: `Complete only the incomplete Manual Goals fields in \`.ai/goals.md\`.${missing}` }), completenessExplanation: manualGoalsCompletenessExplanation(quality) });
+    issues.push({ ...selectedIssue({ id: 'missing-manual-goals', category: 'missing manual goals', severity: 'high', actionability: 'manual', source: evidence, title: 'Complete Manual Repository Intent Notes', evidence, reason: `Manual Goals completeness is below the deterministic threshold.${missing}`, recommendedAction: `Complete only the incomplete Manual Goals fields in \`.ai/goals.md\`.${missing}` }), completenessExplanation: manualGoalsCompletenessExplanation(quality), evidenceSynthesis: quality?.canonicalIntelligenceQuality?.evidenceSynthesis });
   }
   if (missingCanonical || risks.some((r) => /missing intelligence file|architecture has no/i.test(r))) {
     const risk = risks.find((r) => /missing intelligence file|architecture has no/i.test(r)) ?? `Missing repository intelligence: ${missingCanonical?.replace(/Present$/, '')}`;
@@ -216,6 +217,9 @@ function suggestedManualUpdate(selected) {
   if (selected.id === 'missing-manual-goals') {
     const explanation = selected.completenessExplanation;
     if (!explanation) return 'Canonical completeness explanation unavailable. Regenerate repository intelligence before accepting a Manual Goals update so only deterministically missing fields are suggested.';
+    const synthesis = selected.evidenceSynthesis;
+    const suggestedFields = Object.values(synthesis?.fields ?? {}).filter((field) => field.missing && field.suggestedWording);
+    if (suggestedFields.length) return suggestedFields.map(renderSynthesisMarkdown).join('\n\n---\n\n');
     const suggested = canonicalManualGoalsSuggestedUpdate(explanation);
     if (suggested === 'No Manual Goals fields require updates.') return suggested;
     return [

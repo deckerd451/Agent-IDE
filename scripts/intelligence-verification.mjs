@@ -110,6 +110,27 @@ export async function verifyIntelligence(repositoryPath, options = {}) {
     failures.push(`Explanation contradiction: Manual Goals ${explanationManual.classification} (${explanationManual.computed?.percent}%) vs Intelligence Quality ${qualityManual.state} (${qualityManual.percent}%).`);
   }
 
+
+  const evidenceSynthesis = quality?.canonicalIntelligenceQuality?.evidenceSynthesis;
+  const explanationSynthesis = explanations?.evidenceSynthesis;
+  if (evidenceSynthesis && explanationSynthesis) {
+    if (evidenceSynthesis.strength !== explanationSynthesis.strength || Number(evidenceSynthesis.supportedFields) !== Number(explanationSynthesis.supportedFields)) failures.push('Evidence Synthesis mismatch: Intelligence Quality and Intelligence Explanations differ.');
+    for (const [key, field] of Object.entries(evidenceSynthesis.fields ?? {})) {
+      const explanationField = explanationSynthesis.fields?.[key];
+      if (!explanationField) failures.push(`Evidence Synthesis mismatch: missing explanation field ${field.label}.`);
+      if (field.suggestedWording && explanationField?.suggestedWording !== field.suggestedWording) failures.push(`Evidence Synthesis mismatch: suggested wording differs for ${field.label}.`);
+      if (field.suggestedWording && !(field.evidence ?? []).some((item) => item.wording === field.suggestedWording)) failures.push(`Evidence Synthesis invalid: suggested wording does not exactly match evidence for ${field.label}.`);
+      if (field.confidence && explanationField?.confidence && field.confidence !== explanationField.confidence) failures.push(`Evidence Synthesis mismatch: confidence differs for ${field.label}.`);
+      if (field.suggestedWording && packageText.includes(`
+${field.label}
+`) && !packageText.includes(field.suggestedWording)) failures.push(`Evidence Synthesis mismatch: Product Decision Package omitted selected wording for ${field.label}.`);
+      if (field.suggestedWording && decisionRanking?.candidates?.some((candidate) => candidate.id === 'missing-manual-goals') && decisionRanking.candidates.find((candidate) => candidate.id === 'missing-manual-goals')?.evidenceSynthesis) {
+        const rankingField = decisionRanking.candidates.find((candidate) => candidate.id === 'missing-manual-goals')?.evidenceSynthesis?.fields?.[key];
+        if (rankingField?.suggestedWording && rankingField.suggestedWording !== field.suggestedWording) failures.push(`Evidence Synthesis mismatch: Decision Ranking differs for ${field.label}.`);
+      }
+    }
+  }
+
   if (/## Selected Issue/i.test(packageText) && !decisionRanking?.candidates?.length) {
     failures.push('Decision ranking missing or empty.');
   } else if (decisionRanking?.candidates?.length) {

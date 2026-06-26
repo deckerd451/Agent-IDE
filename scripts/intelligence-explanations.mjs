@@ -142,13 +142,33 @@ export function renderExplanationMarkdown(explanation) {
 }
 
 
-export function explainCompletenessSynchronization({ completeness, consumers = [] } = {}) {
+export function explainEvidenceSynthesis(evidenceSynthesis = {}) {
+  return {
+    id: 'evidence-synthesis',
+    title: 'Evidence Synthesis',
+    rule: 'Missing canonical fields may display deterministic suggestions only when exact repository-local wording is found outside .ai/goals.md.',
+    strength: evidenceSynthesis.strength ?? 'None',
+    supportedFields: evidenceSynthesis.supportedFields ?? 0,
+    missingFields: evidenceSynthesis.missingFields ?? 0,
+    fields: Object.fromEntries(Object.entries(evidenceSynthesis.fields ?? {}).map(([key, field]) => [key, {
+      label: field.label,
+      suggestedWording: field.suggestedWording,
+      confidence: field.confidence,
+      sources: (field.evidence ?? []).map((item) => item.source),
+      evidence: field.evidence ?? [],
+      selectionRule: field.selectionRule,
+    }])),
+  };
+}
+
+export function explainCompletenessSynchronization({ completeness, consumers = [], evidenceSynthesis = null } = {}) {
   const manualGoals = manualGoalsExplanationFromCompleteness(completeness);
   const result = manualGoals ? {
     classification: manualGoals.classification,
     percent: manualGoals.computed.percent,
     missing: manualGoals.missing,
     suggestedManualUpdate: manualGoals.missing.length ? manualGoals.requiredFields.filter((field) => manualGoals.missing.includes(field.label)).map((field) => field.manualUpdate).filter(Boolean) : ['No Manual Goals fields require updates.'],
+    evidenceSynthesis: evidenceSynthesis ? { strength: evidenceSynthesis.strength, supportedFields: evidenceSynthesis.supportedFields, missingFields: evidenceSynthesis.missingFields } : null,
   } : null;
   const defaultConsumers = ['Repository Health', 'Intelligence Quality', 'Decision Ranking', 'Product Decision Packages', 'Suggested Manual Updates', 'Verification', 'Control Plane'];
   return {
