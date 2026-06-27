@@ -79,6 +79,15 @@ function fromOwnershipRisks(executionModelText) {
 
 const maintenanceRiskCategories = new Set(['repository health', 'missing intelligence', 'ownership']);
 
+const knownSourceFiles = ['src/workflow.ts', 'src/App.tsx', 'scripts/server.mjs', 'scripts/next-improvement.mjs', 'scripts/execution-model.mjs', 'scripts/improvement-analyzer.mjs'];
+
+function extractAffectedFiles(text) {
+  return knownSourceFiles.filter((f) => {
+    const base = f.split('/').pop().replace(/\.[^.]+$/, '');
+    return new RegExp(base, 'i').test(text);
+  });
+}
+
 function fromExecutionModelRisks(executionModelText) {
   if (!executionModelText.trim()) return [];
   const section = sectionText(executionModelText, 'Architectural Risks');
@@ -104,16 +113,19 @@ function fromExecutionModelRisks(executionModelText) {
     const isCoupling = /coupling|cyclic|circular/i.test(title + rawCategory);
     const isComplexity = /complexity|simplif/i.test(title + rawCategory);
     const resolvedCategory = isPersistence ? 'implicit-state' : isCoupling ? 'architectural-coupling' : isComplexity ? 'architectural-simplification' : rawCategory.toLowerCase();
+    const affectedFiles = extractAffectedFiles(evidence + ' ' + title);
 
     return {
       id: `exec-model-risk-${i}`,
       kind: 'architectural-improvement',
       class: 'improvement',
+      packageType: 'implementation',
       category: resolvedCategory,
       severity: /localStorage|sessionStorage|cyclic|split ownership|fatal|critical/i.test(title) ? 'high' : 'medium',
       actionability: isPersistence || isCoupling ? 'code-fixable' : 'code-fixable',
       priority: isPersistence ? 94 : isCoupling ? 88 : 84,
       expectedImprovementValues: { repositoryHealth: 10, canonicalCompleteness: 0, quality: 10, verification: 0, handoffReadiness: 8 },
+      affectedFiles,
       source: evidence,
       title: `Resolve Architectural Risk: ${title.slice(0, 65)}`,
       evidence: `${title} — Source: ${evidence}`,

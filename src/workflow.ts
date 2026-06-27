@@ -125,6 +125,7 @@ const workflowDefinitions: Record<WorkflowType, { goal: string; steps: StepDefin
 export function workflowTypeForInput(input: WorkflowInput): WorkflowType {
   if (input.packageType === 'product-decision') return 'Product Decision';
   if (input.packageType === 'validation-experiment') return 'Validation';
+  if (input.packageType === 'implementation') return 'Implementation';
   const text = `${input.category ?? ''} ${input.title ?? ''} ${input.ownerAction ?? ''} ${input.recommendationTitle ?? ''}`;
   if (/documentation|docs/i.test(text)) return 'Documentation';
   if (/investigat|unknown|risk|explain/i.test(text)) return 'Investigation';
