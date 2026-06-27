@@ -454,7 +454,7 @@ function renderRecommendationTrace({ stages, improvementCandidates, maintenanceI
   lines.push('|---|---|---|');
   for (const file of filesRead) {
     const key = file.replace('.md', '').replace('.json', '').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-    const docKey = { goals_md: 'goals', repository_health_md: 'health', intelligence_quality_json: 'quality', intelligence_audit_md: 'audit', backlog_md: 'backlog', strategy_md: 'strategy', context_package_md: 'contextPackage', architecture_md: 'architecture', decisions_md: 'decisions', execution_model_md: 'executionModel' }[key] ?? key;
+    const docKey = { repository_health: 'health', intelligence_quality: 'quality', intelligence_audit: 'audit', context_package: 'contextPackage', execution_model: 'executionModel' }[key] ?? key;
     const content = typeof docs[docKey] === 'string' ? docs[docKey] : (docs[docKey] ? JSON.stringify(docs[docKey]) : '');
     const present = Boolean(content && content.trim());
     lines.push(`| .ai/${file} | ${present ? 'Yes' : 'No'} | ${content.length} |`);
