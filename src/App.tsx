@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { sections, type Section } from './sections';
-import { advanceWorkflow, contextSnapshotHash, stableContextPackageHash, createWorkflow, validationCompletionStorageKey, workflowKey, workflowStateStorageKey, type ValidationCompletionRecord, type Workflow, type WorkflowState } from './workflow';
+import { advanceWorkflow, contextSnapshotHash, createWorkflow, workflowKey, workflowStateStorageKey, type Workflow, type WorkflowState } from './workflow';
 
 type WorkflowDiagnostics = {
   lastPrimaryActionClicked: string;
@@ -178,22 +178,6 @@ function readWorkflowState(): WorkflowState | null {
 }
 
 
-function readValidationCompletions(): ValidationCompletionRecord[] {
-  try {
-    const raw = window.localStorage.getItem(validationCompletionStorageKey);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function persistValidationCompletion(record: ValidationCompletionRecord) {
-  const completions = readValidationCompletions();
-  const key = [record.repositoryPath, record.workflowKey, record.selectedIssueId, record.contextPackageHash ?? record.refreshTimestamp ?? 'unknown-snapshot'].join('::');
-  const next = [record, ...completions.filter((item) => [item.repositoryPath, item.workflowKey, item.selectedIssueId, item.contextPackageHash ?? item.refreshTimestamp ?? 'unknown-snapshot'].join('::') !== key)].slice(0, 100);
-  window.localStorage.setItem(validationCompletionStorageKey, JSON.stringify(next));
-}
 
 function workflowIndex(workflow: Workflow | null | undefined) {
   if (!workflow) return -1;
@@ -1235,9 +1219,7 @@ export function App() {
     setIsRefreshing(true);
 
     try {
-      const completionsBeforeRefresh = readValidationCompletions();
-      console.log('[refresh:diagnostic] completion records before refresh:', JSON.stringify(completionsBeforeRefresh, null, 2));
-      const requestPayload = { repositoryPath, validationCompletions: completionsBeforeRefresh };
+      const requestPayload = { repositoryPath };
       console.log('[refresh:diagnostic] request payload:', JSON.stringify(requestPayload, null, 2));
       const response = await fetch(new URL('/api/repository/refresh', serverBaseUrl), {
         method: 'POST',
@@ -1366,20 +1348,6 @@ export function App() {
     if (currentWorkflow.completionState === 'Ready To Refresh' || currentWorkflow.repositoryState === 'Refresh Repository') {
       const isTerminalRefreshStep = currentWorkflow.repositoryState === 'Refresh Repository';
       setWorkflowDiagnostics((current) => ({ ...current, refreshStepDetected: isTerminalRefreshStep, refreshStarted: true }));
-      if (isTerminalRefreshStep && currentWorkflow.type === 'Validation') {
-        const task = firstCandidate(controlPlane, 1);
-        const contextPackage = controlPlane.packages.context || documents['context-package.md']?.content || '';
-        persistValidationCompletion({
-          workflowKey: currentWorkflow.workflowKey,
-          completedAt: new Date().toISOString(),
-          repositoryPath: connectedPath || repositoryPath,
-          selectedIssueId: task?.id ?? 'ai-handoff-validation',
-          recommendationTitle: controlPlane.recommendation.title,
-          contextPackageHash: stableContextPackageHash(contextPackage),
-          refreshTimestamp: controlPlane.status.timestamp,
-        });
-        setWorkflowDiagnostics((current) => ({ ...current, completionRecordPersistedBeforeRefresh: true }));
-      }
       const previousTitle = controlPlane.recommendation.title;
       await refreshIntelligence({ clearWorkflow: isTerminalRefreshStep, previousTitle });
       if (!isTerminalRefreshStep) {
@@ -1411,22 +1379,9 @@ export function App() {
     setWorkflowState(next);
     setWorkflowDiagnostics((current) => ({ ...current, setWorkflowStateRan: true }));
     if (next.status === 'Ready To Refresh' || next.repositoryState === 'Refresh Repository') {
-      if (currentWorkflow.type === 'Validation') {
-        const task = firstCandidate(controlPlane, 1);
-        const contextPackage = controlPlane.packages.context || documents['context-package.md']?.content || '';
-        persistValidationCompletion({
-          workflowKey: next.workflowKey,
-          completedAt: new Date().toISOString(),
-          repositoryPath: connectedPath || repositoryPath,
-          selectedIssueId: task?.id ?? 'ai-handoff-validation',
-          recommendationTitle: controlPlane.recommendation.title,
-          contextPackageHash: stableContextPackageHash(contextPackage),
-          refreshTimestamp: controlPlane.status.timestamp,
-        });
-      }
       setIsWorkItemOpen(false);
       const previousTitle = controlPlane.recommendation.title;
-      setWorkflowDiagnostics((current) => ({ ...current, refreshStepDetected: next.repositoryState === 'Refresh Repository', completionRecordPersistedBeforeRefresh: currentWorkflow.type === 'Validation', refreshStarted: true }));
+      setWorkflowDiagnostics((current) => ({ ...current, refreshStepDetected: next.repositoryState === 'Refresh Repository', completionRecordPersistedBeforeRefresh: false, refreshStarted: true }));
       await refreshIntelligence({ clearWorkflow: true, previousTitle });
     }
   }

@@ -397,14 +397,16 @@ async function inspectSourceFiles(repositoryPath) {
     });
   }
 
-  // 4. Detect localStorage writes for workflow state in App.tsx
-  const localStorageWriteCount = (appTsx.match(/localStorage\.setItem/g) ?? []).length;
-  if (localStorageWriteCount > 0) {
+  // 4. Detect recommendation-affecting localStorage writes in App.tsx.
+  // UI-only preferences and workflow-progress view state may remain browser-local; only
+  // browser-local state that affects server-side recommendation selection is a determinism risk.
+  const writesRecommendationAffectingStorage = appTsx.includes('localStorage.setItem(validationCompletionStorageKey');
+  if (writesRecommendationAffectingStorage) {
     findings.push({
       category: 'Persistence',
       confidence: 'High',
-      observation: `Client persists ${localStorageWriteCount} distinct state write(s) to localStorage. Browser-local persistence means repository recommendation state is not reproducible from a fresh browser session.`,
-      evidence: `src/App.tsx: ${localStorageWriteCount} localStorage.setItem calls`,
+      observation: 'Client persists recommendation-affecting validation completion state to localStorage. Browser-local recommendation suppression means selection is not reproducible from a fresh browser session.',
+      evidence: 'src/App.tsx writes validationCompletionStorageKey via localStorage.setItem',
       sourceFiles: ['src/App.tsx'],
     });
   }

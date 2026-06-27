@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-26T13:59:09.648Z",
+  "generatedAt": "2026-06-27T23:09:17.814Z",
   "aiHandoffValidation": {
     "schemaVersion": 1,
-    "generatedAt": "2026-06-26T13:59:08.613Z",
-    "overallScore": 88,
+    "generatedAt": "2026-06-27T23:09:17.721Z",
+    "overallScore": 96,
     "status": "Ready",
     "categories": {
       "repositoryExplanation": {
@@ -40,7 +40,7 @@
       "decisionRanking": {
         "label": "Decision ranking",
         "status": "Present",
-        "evidence": "Context Package exposes ## Decision Ranking."
+        "evidence": "Context Package exposes ## Decision Ranking with selected issue, deterministic selection explanation, and ranked candidates."
       },
       "highestPriorityIssue": {
         "label": "Highest-priority issue",
@@ -84,14 +84,8 @@
     ],
     "hiddenInformation": [],
     "contradictions": [],
-    "missingExplanations": [
-      "Decision ranking rationale",
-      "Recommendation rationale"
-    ],
-    "suggestedImprovements": [
-      "Add decision ranking rationale to generated explanations.",
-      "Add recommendation rationale to generated explanations."
-    ]
+    "missingExplanations": [],
+    "suggestedImprovements": []
   },
   "completeness": {
     "id": "canonical-completeness",
@@ -617,7 +611,7 @@
   "quality": {
     "id": "intelligence-quality",
     "title": "Intelligence Quality Evaluation",
-    "score": 92,
+    "score": 83,
     "components": {
       "canonicalCompleteness": {
         "score": 83,
@@ -650,7 +644,7 @@
         ]
       },
       "verification": {
-        "score": 100,
+        "score": 40,
         "rule": "Verification score is the percent of expected artifacts verified.",
         "evidence": ".ai/intelligence-verification.json"
       }
@@ -660,8 +654,153 @@
         "rule": "Missing Current Product Bet",
         "points": 10,
         "evidence": ".ai/goals.md"
+      },
+      {
+        "rule": "strategy.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "architecture.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "backlog.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "validation.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "decisions.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "repository-health.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "prompts/architect.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "prompts/builder.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "prompts/debugger.md: Artifact timestamp is older than refresh start.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "Explanation contradiction: selected recommendation is not referenced by generated package.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
       }
     ]
+  },
+  "recommendation": {
+    "id": "recommendation-selection",
+    "title": "Why This Issue Was Selected",
+    "rule": "Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.",
+    "candidateIssues": [
+      {
+        "id": "ai-handoff-validation",
+        "title": "Run AI Handoff Validation",
+        "category": "AI handoff validation",
+        "priority": 10,
+        "actionability": "validation-experiment",
+        "evidence": "No serious repository intelligence issue detected."
+      }
+    ],
+    "selected": {
+      "id": "ai-handoff-validation",
+      "title": "Run AI Handoff Validation",
+      "priority": 10
+    },
+    "computed": {
+      "selectedPriority": 10,
+      "highestPriority": 10
+    },
+    "classification": "Consistent",
+    "reason": "Highest deterministic priority requiring action.",
+    "recommendation": "Run and document a local AI handoff validation dry run."
+  },
+  "decisionRanking": {
+    "id": "decision-ranking",
+    "title": "Decision Ranking Explanation",
+    "rule": "Rank every candidate with deterministic repository-local scoring, then select rank #1.",
+    "scoringRules": [
+      "Priority score = issue base priority + severity boost + actionability boost, capped at 100.",
+      "Expected improvement is a deterministic repository-local lookup by issue type.",
+      "Ordering ties break by expected improvement total, actionability, severity, title, then issue ID."
+    ],
+    "tieBreaking": [
+      "priorityScore desc",
+      "expectedImprovement.total desc",
+      "actionability rank asc",
+      "severity rank asc",
+      "title asc",
+      "id asc"
+    ],
+    "candidateOrdering": [
+      {
+        "rank": 1,
+        "id": "ai-handoff-validation",
+        "title": "Run AI Handoff Validation",
+        "priorityScore": 10,
+        "expectedImprovement": {
+          "repositoryHealth": 2,
+          "canonicalCompleteness": 0,
+          "quality": 2,
+          "verification": 4,
+          "handoffReadiness": 3,
+          "total": 11
+        },
+        "selected": true
+      }
+    ],
+    "expectedImprovementCalculations": {
+      "ai-handoff-validation": {
+        "repositoryHealth": 2,
+        "canonicalCompleteness": 0,
+        "quality": 2,
+        "verification": 4,
+        "handoffReadiness": 3,
+        "total": 11
+      }
+    },
+    "selected": {
+      "id": "ai-handoff-validation",
+      "title": "Run AI Handoff Validation",
+      "rank": 1,
+      "priorityScore": 10
+    },
+    "classification": "Consistent",
+    "reason": "Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11."
   },
   "completenessSynchronization": {
     "id": "completeness-synchronization",
@@ -674,11 +813,7 @@
       "suggestedManualUpdate": [
         "No Manual Goals fields require updates."
       ],
-      "evidenceSynthesis": {
-        "strength": "Strong",
-        "supportedFields": 2,
-        "missingFields": 2
-      }
+      "evidenceSynthesis": null
     },
     "consumers": [
       "Repository Health",

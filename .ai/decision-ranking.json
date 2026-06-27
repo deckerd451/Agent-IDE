@@ -16,47 +16,27 @@
   ],
   "candidates": [
     {
-      "id": "exec-model-risk-1",
-      "kind": "architectural-improvement",
-      "class": "improvement",
-      "category": "implicit-state",
-      "severity": "high",
-      "actionability": "code-fixable",
-      "priority": 100,
-      "expectedImprovementValues": {
-        "repositoryHealth": 10,
-        "canonicalCompleteness": 0,
-        "quality": 10,
-        "verification": 0,
-        "handoffReadiness": 8
-      },
-      "source": "src/App.tsx: 4 localStorage.setItem calls",
-      "title": "Resolve Architectural Risk: Client persists 4 distinct state write(s) to localStorage. Browse",
-      "evidence": "Client persists 4 distinct state write(s) to localStorage. Browser-local persistence means repository recommendation state is not reproducible from a fresh browser session. — Source: src/App.tsx: 4 localStorage.setItem calls",
-      "reason": "Execution model analysis identified this as an evidence-backed architectural risk. Resolving it improves determinism and maintainability.",
-      "recommendedAction": "Investigate and resolve: Client persists 4 distinct state write(s) to localStorage. Browser-local persistence means repository recommendation state is not reproducible from a fresh browser session..",
-      "details": {
-        "problem": "Client persists 4 distinct state write(s) to localStorage. Browser-local persistence means repository recommendation state is not reproducible from a fresh browser session. (Category: Persistence). Evidence: src/App.tsx: 4 localStorage.setItem calls.",
-        "requirements": [
-          "Investigate the evidence cited before making changes.",
-          "Apply only the focused change required to resolve this risk.",
-          "Keep the change narrowly scoped and do not introduce unrelated refactoring.",
-          "Preserve all manual intelligence sections."
-        ],
-        "acceptance": [
-          "The cited architectural risk is resolved or explicitly documented as accepted.",
-          "execution-model.md no longer reports this risk after refresh.",
-          "No new architectural risks are introduced."
-        ]
-      },
-      "priorityScore": 100,
+      "id": "ai-handoff-validation",
+      "kind": "ai-handoff-validation",
+      "class": "maintenance",
+      "category": "AI handoff validation",
+      "severity": "low",
+      "actionability": "validation-experiment",
+      "packageType": "validation-experiment",
+      "source": "No serious repository intelligence issue detected.",
+      "title": "Run AI Handoff Validation",
+      "evidence": "No serious repository intelligence issue detected.",
+      "reason": "When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.",
+      "recommendedAction": "Run and document a local AI handoff validation dry run.",
+      "priorityScore": 10,
+      "priority": 10,
       "expectedImprovement": {
-        "repositoryHealth": 10,
+        "repositoryHealth": 2,
         "canonicalCompleteness": 0,
-        "quality": 10,
-        "verification": 0,
-        "handoffReadiness": 8,
-        "total": 28
+        "quality": 2,
+        "verification": 4,
+        "handoffReadiness": 3,
+        "total": 11
       },
       "rank": 1,
       "selected": true,
@@ -66,179 +46,36 @@
         "rule": "Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.",
         "candidateIssues": [
           {
-            "id": "exec-model-risk-1",
-            "title": "Resolve Architectural Risk: Client persists 4 distinct state write(s) to localStorage. Browse",
-            "category": "implicit-state",
-            "priority": 100,
-            "actionability": "code-fixable",
-            "evidence": "Client persists 4 distinct state write(s) to localStorage. Browser-local persistence means repository recommendation state is not reproducible from a fresh browser session. — Source: src/App.tsx: 4 localStorage.setItem calls"
-          },
-          {
-            "id": "exec-model-risk-2",
-            "title": "Resolve Architectural Risk: Multiple ownership boundaries affect recommendation selection. Va",
-            "category": "implicit-state",
-            "priority": 100,
-            "actionability": "code-fixable",
-            "evidence": "Multiple ownership boundaries affect recommendation selection. ValidationCompletionRecord is a client-defined type that crosses the client/server boundary to influence server-side recommendation suppression. The canonical source of recommendation state is split: current recommendation lives in .ai/decision-ranking.json (server) but suppression state lives in browser localStorage (client). — Source: src/workflow.ts defines ValidationCompletionRecord; scripts/next-improvement.mjs consumes it via validationCompletions option"
-          },
-          {
-            "id": "exec-model-risk-0",
-            "title": "Resolve Architectural Risk: Recommendation generation is not fully server-deterministic. The ",
-            "category": "implicit-state",
-            "priority": 100,
-            "actionability": "code-fixable",
-            "evidence": "Recommendation generation is not fully server-deterministic. The server receives client-supplied completion records that suppress recommendation selection. Two clients with different localStorage state will produce different recommendations from the same repository. — Source: src/App.tsx sends validationCompletions in /api/repository/refresh payload; scripts/next-improvement.mjs uses these to set validationAlreadyCompleted and suppress ai-handoff-validation"
-          },
-          {
-            "id": "validation",
-            "title": "Improve Validation Confidence",
-            "category": "validation detector gaps",
-            "priority": 92,
-            "actionability": "code-fixable",
-            "evidence": "Medium"
+            "id": "ai-handoff-validation",
+            "title": "Run AI Handoff Validation",
+            "category": "AI handoff validation",
+            "priority": 10,
+            "actionability": "validation-experiment",
+            "evidence": "No serious repository intelligence issue detected."
           }
         ],
         "selected": {
-          "id": "exec-model-risk-1",
-          "title": "Resolve Architectural Risk: Client persists 4 distinct state write(s) to localStorage. Browse",
-          "priority": 100
+          "id": "ai-handoff-validation",
+          "title": "Run AI Handoff Validation",
+          "priority": 10
         },
         "computed": {
-          "selectedPriority": 100,
-          "highestPriority": 100
+          "selectedPriority": 10,
+          "highestPriority": 10
         },
         "classification": "Consistent",
         "reason": "Highest deterministic priority requiring action.",
-        "recommendation": "Investigate and resolve: Client persists 4 distinct state write(s) to localStorage. Browser-local persistence means repository recommendation state is not reproducible from a fresh browser session.."
-      },
-      "packageType": "implementation"
-    },
-    {
-      "id": "exec-model-risk-2",
-      "kind": "architectural-improvement",
-      "class": "improvement",
-      "category": "implicit-state",
-      "severity": "high",
-      "actionability": "code-fixable",
-      "priority": 100,
-      "expectedImprovementValues": {
-        "repositoryHealth": 10,
-        "canonicalCompleteness": 0,
-        "quality": 10,
-        "verification": 0,
-        "handoffReadiness": 8
-      },
-      "source": "src/workflow.ts defines ValidationCompletionRecord; scripts/next-improvement.mjs consumes it via validationCompletions option",
-      "title": "Resolve Architectural Risk: Multiple ownership boundaries affect recommendation selection. Va",
-      "evidence": "Multiple ownership boundaries affect recommendation selection. ValidationCompletionRecord is a client-defined type that crosses the client/server boundary to influence server-side recommendation suppression. The canonical source of recommendation state is split: current recommendation lives in .ai/decision-ranking.json (server) but suppression state lives in browser localStorage (client). — Source: src/workflow.ts defines ValidationCompletionRecord; scripts/next-improvement.mjs consumes it via validationCompletions option",
-      "reason": "Execution model analysis identified this as an evidence-backed architectural risk. Resolving it improves determinism and maintainability.",
-      "recommendedAction": "Investigate and resolve: Multiple ownership boundaries affect recommendation selection. ValidationCompletionRecord is a client-defined type that crosses the client/server boundary to influence server-side recommendation suppression. The canonical source of recommendation state is split: current recommendation lives in .ai/decision-ranking.json (server) but suppression state lives in browser localStorage (client)..",
-      "details": {
-        "problem": "Multiple ownership boundaries affect recommendation selection. ValidationCompletionRecord is a client-defined type that crosses the client/server boundary to influence server-side recommendation suppression. The canonical source of recommendation state is split: current recommendation lives in .ai/decision-ranking.json (server) but suppression state lives in browser localStorage (client). (Category: Source of Truth). Evidence: src/workflow.ts defines ValidationCompletionRecord; scripts/next-improvement.mjs consumes it via validationCompletions option.",
-        "requirements": [
-          "Investigate the evidence cited before making changes.",
-          "Apply only the focused change required to resolve this risk.",
-          "Keep the change narrowly scoped and do not introduce unrelated refactoring.",
-          "Preserve all manual intelligence sections."
-        ],
-        "acceptance": [
-          "The cited architectural risk is resolved or explicitly documented as accepted.",
-          "execution-model.md no longer reports this risk after refresh.",
-          "No new architectural risks are introduced."
-        ]
-      },
-      "priorityScore": 100,
-      "expectedImprovement": {
-        "repositoryHealth": 10,
-        "canonicalCompleteness": 0,
-        "quality": 10,
-        "verification": 0,
-        "handoffReadiness": 8,
-        "total": 28
-      },
-      "rank": 2,
-      "selected": false
-    },
-    {
-      "id": "exec-model-risk-0",
-      "kind": "architectural-improvement",
-      "class": "improvement",
-      "category": "implicit-state",
-      "severity": "high",
-      "actionability": "code-fixable",
-      "priority": 100,
-      "expectedImprovementValues": {
-        "repositoryHealth": 10,
-        "canonicalCompleteness": 0,
-        "quality": 10,
-        "verification": 0,
-        "handoffReadiness": 8
-      },
-      "source": "src/App.tsx sends validationCompletions in /api/repository/refresh payload; scripts/next-improvement.mjs uses these to set validationAlreadyCompleted and suppress ai-handoff-validation",
-      "title": "Resolve Architectural Risk: Recommendation generation is not fully server-deterministic. The ",
-      "evidence": "Recommendation generation is not fully server-deterministic. The server receives client-supplied completion records that suppress recommendation selection. Two clients with different localStorage state will produce different recommendations from the same repository. — Source: src/App.tsx sends validationCompletions in /api/repository/refresh payload; scripts/next-improvement.mjs uses these to set validationAlreadyCompleted and suppress ai-handoff-validation",
-      "reason": "Execution model analysis identified this as an evidence-backed architectural risk. Resolving it improves determinism and maintainability.",
-      "recommendedAction": "Investigate and resolve: Recommendation generation is not fully server-deterministic. The server receives client-supplied completion records that suppress recommendation selection. Two clients with different localStorage state will produce different recommendations from the same repository..",
-      "details": {
-        "problem": "Recommendation generation is not fully server-deterministic. The server receives client-supplied completion records that suppress recommendation selection. Two clients with different localStorage state will produce different recommendations from the same repository. (Category: Determinism). Evidence: src/App.tsx sends validationCompletions in /api/repository/refresh payload; scripts/next-improvement.mjs uses these to set validationAlreadyCompleted and suppress ai-handoff-validation.",
-        "requirements": [
-          "Investigate the evidence cited before making changes.",
-          "Apply only the focused change required to resolve this risk.",
-          "Keep the change narrowly scoped and do not introduce unrelated refactoring.",
-          "Preserve all manual intelligence sections."
-        ],
-        "acceptance": [
-          "The cited architectural risk is resolved or explicitly documented as accepted.",
-          "execution-model.md no longer reports this risk after refresh.",
-          "No new architectural risks are introduced."
-        ]
-      },
-      "priorityScore": 100,
-      "expectedImprovement": {
-        "repositoryHealth": 10,
-        "canonicalCompleteness": 0,
-        "quality": 10,
-        "verification": 0,
-        "handoffReadiness": 8,
-        "total": 28
-      },
-      "rank": 3,
-      "selected": false
-    },
-    {
-      "id": "validation",
-      "kind": "validation",
-      "class": "maintenance",
-      "category": "validation detector gaps",
-      "severity": "medium",
-      "actionability": "code-fixable",
-      "packageType": "implementation",
-      "source": "Medium",
-      "title": "Improve Validation Confidence",
-      "evidence": "Medium",
-      "reason": "Implementation packages should be backed by known local checks that prove changes still work.",
-      "recommendedAction": "Update validation intelligence with deterministic local checks and known gaps.",
-      "priorityScore": 92,
-      "priority": 92,
-      "expectedImprovement": {
-        "repositoryHealth": 7,
-        "canonicalCompleteness": 0,
-        "quality": 5,
-        "verification": 10,
-        "handoffReadiness": 5,
-        "total": 27
-      },
-      "rank": 4,
-      "selected": false
+        "recommendation": "Run and document a local AI handoff validation dry run."
+      }
     }
   ],
   "selectedIssue": {
-    "id": "exec-model-risk-1",
-    "title": "Resolve Architectural Risk: Client persists 4 distinct state write(s) to localStorage. Browse",
+    "id": "ai-handoff-validation",
+    "title": "Run AI Handoff Validation",
     "rank": 1,
-    "priorityScore": 100
+    "priorityScore": 10
   },
-  "selectionExplanation": "Resolve Architectural Risk: Client persists 4 distinct state write(s) to localStorage. Browse is ranked #1 with priority 100 and total expected improvement +28.",
+  "selectionExplanation": "Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.",
   "explanation": {
     "id": "decision-ranking",
     "title": "Decision Ranking Explanation",
@@ -259,106 +96,37 @@
     "candidateOrdering": [
       {
         "rank": 1,
-        "id": "exec-model-risk-1",
-        "title": "Resolve Architectural Risk: Client persists 4 distinct state write(s) to localStorage. Browse",
-        "priorityScore": 100,
+        "id": "ai-handoff-validation",
+        "title": "Run AI Handoff Validation",
+        "priorityScore": 10,
         "expectedImprovement": {
-          "repositoryHealth": 10,
+          "repositoryHealth": 2,
           "canonicalCompleteness": 0,
-          "quality": 10,
-          "verification": 0,
-          "handoffReadiness": 8,
-          "total": 28
+          "quality": 2,
+          "verification": 4,
+          "handoffReadiness": 3,
+          "total": 11
         },
         "selected": true
-      },
-      {
-        "rank": 2,
-        "id": "exec-model-risk-2",
-        "title": "Resolve Architectural Risk: Multiple ownership boundaries affect recommendation selection. Va",
-        "priorityScore": 100,
-        "expectedImprovement": {
-          "repositoryHealth": 10,
-          "canonicalCompleteness": 0,
-          "quality": 10,
-          "verification": 0,
-          "handoffReadiness": 8,
-          "total": 28
-        },
-        "selected": false
-      },
-      {
-        "rank": 3,
-        "id": "exec-model-risk-0",
-        "title": "Resolve Architectural Risk: Recommendation generation is not fully server-deterministic. The ",
-        "priorityScore": 100,
-        "expectedImprovement": {
-          "repositoryHealth": 10,
-          "canonicalCompleteness": 0,
-          "quality": 10,
-          "verification": 0,
-          "handoffReadiness": 8,
-          "total": 28
-        },
-        "selected": false
-      },
-      {
-        "rank": 4,
-        "id": "validation",
-        "title": "Improve Validation Confidence",
-        "priorityScore": 92,
-        "expectedImprovement": {
-          "repositoryHealth": 7,
-          "canonicalCompleteness": 0,
-          "quality": 5,
-          "verification": 10,
-          "handoffReadiness": 5,
-          "total": 27
-        },
-        "selected": false
       }
     ],
     "expectedImprovementCalculations": {
-      "exec-model-risk-1": {
-        "repositoryHealth": 10,
+      "ai-handoff-validation": {
+        "repositoryHealth": 2,
         "canonicalCompleteness": 0,
-        "quality": 10,
-        "verification": 0,
-        "handoffReadiness": 8,
-        "total": 28
-      },
-      "exec-model-risk-2": {
-        "repositoryHealth": 10,
-        "canonicalCompleteness": 0,
-        "quality": 10,
-        "verification": 0,
-        "handoffReadiness": 8,
-        "total": 28
-      },
-      "exec-model-risk-0": {
-        "repositoryHealth": 10,
-        "canonicalCompleteness": 0,
-        "quality": 10,
-        "verification": 0,
-        "handoffReadiness": 8,
-        "total": 28
-      },
-      "validation": {
-        "repositoryHealth": 7,
-        "canonicalCompleteness": 0,
-        "quality": 5,
-        "verification": 10,
-        "handoffReadiness": 5,
-        "total": 27
+        "quality": 2,
+        "verification": 4,
+        "handoffReadiness": 3,
+        "total": 11
       }
     },
     "selected": {
-      "id": "exec-model-risk-1",
-      "title": "Resolve Architectural Risk: Client persists 4 distinct state write(s) to localStorage. Browse",
+      "id": "ai-handoff-validation",
+      "title": "Run AI Handoff Validation",
       "rank": 1,
-      "priorityScore": 100
+      "priorityScore": 10
     },
     "classification": "Consistent",
-    "reason": "Resolve Architectural Risk: Client persists 4 distinct state write(s) to localStorage. Browse is ranked #1 with priority 100 and total expected improvement +28."
+    "reason": "Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11."
   }
 }
