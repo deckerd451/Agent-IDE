@@ -182,6 +182,11 @@ export function contextSnapshotHash(value = '') {
   return `djb2-${hash.toString(16).padStart(8, '0')}`;
 }
 
+export function stableContextPackageHash(value = '') {
+  const normalized = value.replace(/^Generated:.*$/m, '').trim();
+  return normalized ? contextSnapshotHash(normalized) : undefined;
+}
+
 export function validationCompletionKey(record: Pick<ValidationCompletionRecord, 'repositoryPath' | 'workflowKey' | 'selectedIssueId' | 'contextPackageHash' | 'refreshTimestamp'>) {
   return [record.repositoryPath, record.workflowKey, record.selectedIssueId, record.contextPackageHash ?? record.refreshTimestamp ?? 'unknown-snapshot'].join('::');
 }

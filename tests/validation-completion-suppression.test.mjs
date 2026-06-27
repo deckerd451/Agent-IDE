@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chooseNextImprovementWithCandidates, contextSnapshotHash } from '../scripts/next-improvement.mjs';
+import { chooseNextImprovementWithCandidates, stableContextPackageHash } from '../scripts/next-improvement.mjs';
 
 const healthyQuality = {
   coverage: {
@@ -47,7 +47,7 @@ test('completed validation workflow suppresses same validation recommendation fo
       repositoryPath: '/tmp/repo',
       selectedIssueId: 'ai-handoff-validation',
       recommendationTitle: 'Run AI Handoff Validation',
-      contextPackageHash: contextSnapshotHash(contextPackage),
+      contextPackageHash: stableContextPackageHash(contextPackage),
     }],
   });
 
@@ -67,7 +67,7 @@ test('changed intelligence snapshot allows validation recommendation to reappear
       repositoryPath: '/tmp/repo',
       selectedIssueId: 'ai-handoff-validation',
       recommendationTitle: 'Run AI Handoff Validation',
-      contextPackageHash: contextSnapshotHash(completedContextPackage),
+      contextPackageHash: stableContextPackageHash(completedContextPackage),
     }],
   });
 

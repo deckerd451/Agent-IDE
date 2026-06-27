@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { sections, type Section } from './sections';
-import { advanceWorkflow, contextSnapshotHash, createWorkflow, validationCompletionStorageKey, workflowKey, workflowStateStorageKey, type ValidationCompletionRecord, type Workflow, type WorkflowState } from './workflow';
+import { advanceWorkflow, contextSnapshotHash, stableContextPackageHash, createWorkflow, validationCompletionStorageKey, workflowKey, workflowStateStorageKey, type ValidationCompletionRecord, type Workflow, type WorkflowState } from './workflow';
 
 type WorkflowDiagnostics = {
   lastPrimaryActionClicked: string;
@@ -1157,10 +1157,14 @@ export function App() {
     setIsRefreshing(true);
 
     try {
+      const completionsBeforeRefresh = readValidationCompletions();
+      console.log('[refresh:diagnostic] completion records before refresh:', JSON.stringify(completionsBeforeRefresh, null, 2));
+      const requestPayload = { repositoryPath, validationCompletions: completionsBeforeRefresh };
+      console.log('[refresh:diagnostic] request payload:', JSON.stringify(requestPayload, null, 2));
       const response = await fetch(new URL('/api/repository/refresh', serverBaseUrl), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repositoryPath, validationCompletions: readValidationCompletions() }),
+        body: JSON.stringify(requestPayload),
       });
 
       if (!response.ok || !response.body) {
@@ -1295,7 +1299,7 @@ export function App() {
           repositoryPath: connectedPath || repositoryPath,
           selectedIssueId: task?.id ?? 'ai-handoff-validation',
           recommendationTitle: controlPlane.recommendation.title,
-          contextPackageHash: contextPackage ? contextSnapshotHash(contextPackage) : undefined,
+          contextPackageHash: stableContextPackageHash(contextPackage),
           refreshTimestamp: controlPlane.status.timestamp,
         });
       }
