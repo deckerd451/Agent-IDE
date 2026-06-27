@@ -652,12 +652,19 @@ function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onAdv
   );
 }
 
-function ControlPlaneDashboard({ data, progressSummary, workflow, onOpenWorkItem, onRefresh, onViewStrategy }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; repositoryPath?: string; onOpenWorkItem: () => void; onRefresh: () => void; onViewStrategy: () => void }) {
+function ControlPlaneDashboard({ data, progressSummary, workflow, onOpenWorkItem, onRefresh, onViewStrategy, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; repositoryPath?: string; onOpenWorkItem: () => void; onRefresh: () => void; onViewStrategy: () => void }) {
   if (!data) return <WelcomeDashboard />;
-  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} onOpenWorkItem={onOpenWorkItem} onRefresh={onRefresh} onViewStrategy={onViewStrategy} />;
+  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} repositoryPath={repositoryPath} onOpenWorkItem={onOpenWorkItem} onRefresh={onRefresh} onViewStrategy={onViewStrategy} />;
 }
 
-function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenWorkItem, onRefresh, onViewStrategy }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; onOpenWorkItem: () => void; onRefresh: () => void; onViewStrategy: () => void }) {
+function primaryHomepageAction(packageType?: ControlPlaneRecommendation['packageType'], completionState?: Workflow['completionState']) {
+  if (completionState === 'Ready To Refresh' || completionState === 'Complete') return 'See Next Recommendation';
+  if (packageType === 'product-decision') return 'Review Decision';
+  if (packageType === 'validation-experiment') return 'Generate Validation Prompt';
+  return 'Generate Implementation Prompt';
+}
+
+function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenWorkItem, onRefresh, onViewStrategy, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; repositoryPath?: string; onOpenWorkItem: () => void; onRefresh: () => void; onViewStrategy: () => void }) {
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
       return {
@@ -699,12 +706,11 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenW
   const afterThis = firstCandidate(data, 2);
   const diffEntries = meaningfulDiffEntries(data.diff);
   const taskTitle = humanTaskTitle(topWork, data.recommendation.title);
-  const taskAction = actionForTask(topWork, data.recommendation, data.quality);
-  const workMetaRows = [
-    ['What you need to do', taskAction],
-    ['Expected impact', topWork ? `+${topWork.expectedImprovement.total}` : 'See package'],
-    ['Suggested next step', hasUsefulValue(topWork?.expectedCompletionTarget) ? topWork?.expectedCompletionTarget : null],
-  ].filter(([, value]) => hasUsefulValue(value));
+  const primaryAction = primaryHomepageAction(data.recommendation.packageType, workflow?.completionState);
+  const isReadyToRefresh = primaryAction === 'See Next Recommendation';
+  const repositoryName = data.status.repositoryName || repositoryPath?.split(/[\\/]/).filter(Boolean).pop() || 'Connected repository';
+  const confidence = data.status.currentConfidence || `${data.quality?.confidence.score ?? data.verification?.score ?? 0}%`;
+  const estimatedTime = workflow ? `${Math.max(1, workflow.estimatedRemainingSteps) * 4} minutes` : 'About 4 minutes';
   const afterThisRows = [
     ['Expected impact', `+${afterThis?.expectedImprovement.total ?? 0}`],
     ['Why this matters', afterThis?.reason],
@@ -713,23 +719,27 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenW
 
   return (
     <div className="controlPlane compactDashboard">
-      <section className="todayWorkCard" aria-label="Today's Work">
+      <section className="todayWorkCard singleRecommendationCard" aria-label="Next Repository Improvement">
         <div>
-          <p className="kicker">Today's Recommendation</p>
-          <h2>{workflow?.completionState === 'Ready To Refresh' ? "Today's Work Complete" : taskTitle}</h2>
-          <p><b>Why this helps:</b> {workflow?.goal ?? (topWork?.reason ?? data.recommendation.whyItMatters)}</p>
-          <div className="workMetaGrid">
-            <div><small>Repository Status</small><strong>{outcomeWorkflowText(workflow?.currentStep.label) || taskAction}</strong></div>
-            <div><small>Estimated Time</small><strong>{workflow ? `${Math.max(1, workflow.estimatedRemainingSteps) * 4} minutes` : 'About 4 minutes'}</strong></div>
-            <div><small>Why It Matters</small><strong>{topWork?.reason ?? data.recommendation.whyItMatters}</strong></div>
-            <div><small>Primary Action</small><strong>{workflow?.completionState === 'Ready To Refresh' ? 'See Next Recommendation' : (outcomeWorkflowText(workflow?.currentPrimaryAction) || 'Open Today\'s Work')}</strong></div>
-            {workMetaRows.slice(1).map(([label, value]) => <div key={label ?? String(value)}><small>{label}</small><strong>{renderInlineMarkdown(String(value))}</strong></div>)}
+          <p className="kicker">Next Improvement</p>
+          <div className="repositoryIdentity">
+            <span>{repositoryName}</span>
+            <span>{workflow?.completionState === 'Ready To Refresh' ? 'Next improvement ready' : 'Repository improving'}</span>
+            <span>{confidence} confidence</span>
+          </div>
+          <h2>{isReadyToRefresh ? 'Next recommendation is ready' : taskTitle}</h2>
+          <p className="recommendationReason">{topWork?.reason ?? data.recommendation.whyItMatters}</p>
+          <div className="singleRecommendationMeta" aria-label="Recommendation summary">
+            <div><small>Repository</small><strong>{repositoryName}</strong></div>
+            <div><small>Recommendation</small><strong>{isReadyToRefresh ? 'Refresh repository intelligence' : taskTitle}</strong></div>
+            <div><small>Estimated Time</small><strong>{estimatedTime}</strong></div>
+            <div><small>Expected Impact</small><strong>{topWork ? `+${topWork.expectedImprovement.total}` : 'Ready to generate'}</strong></div>
           </div>
         </div>
-        <button className="primaryCta" onClick={workflow?.completionState === 'Ready To Refresh' ? onRefresh : onOpenWorkItem} type="button">{workflow?.completionState === 'Ready To Refresh' ? 'See Next Recommendation' : "Open Today's Work"}</button>
+        <button className="primaryCta" onClick={isReadyToRefresh ? onRefresh : onOpenWorkItem} type="button">{primaryAction}</button>
       </section>
 
-
+      <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced</summary>
       {afterThis && (
         <section className="controlCard afterThisCard" aria-label="After This">
           <p className="kicker">After This</p>
@@ -761,7 +771,6 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenW
 
       <section className="controlCard handoffCard quickAiActions" aria-label="Quick Actions"><p className="kicker">Quick Actions</p><div className="handoffGrid"><button onClick={workflow?.completionState === 'Ready To Refresh' ? onRefresh : onOpenWorkItem} type="button">{workflow?.completionState === 'Ready To Refresh' ? 'See Next Recommendation' : 'Open Current Workspace'}</button><button className="secondaryCta" onClick={onViewStrategy} type="button">View Strategy</button></div></section>
 
-      <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced Repository Intelligence</summary>
             <details className="controlCard disclosureCard" aria-label="Repository Health"><summary>Repository Health</summary><div className="dashboardGrid statusGrid">
         {statusCards.map(([label, value]) => <article className="metricCard" key={String(label)}><small>{label}</small><strong>{value || 'Unknown'}</strong></article>)}
       </div></details>
