@@ -11,7 +11,7 @@ Evidence: .ai/goals.md
 ## Strategic Differentiator
 Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 
-Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md
+Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md, docs/repository-improvement-product-redesign.md
 ## Current Product Bet
 The repository is currently focused on making repository understanding the primary surface of Agent IDE.
 
@@ -36,6 +36,7 @@ High
 - .ai/architecture.md
 - .ai/decisions.md
 - README.md
+- docs/repository-improvement-product-redesign.md
 ## Strategy Warnings
 - No strategy leakage detected.
 - No implementation leakage detected.

@@ -26,6 +26,12 @@ Do not build broad automation before repository understanding is consistently re
 - Control Plane reports repository handoff readiness as Ready.
 - Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections.
 
+## Manual Goals
+- Product intent: Nearify should help people transform real-world encounters into lasting professional relationships through accurate relationship memory and timely follow-up recommendations.
+- Current focus: Make repository understanding the primary surface of Agent IDE for Nearify handoffs.
+- Success criteria: Manual Goals completeness reaches 100%, Canonical Completeness reports Manual Goals as Complete, and Repository Intelligence regenerates successfully with Verification Status remaining Verified with zero failures.
+- Long-term vision: Nearify should become the world's most trusted relationship intelligence system, helping people transform real-world encounters into lasting professional relationships through accurate relationship memory, timely follow-up recommendations, and continuously improving relationship intelligence.
+
 ## Active
 
 - Make repository understanding the primary surface of Agent IDE.
@@ -49,7 +55,7 @@ Evidence: .ai/goals.md
 ## Strategic Differentiator
 Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 
-Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md
+Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md, docs/repository-improvement-product-redesign.md
 ## Current Product Bet
 The repository is currently focused on making repository understanding the primary surface of Agent IDE.
 
@@ -74,6 +80,7 @@ High
 - .ai/architecture.md
 - .ai/decisions.md
 - README.md
+- docs/repository-improvement-product-redesign.md
 ## Strategy Warnings
 - No strategy leakage detected.
 - No implementation leakage detected.
@@ -82,7 +89,7 @@ High
 
 # Architecture
 
-Last Audit: 2026-06-25T20:50:54.660Z
+Last Audit: 2026-06-27T21:12:47.221Z
 Confidence: 95%
 
 ## Product Thesis
@@ -136,6 +143,7 @@ Current Focus Evidence:
 - TypeScript
 
 ### Major Areas
+- docs/
 - scripts/
 - src/
 - tests/
@@ -163,7 +171,7 @@ Current Focus Evidence:
 
 # Backlog
 
-Last Audit: 2026-06-25T20:50:54.879Z
+Last Audit: 2026-06-27T21:12:47.377Z
 Confidence: 95%
 
 ## High Priority
@@ -201,12 +209,12 @@ Confidence: 95%
 # Validation
 
 ## Last Validation
-- 2026-06-25T20:51:02.194Z
+- 2026-06-27T21:13:13.073Z
 
 ## Confidence
-- Medium
+- Low
 
-## Overall Status: Passing
+## Overall Status: Failing
 
 ## Commands Run
 - `npm run build`
@@ -214,42 +222,43 @@ Confidence: 95%
 
 ## Results
 ### npm run build
-- Status: PASS
-- Exit code: 0
-- Duration: 4.0s
+- Status: FAIL
+- Exit code: 1
+- Duration: 1.4s
 - Output summary:
 ```text
-  npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
-  > agent-ide@0.1.0 build
-  > tsc -b && vite build
-  vite v8.1.0 building client environment for production...
-  transforming...✓ 17 modules transformed.
-  rendering chunks...
-  computing gzip size...
-  dist/index.html                   0.39 kB │ gzip:  0.26 kB
-  dist/assets/index-C7_sdjre.css   11.47 kB │ gzip:  2.80 kB
-  dist/assets/index-ec-tdO1p.js   214.50 kB │ gzip: 66.38 kB
-  ✓ built in 356ms
+  src/App.tsx(1501,177): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1501,292): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1504,139): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1504,181): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1504,193): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1504,198): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1507,7): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1508,5): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/main.tsx(1,28): error TS2307: Cannot find module 'react' or its corresponding type declarations.
+  src/main.tsx(2,28): error TS2307: Cannot find module 'react-dom/client' or its corresponding type declarations.
+  src/main.tsx(4,8): error TS2882: Cannot find module or type declarations for side-effect import of './styles.css'.
+  src/main.tsx(7,3): error TS2875: This JSX tag requires the module path 'react/jsx-runtime' to exist, but none could be found. Make sure you have types for the appropriate package installed.
 ```
 
 ### npm run test
 - Status: PASS
 - Exit code: 0
-- Duration: 3.2s
+- Duration: 2.6s
 - Output summary:
 ```text
-    ---
-    duration_ms: 176.792634
+    duration_ms: 0.273195
+    type: 'test'
     ...
-  1..55
-  # tests 55
+  1..160
+  # tests 160
   # suites 0
-  # pass 55
+  # pass 160
   # fail 0
   # cancelled 0
   # skipped 0
   # todo 0
-  # duration_ms 2685.224
+  # duration_ms 2354.092571
 ```
 
 ## Xcode Project Validation
@@ -268,8 +277,8 @@ Confidence: 95%
 
 # Repository Health
 
-Last Audit: 2026-06-25T20:50:12.541Z
-Overall Health: Needs Attention
+Last Audit: 2026-06-26T13:59:08.292Z
+Overall Health: Healthy
 Confidence: High
 
 ## Intelligence Completeness
@@ -282,6 +291,27 @@ Confidence: High
 - Agents: Present
 - Code: Present
 - Architect Prompt: Present
+
+### Canonical Intelligence
+- Overall: Partial (83%)
+- Manual Goals: Complete (100%)
+- Product Thesis: Complete (100%)
+- Current Focus: Complete (100%)
+- Success Criteria: Strong (100%)
+- Current Product Bet: Missing (0%)
+  - Missing: Current Product Bet
+- What Not To Build: Complete (100%)
+
+### Evidence Synthesis
+- Evidence Synthesis: Strong
+- Canonical fields supported by repository evidence: 2 / 2
+
+## Evidence Lineage
+- Canonical Sources: Goals, README
+- Independent Evidence: Architecture, Decision Log, Validation
+- Generated Evidence: Context Package, Repository Health, Strategy
+- Confidence calculation: Canonical and independent evidence groups increase confidence; generated confirmations verify consistency but do not increase confidence.
+- Evidence ancestry: Generated artifacts descend from canonical owner intent plus independent repository evidence.
 
 ## Quality Signals
 - Product thesis present
@@ -305,14 +335,68 @@ Confidence: High
 - Validation confidence Medium
 - Xcode validation metadata not detected
 - Canonical editing target .ai/goals.md
-- Manual sections not detected in canonical goals
+- Manual sections preserved in canonical goals
+- Canonical Intelligence Partial (83%)
+- Manual Goals Complete (100%)
+- Evidence Synthesis Strong
+- Canonical fields supported by repository evidence 2 / 2
 - Generated artifacts are regenerated, not manually edited.
 
 ## Risks
-- Missing manual goals
+- No repository health risks detected.
+
+## Repository Intelligence Explanation
+### Evidence Synthesis: Current Product Bet
+- Sources: Strategy
+- Confidence: None
+- Independent evidence: None
+- Generated confirmations: Strategy
+- Suggested Canonical Wording: The repository is currently focused on making repository understanding the primary surface of Agent IDE.
+- Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
+
+### Evidence Synthesis: Strategic Differentiator
+- Sources: Strategy
+- Confidence: None
+- Independent evidence: None
+- Generated confirmations: Strategy
+- Suggested Canonical Wording: Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
+- Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
+
+- No repository health findings require explanation.
+
+## AI Handoff Validation
+- Overall score: 88/100 (Ready)
+
+### Recoverable Information
+- Repository explanation
+- Product thesis
+- Current product bet
+- Current focus
+- Strategy
+- Architecture
+- Decision ranking
+- Highest-priority issue
+- Next implementation step
+- Validation status
+- Canonical ownership
+- Confidence explanation
+
+### Hidden Information
+- None detected.
+
+### Contradictions
+- None detected.
+
+### Missing Explanations
+- Decision ranking rationale
+- Recommendation rationale
+
+### Suggested Improvements
+- Add decision ranking rationale to generated explanations.
+- Add recommendation rationale to generated explanations.
 
 ## Recommended Next Step
-Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
+Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
 
 ## Manual Health Notes
 
@@ -325,7 +409,7 @@ Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and s
 
 # Decisions
 
-Last Audit: 2026-06-25T20:51:02.345Z
+Last Audit: 2026-06-27T21:12:52.312Z
 Confidence: 95%
 
 ## Active Decisions
@@ -437,6 +521,12 @@ Do not build broad automation before repository understanding is consistently re
 - Control Plane reports repository handoff readiness as Ready.
 - Canonical intelligence consistency has no avoidable contradictions or duplicate generated sections.
 
+## Manual Goals
+- Product intent: Nearify should help people transform real-world encounters into lasting professional relationships through accurate relationship memory and timely follow-up recommendations.
+- Current focus: Make repository understanding the primary surface of Agent IDE for Nearify handoffs.
+- Success criteria: Manual Goals completeness reaches 100%, Canonical Completeness reports Manual Goals as Complete, and Repository Intelligence regenerates successfully with Verification Status remaining Verified with zero failures.
+- Long-term vision: Nearify should become the world's most trusted relationship intelligence system, helping people transform real-world encounters into lasting professional relationships through accurate relationship memory, timely follow-up recommendations, and continuously improving relationship intelligence.
+
 ## Active
 
 - Make repository understanding the primary surface of Agent IDE.
@@ -451,7 +541,7 @@ Do not build broad automation before repository understanding is consistently re
 ```markdown
 # Architecture
 
-Last Audit: 2026-06-25T20:50:54.660Z
+Last Audit: 2026-06-27T21:12:47.221Z
 Confidence: 95%
 
 ## Product Thesis
@@ -505,6 +595,7 @@ Current Focus Evidence:
 - TypeScript
 
 ### Major Areas
+- docs/
 - scripts/
 - src/
 - tests/
@@ -545,7 +636,7 @@ Evidence: .ai/goals.md
 ## Strategic Differentiator
 Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 
-Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md
+Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md, docs/repository-improvement-product-redesign.md
 ## Current Product Bet
 The repository is currently focused on making repository understanding the primary surface of Agent IDE.
 
@@ -570,6 +661,7 @@ High
 - .ai/architecture.md
 - .ai/decisions.md
 - README.md
+- docs/repository-improvement-product-redesign.md
 ## Strategy Warnings
 - No strategy leakage detected.
 - No implementation leakage detected.
@@ -580,7 +672,7 @@ High
 ```markdown
 # Backlog
 
-Last Audit: 2026-06-25T20:50:54.879Z
+Last Audit: 2026-06-27T21:12:47.377Z
 Confidence: 95%
 
 ## High Priority
@@ -619,7 +711,7 @@ Confidence: 95%
 ```markdown
 # Decisions
 
-Last Audit: 2026-06-25T20:51:02.345Z
+Last Audit: 2026-06-27T21:12:52.312Z
 Confidence: 95%
 
 ## Active Decisions
@@ -699,12 +791,12 @@ Generated decision records should include context, reason, and consequences, and
 # Validation
 
 ## Last Validation
-- 2026-06-25T20:51:02.194Z
+- 2026-06-27T21:13:13.073Z
 
 ## Confidence
-- Medium
+- Low
 
-## Overall Status: Passing
+## Overall Status: Failing
 
 ## Commands Run
 - `npm run build`
@@ -712,42 +804,43 @@ Generated decision records should include context, reason, and consequences, and
 
 ## Results
 ### npm run build
-- Status: PASS
-- Exit code: 0
-- Duration: 4.0s
+- Status: FAIL
+- Exit code: 1
+- Duration: 1.4s
 - Output summary:
 ```text
-  npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
-  > agent-ide@0.1.0 build
-  > tsc -b && vite build
-  vite v8.1.0 building client environment for production...
-  transforming...✓ 17 modules transformed.
-  rendering chunks...
-  computing gzip size...
-  dist/index.html                   0.39 kB │ gzip:  0.26 kB
-  dist/assets/index-C7_sdjre.css   11.47 kB │ gzip:  2.80 kB
-  dist/assets/index-ec-tdO1p.js   214.50 kB │ gzip: 66.38 kB
-  ✓ built in 356ms
+  src/App.tsx(1501,177): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1501,292): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1504,139): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1504,181): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1504,193): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1504,198): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1507,7): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/App.tsx(1508,5): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+  src/main.tsx(1,28): error TS2307: Cannot find module 'react' or its corresponding type declarations.
+  src/main.tsx(2,28): error TS2307: Cannot find module 'react-dom/client' or its corresponding type declarations.
+  src/main.tsx(4,8): error TS2882: Cannot find module or type declarations for side-effect import of './styles.css'.
+  src/main.tsx(7,3): error TS2875: This JSX tag requires the module path 'react/jsx-runtime' to exist, but none could be found. Make sure you have types for the appropriate package installed.
 ```
 
 ### npm run test
 - Status: PASS
 - Exit code: 0
-- Duration: 3.2s
+- Duration: 2.6s
 - Output summary:
 ```text
-    ---
-    duration_ms: 176.792634
+    duration_ms: 0.273195
+    type: 'test'
     ...
-  1..55
-  # tests 55
+  1..160
+  # tests 160
   # suites 0
-  # pass 55
+  # pass 160
   # fail 0
   # cancelled 0
   # skipped 0
   # todo 0
-  # duration_ms 2685.224
+  # duration_ms 2354.092571
 ```
 
 ## Xcode Project Validation
@@ -796,8 +889,8 @@ Generated decision records should include context, reason, and consequences, and
 ```markdown
 # Repository Health
 
-Last Audit: 2026-06-25T20:50:12.541Z
-Overall Health: Needs Attention
+Last Audit: 2026-06-26T13:59:08.292Z
+Overall Health: Healthy
 Confidence: High
 
 ## Intelligence Completeness
@@ -810,6 +903,27 @@ Confidence: High
 - Agents: Present
 - Code: Present
 - Architect Prompt: Present
+
+### Canonical Intelligence
+- Overall: Partial (83%)
+- Manual Goals: Complete (100%)
+- Product Thesis: Complete (100%)
+- Current Focus: Complete (100%)
+- Success Criteria: Strong (100%)
+- Current Product Bet: Missing (0%)
+  - Missing: Current Product Bet
+- What Not To Build: Complete (100%)
+
+### Evidence Synthesis
+- Evidence Synthesis: Strong
+- Canonical fields supported by repository evidence: 2 / 2
+
+## Evidence Lineage
+- Canonical Sources: Goals, README
+- Independent Evidence: Architecture, Decision Log, Validation
+- Generated Evidence: Context Package, Repository Health, Strategy
+- Confidence calculation: Canonical and independent evidence groups increase confidence; generated confirmations verify consistency but do not increase confidence.
+- Evidence ancestry: Generated artifacts descend from canonical owner intent plus independent repository evidence.
 
 ## Quality Signals
 - Product thesis present
@@ -833,14 +947,68 @@ Confidence: High
 - Validation confidence Medium
 - Xcode validation metadata not detected
 - Canonical editing target .ai/goals.md
-- Manual sections not detected in canonical goals
+- Manual sections preserved in canonical goals
+- Canonical Intelligence Partial (83%)
+- Manual Goals Complete (100%)
+- Evidence Synthesis Strong
+- Canonical fields supported by repository evidence 2 / 2
 - Generated artifacts are regenerated, not manually edited.
 
 ## Risks
-- Missing manual goals
+- No repository health risks detected.
+
+## Repository Intelligence Explanation
+### Evidence Synthesis: Current Product Bet
+- Sources: Strategy
+- Confidence: None
+- Independent evidence: None
+- Generated confirmations: Strategy
+- Suggested Canonical Wording: The repository is currently focused on making repository understanding the primary surface of Agent IDE.
+- Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
+
+### Evidence Synthesis: Strategic Differentiator
+- Sources: Strategy
+- Confidence: None
+- Independent evidence: None
+- Generated confirmations: Strategy
+- Suggested Canonical Wording: Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
+- Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
+
+- No repository health findings require explanation.
+
+## AI Handoff Validation
+- Overall score: 88/100 (Ready)
+
+### Recoverable Information
+- Repository explanation
+- Product thesis
+- Current product bet
+- Current focus
+- Strategy
+- Architecture
+- Decision ranking
+- Highest-priority issue
+- Next implementation step
+- Validation status
+- Canonical ownership
+- Confidence explanation
+
+### Hidden Information
+- None detected.
+
+### Contradictions
+- None detected.
+
+### Missing Explanations
+- Decision ranking rationale
+- Recommendation rationale
+
+### Suggested Improvements
+- Add decision ranking rationale to generated explanations.
+- Add recommendation rationale to generated explanations.
 
 ## Recommended Next Step
-Fill in `.ai/goals.md` under `## Manual Goals` with current product intent and success criteria.
+Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
 
 ## Manual Health Notes
 ```
