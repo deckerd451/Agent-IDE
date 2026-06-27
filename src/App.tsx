@@ -403,6 +403,22 @@ function buildValidationPrompt(contextPackage: string) {
   return `${validationPromptInstructions}\n\n---\n\n${contextPackage}`;
 }
 
+function workspaceTypeForTask(recommendation: ControlPlaneRecommendation, candidate?: DecisionCandidate | null) {
+  if (recommendation.packageType === 'product-decision') return 'Product Decision';
+  if (recommendation.packageType === 'validation-experiment' || candidate?.id === 'ai-handoff-validation') return 'Validation';
+  if (/documentation|docs/i.test(`${candidate?.category ?? ''} ${candidate?.title ?? ''}`)) return 'Documentation';
+  if (/investigat|unknown|risk|explain/i.test(`${candidate?.category ?? ''} ${candidate?.title ?? ''} ${candidate?.ownerAction ?? ''}`)) return 'Investigation';
+  return 'Implementation';
+}
+
+function primaryActionForWorkspace(type: string) {
+  if (type === 'Product Decision') return 'Apply Canonical Edit';
+  if (type === 'Validation') return 'Start Validation';
+  if (type === 'Investigation') return 'Begin Investigation';
+  if (type === 'Documentation') return 'Open Documentation Task';
+  return 'Launch Builder';
+}
+
 function hasUsefulValue(value?: string | null) {
   return Boolean(value && !/^(not specified|none detected|none|n\/?a)$/i.test(value.trim()));
 }
@@ -485,7 +501,7 @@ function CanonicalEditPanel({ proposal, repositoryPath }: { proposal: CanonicalE
       <ul>{proposal.supportingEvidence.map((item) => <li key={item}>{item}</li>)}</ul>
       <h3>Repository Owner Notes</h3>
       <p>{proposal.ownerNotes || 'Repository owner reviews the deterministic first draft, edits it if desired, and approves the canonical change before Agent IDE writes .ai/goals.md.'}</p>
-      <button disabled={isApplyingCanonicalEdit || !repositoryPath || !canonicalEditText.trim()} onClick={() => void applyCanonicalEdit()} type="button">{isApplyingCanonicalEdit ? 'Applying…' : 'Apply Canonical Edit'}<span className="visuallyHidden">Apply Edit</span></button>
+      <button className="primaryCta" disabled={isApplyingCanonicalEdit || !repositoryPath || !canonicalEditText.trim()} onClick={() => void applyCanonicalEdit()} type="button">{isApplyingCanonicalEdit ? 'Applying…' : 'Apply Canonical Edit'}<span className="visuallyHidden">Apply Edit</span></button>
       {canonicalEditStatus && <div className="summary success">{canonicalEditStatus}</div>}
     </section>
   );
@@ -524,12 +540,13 @@ function ValidationWorkspace({ data, documents, task, onFinish }: { data: Contro
       </section>
 
       <section className="controlCard implementationWorkflow" aria-label="Validation Actions">
-        <h2>Validation Actions</h2>
+        <h2>Validation Checklist</h2>
+        <ol className="workspaceChecklist"><li>Copy Context Package</li><li>Copy Validation Prompt</li><li>Open Fresh AI</li><li>Paste</li><li>Review Answer</li><li>Finish Validation</li><li>Refresh Intelligence</li></ol>
         <div className="handoffGrid">
-          <button disabled={!validationPrompt} onClick={() => void copyText(validationPrompt)} type="button">Run Validation</button>
+          <button className="primaryCta" disabled={!validationPrompt} onClick={() => void copyText(validationPrompt)} type="button">Start Validation<span className="visuallyHidden">Run Validation</span></button>
           {promptActions.map(([label, content]) => <button disabled={!content} key={label} onClick={() => void copyText(content)} type="button">{label}</button>)}
         </div>
-        <details open><summary>Validation Prompt</summary><pre>{validationPrompt}</pre></details>
+        <details><summary>Validation Prompt</summary><pre>{validationPrompt}</pre></details>
         <details><summary>Context Package</summary><pre>{contextPackage}</pre></details>
       </section>
 
@@ -542,7 +559,7 @@ function ValidationWorkspace({ data, documents, task, onFinish }: { data: Contro
           <div><small>Completed Validation</small><strong>{task?.title ?? data.recommendation.title}</strong></div>
           <div><small>Next Task</small><strong>Return to Homepage → Refresh Intelligence → Advance Today's Work</strong></div>
         </div>
-        <button className="primaryCta" onClick={onFinish} type="button">Finish Validation</button>
+        <button onClick={onFinish} type="button">Finish Validation</button>
       </section>
     </>
   );
@@ -552,6 +569,8 @@ function WorkItemPage({ data, repositoryPath, documents, onBack, onFinish }: { d
   const task = firstCandidate(data, 1);
   const title = humanTaskTitle(task, data.recommendation.title);
   const canonicalEditProposal = buildCanonicalEditProposal(data);
+  const workspaceType = workspaceTypeForTask(data.recommendation, task);
+  const primaryAction = primaryActionForWorkspace(workspaceType);
   const isProductDecision = data.recommendation.packageType === 'product-decision';
   const isValidationExperiment = data.recommendation.packageType === 'validation-experiment';
   const affectedFile = filePathForTask(task, data.recommendation);
@@ -568,7 +587,7 @@ function WorkItemPage({ data, repositoryPath, documents, onBack, onFinish }: { d
     <div className="controlPlane workItemPage">
       <section className="todayWorkCard workItemHero" aria-label="Work Item">
         <div>
-          <p className="kicker">Work Item · Status: Not Started</p>
+          <p className="kicker">{workspaceType} Workspace · Status: Not Started</p>
           <h2>{title}</h2>
           <p><b>Why this task matters:</b> {task?.reason ?? data.recommendation.whyItMatters}</p>
           <div className="workMetaGrid">
@@ -579,11 +598,11 @@ function WorkItemPage({ data, repositoryPath, documents, onBack, onFinish }: { d
             <div><small>Repository owner vs AI responsibility</small><strong>{isProductDecision ? 'Repository owner approves canonical intent; AI does not infer product intent.' : isValidationExperiment ? 'Fresh AI validates repository intelligence from generated context only; no repository intelligence changes.' : 'AI may implement using prompts; repository owner reviews changes.'}</strong></div>
           </div>
         </div>
-        <button className="primaryCta" onClick={onBack} type="button">Back to Work Queue</button>
+        <button className="secondaryCta" onClick={onBack} type="button">Back to Work Queue</button>
       </section>
 
       {isValidationExperiment ? <ValidationWorkspace data={data} documents={documents} task={task} onFinish={onFinish} /> : <>
-        <section className="controlCard"><h2>Acceptance Criteria</h2>{acceptance.length ? <ul>{acceptance.map((item) => <li key={item}>{item}</li>)}</ul> : <p>{data.recommendation.explanation}</p>}</section>
+        <section className="controlCard"><h2>{workspaceType} Checklist</h2><ol className="workspaceChecklist"><li>Review proposal</li><li>Edit proposal or implementation plan</li><li>Approve</li><li>{primaryAction}</li><li>Refresh Intelligence</li><li>Next Task</li></ol><h2>Acceptance Criteria</h2>{acceptance.length ? <ul>{acceptance.map((item) => <li key={item}>{item}</li>)}</ul> : <p>{data.recommendation.explanation}</p>}</section>
         <section className="controlCard"><h2>Supporting Evidence</h2><p>{task?.evidence ?? data.recommendation.evidenceSource}</p></section>
         <section className="controlCard"><h2>Evidence Lineage</h2>{lineage?.length ? <ul>{lineage.slice(0, 8).map((item) => <li key={`${item.file}-${item.group}`}><strong>{item.group}</strong> — {item.file} · {item.ancestry}</li>)}</ul> : <p>No lineage artifact loaded for this task.</p>}</section>
 
@@ -593,23 +612,23 @@ function WorkItemPage({ data, repositoryPath, documents, onBack, onFinish }: { d
         <section className="controlCard implementationWorkflow" aria-label="AI implementation workflow">
           <h2>AI Implementation Workflow</h2>
           <div className="workMetaGrid"><div><small>Affected files</small><strong>{affectedFile ? <code>{affectedFile}</code> : 'See context package and builder prompt'}</strong></div></div>
-          <div className="handoffGrid"><button disabled={!prompts[0][1]} onClick={() => void copyText(prompts[0][1])} type="button">Launch Builder</button>{prompts.map(([label, content]) => <button disabled={!content} key={label} onClick={() => void copyText(content)} type="button">Copy {label}</button>)}</div>
+          <div className="handoffGrid"><button disabled={!prompts[0][1]} onClick={() => void copyText(prompts[0][1])} type="button">{primaryAction}</button>{prompts.map(([label, content]) => <button disabled={!content} key={label} onClick={() => void copyText(content)} type="button">Copy {label}</button>)}</div>
           {prompts.map(([label, content]) => content ? <details key={label}><summary>{label}</summary><pre>{content}</pre></details> : null)}
         </section>
         )}
 
-        <section className="controlCard finishWorkCard"><h2>Finish Work</h2><p>Finish Work returns to the homepage and recommends Refresh Intelligence. It does not modify the repository or regenerate intelligence.</p><button className="primaryCta" onClick={onFinish} type="button">Finish Work</button></section>
+        <section className="controlCard finishWorkCard"><h2>Finish Work</h2><p>Finish Work returns to the homepage and recommends Refresh Intelligence. It does not modify the repository or regenerate intelligence.</p><button onClick={onFinish} type="button">Finish Work</button></section>
       </>}
     </div>
   );
 }
 
-function ControlPlaneDashboard({ data, progressSummary, repositoryPath, onOpenWorkItem }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; repositoryPath?: string; onOpenWorkItem: () => void }) {
+function ControlPlaneDashboard({ data, progressSummary, onOpenWorkItem, onRefresh, onViewStrategy }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; repositoryPath?: string; onOpenWorkItem: () => void; onRefresh: () => void; onViewStrategy: () => void }) {
   if (!data) return <WelcomeDashboard />;
-  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} repositoryPath={repositoryPath} onOpenWorkItem={onOpenWorkItem} />;
+  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} onOpenWorkItem={onOpenWorkItem} onRefresh={onRefresh} onViewStrategy={onViewStrategy} />;
 }
 
-function ControlPlaneDashboardContent({ data, progressSummary, repositoryPath, onOpenWorkItem }: { data: ControlPlane; progressSummary?: ProgressSummary | null; repositoryPath?: string; onOpenWorkItem: () => void }) {
+function ControlPlaneDashboardContent({ data, progressSummary, onOpenWorkItem, onRefresh, onViewStrategy }: { data: ControlPlane; progressSummary?: ProgressSummary | null; onOpenWorkItem: () => void; onRefresh: () => void; onViewStrategy: () => void }) {
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
       return {
@@ -649,11 +668,6 @@ function ControlPlaneDashboardContent({ data, progressSummary, repositoryPath, o
   ];
   const packageLabels = [
     ['context', 'Copy Context Package'],
-    ['architect', 'Copy Architect Prompt'],
-    ['builder', 'Copy Builder Prompt'],
-    ['reviewer', 'Copy Reviewer Prompt'],
-    ['debugger', 'Copy Debugger Prompt'],
-    ['product-decision', 'Copy Product Decision Package'],
   ];
   const topWork = firstCandidate(data, 1);
   const afterThis = firstCandidate(data, 2);
@@ -699,26 +713,27 @@ function ControlPlaneDashboardContent({ data, progressSummary, repositoryPath, o
         </section>
       )}
 
-      <section className="controlCard handoffCard quickAiActions" aria-label="Quick AI Actions"><h2>Quick AI Actions</h2><p>Start from Today's Work, then hand the deterministic package to the right AI role.</p><div className="handoffGrid">{packageLabels.map(([key, label]) => <button disabled={!data.packages[key] && key !== 'product-decision'} key={key} onClick={() => void copyText(key === 'product-decision' ? data.recommendation.prompt : (data.packages[key] ?? ''))} type="button">{label}</button>)}</div></section>
+      <section className="controlCard handoffCard quickAiActions" aria-label="Quick Actions"><p className="kicker">Quick Actions</p><div className="handoffGrid"><button onClick={onRefresh} type="button">Refresh Intelligence</button><button onClick={onOpenWorkItem} type="button">Open Current Workspace</button><button onClick={onViewStrategy} type="button">View Strategy</button>{packageLabels.map(([key, label]) => <button disabled={!data.packages[key]} key={key} onClick={() => void copyText(data.packages[key] ?? '')} type="button">{label}</button>)}</div></section>
 
       {progressSummary && (
         <section className="controlCard progressSummaryCard" aria-label="Refresh progress summary">
-          <h2>Refresh Progress</h2>
+          <p className="kicker">Recent Progress</p>
           {!progressSummary.hasBaseline ? <p>This is your first refresh. Progress will be tracked after your next completed task.</p> : <>
             <div className="qualityGrid">
-              <div><small>Completed task</small><strong>{progressSummary.completedTask}</strong></div>
-              <div><small>Repository quality delta</small><strong>{progressSummary.repositoryQualityDelta}</strong></div>
+              <div><small>Completed</small><strong>✓ {progressSummary.completedTask}</strong></div>
+              <div><small>Repository Quality</small><strong>{progressSummary.repositoryQualityDelta}</strong></div>
               <div><small>Confidence delta</small><strong>{progressSummary.confidenceDelta}</strong></div>
               <div><small>Verification delta</small><strong>{progressSummary.verificationDelta}</strong></div>
               <div><small>AI Handoff delta</small><strong>{progressSummary.aiHandoffDelta || 'No baseline'}</strong></div>
-              <div><small>Current top priority</small><strong>{humanTaskTitle(topWork, progressSummary.currentTopPriority)}</strong></div>
+              <div><small>Next</small><strong>{humanTaskTitle(topWork, progressSummary.currentTopPriority)}</strong></div>
             </div>
             <div className="answerGrid"><div><h2>Newly resolved tasks</h2>{progressSummary.newlyResolvedIssues.length ? <ul>{progressSummary.newlyResolvedIssues.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div><div><h2>New tasks</h2>{progressSummary.newlyIntroducedIssues.length ? <ul>{progressSummary.newlyIntroducedIssues.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div></div>
           </>}
         </section>
       )}
 
-      <details className="controlCard disclosureCard" aria-label="Repository Health"><summary>Repository Health</summary><div className="dashboardGrid statusGrid">
+      <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced Repository Intelligence</summary>
+            <details className="controlCard disclosureCard" aria-label="Repository Health"><summary>Repository Health</summary><div className="dashboardGrid statusGrid">
         {statusCards.map(([label, value]) => <article className="metricCard" key={String(label)}><small>{label}</small><strong>{value || 'Unknown'}</strong></article>)}
       </div></details>
 
@@ -911,7 +926,13 @@ function ControlPlaneDashboardContent({ data, progressSummary, repositoryPath, o
 
       <details className="controlCard disclosureCard"><summary>Evidence Explorer</summary>{data.evidence.length ? data.evidence.map((item) => <details key={`${item.file}-${item.line}`}><summary>{item.section}</summary><p><strong>File:</strong> {item.file}:{item.line}</p><p><strong>Extracted evidence:</strong> {item.evidence}</p><p><strong>Confidence:</strong> {item.confidence}</p></details>) : <p>No generated evidence lines detected yet.</p>}</details>
       <details className="controlCard disclosureCard"><summary>Timeline</summary>{data.timeline.length ? <ol className="timelineList">{data.timeline.slice().reverse().map((item) => <li key={item.timestamp}><strong>{item.timestamp}</strong><span>{item.repositoryHealth} · Strategy {item.strategyQuality} · Confidence {item.confidence}</span><small>{item.recommendation}</small></li>)}</ol> : <p>No refresh executions recorded yet.</p>}</details>
-      <details className="controlCard disclosureCard"><summary>Raw intelligence / full markdown</summary><p>Use the sidebar to open the full version-controlled markdown documents when you need implementation detail.</p></details>
+      <details className="controlCard disclosureCard"><summary>Raw Intelligence</summary><p>Use the sidebar to open the full version-controlled markdown documents when you need implementation detail.</p></details>
+      <details className="controlCard disclosureCard"><summary>Architecture</summary><p>Open Architecture in the sidebar for the generated system map.</p></details>
+      <details className="controlCard disclosureCard"><summary>Strategy</summary><p>Open Strategy in the sidebar for canonical product strategy.</p></details>
+      <details className="controlCard disclosureCard"><summary>Validation</summary><p>Open Validation in the sidebar for deterministic validation guidance.</p></details>
+      <details className="controlCard disclosureCard"><summary>Backlog</summary><p>Open Backlog in the sidebar for generated next work.</p></details>
+      <details className="controlCard disclosureCard"><summary>Generated Artifacts</summary><p>Open Prompt Center or Context Package in the sidebar for generated artifacts.</p></details>
+      </details>
     </div>
   );
 }
@@ -1145,7 +1166,7 @@ export function App() {
         </section>}
 
         {selected.id === 'Control Plane' && isWorkItemOpen && controlPlane && <WorkItemPage data={controlPlane} repositoryPath={connectedPath || repositoryPath} documents={documents} onBack={() => setIsWorkItemOpen(false)} onFinish={() => { setIsWorkItemOpen(false); setFinishNotice('Work marked ready for Refresh Intelligence. Return to the homepage and refresh to verify deltas and advance Today\'s Work.'); }} />}
-        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} repositoryPath={connectedPath || repositoryPath} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} />}
+        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} repositoryPath={connectedPath || repositoryPath} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onRefresh={() => void refreshIntelligence()} onViewStrategy={() => setSelectedId('Strategy')} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}
