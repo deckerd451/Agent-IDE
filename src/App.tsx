@@ -13,9 +13,11 @@ type WorkflowDiagnostics = {
   refreshStepDetected?: boolean;
   refreshStarted?: boolean;
   refreshCompleted?: boolean;
+  refreshError?: string;
+  controlPlaneUpdated?: boolean;
   completionRecordPersistedBeforeRefresh?: boolean;
-  workflowStateClearedAfterRefresh?: boolean;
-  refreshedRecommendationTitle?: string;
+  workflowStateCleared?: boolean;
+  finalRecommendationTitle?: string;
   suppressionApplied?: boolean;
 };
 
@@ -609,9 +611,11 @@ function WorkflowDiagnosticsDisclosure({ workflow, diagnostics }: { workflow: Wo
     ['refresh step detected', diagnostics.refreshStepDetected === undefined ? 'N/A' : String(diagnostics.refreshStepDetected)],
     ['refresh started', diagnostics.refreshStarted === undefined ? 'N/A' : String(diagnostics.refreshStarted)],
     ['refresh completed', diagnostics.refreshCompleted === undefined ? 'N/A' : String(diagnostics.refreshCompleted)],
+    ['refresh error', diagnostics.refreshError ?? 'N/A'],
+    ['control plane updated', diagnostics.controlPlaneUpdated === undefined ? 'N/A' : String(diagnostics.controlPlaneUpdated)],
     ['completion record persisted before refresh', diagnostics.completionRecordPersistedBeforeRefresh === undefined ? 'N/A' : String(diagnostics.completionRecordPersistedBeforeRefresh)],
-    ['workflow state cleared after refresh', diagnostics.workflowStateClearedAfterRefresh === undefined ? 'N/A' : String(diagnostics.workflowStateClearedAfterRefresh)],
-    ['refreshed recommendation title', diagnostics.refreshedRecommendationTitle ?? 'N/A'],
+    ['workflow state cleared', diagnostics.workflowStateCleared === undefined ? 'N/A' : String(diagnostics.workflowStateCleared)],
+    ['final recommendation title', diagnostics.finalRecommendationTitle ?? 'N/A'],
     ['suppression applied', diagnostics.suppressionApplied === undefined ? 'N/A' : String(diagnostics.suppressionApplied)],
   ] as const;
   return <details className="controlCard disclosureCard workflowDiagnostics" aria-label="Development Diagnostics"><summary>Development Diagnostics</summary><dl>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></details>;
@@ -1161,7 +1165,7 @@ export function App() {
     void loadControlPlane(connectedPath).catch(() => undefined);
   }, [connectedPath, loadControlPlane]);
 
-  async function refreshIntelligence() {
+  async function refreshIntelligence(options: { clearWorkflow?: boolean; previousTitle?: string } = {}) {
     setError('');
     setSummary('');
     setSteps([]);
@@ -1228,23 +1232,33 @@ export function App() {
         setSelectedId('Control Plane');
         setIsWorkItemOpen(false);
         await Promise.all(['goals.md', 'strategy.md', 'repository-health.md', 'context-package.md', ...promptFiles].map((file) => loadIntelligenceFile(refreshedRepositoryPath, file)));
-        const url = new URL('/api/repository/control-plane', serverBaseUrl);
-        url.searchParams.set('repositoryPath', refreshedRepositoryPath);
-        const response = await fetch(url);
-        const refreshedControlPlane = await response.json() as ControlPlane & { error?: string };
-        if (!response.ok) throw new Error(refreshedControlPlane.error ?? 'Unable to load control plane.');
+        const cpUrl = new URL('/api/repository/control-plane', serverBaseUrl);
+        cpUrl.searchParams.set('repositoryPath', refreshedRepositoryPath);
+        const cpResponse = await fetch(cpUrl);
+        const refreshedControlPlane = await cpResponse.json() as ControlPlane & { error?: string };
+        if (!cpResponse.ok) throw new Error(refreshedControlPlane.error ?? 'Unable to load control plane.');
+        const refreshedTitle = refreshedControlPlane.recommendation?.title;
+        const prevTitle = options.previousTitle ?? previousControlPlane?.recommendation?.title;
+        const suppressionApplied = Boolean(prevTitle && refreshedTitle !== prevTitle);
         setControlPlane(refreshedControlPlane);
         setProgressSummary(buildProgressSummary(previousControlPlane, refreshedControlPlane));
-        const refreshedTask = firstCandidate(refreshedControlPlane, 1);
-        const refreshedKey = workflowKey(workflowInputForTask(refreshedControlPlane.recommendation, refreshedTask));
-        setWorkflowState((current) => current?.workflowKey === refreshedKey ? current : null);
-        const previousTitle = previousControlPlane?.recommendation?.title;
-        const refreshedTitle = refreshedControlPlane.recommendation?.title;
-        const suppressionApplied = Boolean(previousTitle && previousTitle === controlPlane?.recommendation?.title && refreshedTitle !== previousTitle);
-        setWorkflowDiagnostics((current) => ({ ...current, refreshedRecommendationTitle: refreshedTitle ?? '', suppressionApplied }));
+        if (options.clearWorkflow) {
+          window.localStorage.removeItem(workflowStateStorageKey);
+          setWorkflowState(null);
+          setWorkflowDiagnostics((current) => ({ ...current, controlPlaneUpdated: true, workflowStateCleared: true, finalRecommendationTitle: refreshedTitle ?? '', suppressionApplied, refreshCompleted: true }));
+        } else {
+          const refreshedTask = firstCandidate(refreshedControlPlane, 1);
+          const refreshedKey = workflowKey(workflowInputForTask(refreshedControlPlane.recommendation, refreshedTask));
+          setWorkflowState((current) => current?.workflowKey === refreshedKey ? current : null);
+          setWorkflowDiagnostics((current) => ({ ...current, controlPlaneUpdated: true, finalRecommendationTitle: refreshedTitle ?? '', suppressionApplied }));
+        }
       }
     } catch (refreshError) {
-      setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
+      const msg = refreshError instanceof Error ? refreshError.message : String(refreshError);
+      setError(msg);
+      if (options.clearWorkflow) {
+        setWorkflowDiagnostics((current) => ({ ...current, refreshError: msg, refreshCompleted: false }));
+      }
     } finally {
       setIsRefreshing(false);
     }
@@ -1282,7 +1296,7 @@ export function App() {
     });
     if (currentWorkflow.completionState === 'Ready To Refresh' || currentWorkflow.repositoryState === 'Refresh Repository') {
       const isTerminalRefreshStep = currentWorkflow.repositoryState === 'Refresh Repository';
-      setWorkflowDiagnostics((current) => ({ ...current, refreshStepDetected: isTerminalRefreshStep }));
+      setWorkflowDiagnostics((current) => ({ ...current, refreshStepDetected: isTerminalRefreshStep, refreshStarted: true }));
       if (isTerminalRefreshStep && currentWorkflow.type === 'Validation') {
         const task = firstCandidate(controlPlane, 1);
         const contextPackage = controlPlane.packages.context || documents['context-package.md']?.content || '';
@@ -1297,13 +1311,10 @@ export function App() {
         });
         setWorkflowDiagnostics((current) => ({ ...current, completionRecordPersistedBeforeRefresh: true }));
       }
-      setWorkflowDiagnostics((current) => ({ ...current, refreshStarted: true }));
-      await refreshIntelligence();
-      setWorkflowDiagnostics((current) => ({ ...current, refreshCompleted: true }));
-      if (isTerminalRefreshStep) {
-        window.localStorage.removeItem(workflowStateStorageKey);
-        setWorkflowState(null);
-        setWorkflowDiagnostics((current) => ({ ...current, workflowStateClearedAfterRefresh: true }));
+      const previousTitle = controlPlane.recommendation.title;
+      await refreshIntelligence({ clearWorkflow: isTerminalRefreshStep, previousTitle });
+      if (!isTerminalRefreshStep) {
+        setWorkflowDiagnostics((current) => ({ ...current, refreshCompleted: true }));
       }
       return;
     }
