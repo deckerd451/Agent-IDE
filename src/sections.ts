@@ -10,7 +10,8 @@ export type SectionId =
   | 'Code'
   | 'Repository Health'
   | 'Prompt Center'
-  | 'Context Package';
+  | 'Context Package'
+  | 'Execution Model';
 
 export type Section = {
   id: SectionId;
@@ -91,5 +92,11 @@ export const sections: Section[] = [
     eyebrow: 'Advanced handoff',
     summary: 'A compact generated context package for pasting repository intelligence into GPT, Claude, Cursor, Codex, and other assistants.',
     markdownFile: 'context-package.md',
+  },
+  {
+    id: 'Execution Model',
+    eyebrow: 'How it runs',
+    summary: 'Canonical entities, sources of truth, state transitions, architectural invariants, and execution confidence derived from repository intelligence.',
+    markdownFile: 'execution-model.md',
   },
 ];
