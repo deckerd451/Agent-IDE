@@ -1120,3 +1120,49 @@ h1 {
   box-shadow: none;
   margin-top: 12px;
 }
+
+.navGroup {
+  border: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.navGroup summary {
+  color: #7f8ca3;
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  list-style: none;
+  padding: 10px 10px 4px;
+  text-transform: uppercase;
+}
+
+.navGroup summary::-webkit-details-marker {
+  display: none;
+}
+
+.progressStats {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.progressStats div {
+  background: #0d141f;
+  border: 1px solid #273246;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.progressStats strong {
+  color: #f4f7fb;
+  display: block;
+  font-size: 2rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.todayProgressCard {
+  border-color: rgba(56, 189, 248, 0.35);
+}
