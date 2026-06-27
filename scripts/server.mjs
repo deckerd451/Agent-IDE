@@ -14,7 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
-const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'execution-model.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'intelligence-explanations.json', 'ai-handoff-validation.json', 'evidence-lineage.json', 'decision-ranking.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'execution-model.md', 'recommendation-trace.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'intelligence-explanations.json', 'ai-handoff-validation.json', 'evidence-lineage.json', 'decision-ranking.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
 
 const baselineFiles = {
   'goals.md': `# Goals

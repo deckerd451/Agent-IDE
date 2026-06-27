@@ -364,22 +364,43 @@ function fromStrategicDrift(strategyText, architectureText, backlogText) {
  * @param {string} [docs.strategy] - .ai/strategy.md content
  * @returns {Array} Improvement candidates, each with class:'improvement'
  */
-export function analyzeImprovements({ architecture = '', decisions = '', executionModel = '', backlog = '', strategy = '' } = {}) {
-  const candidates = [
-    ...fromOwnershipRisks(executionModel),
-    ...fromImplicitPersistence(decisions),
-    ...fromExecutionModelRisks(executionModel),
-    ...fromStrategicDrift(strategy, architecture, backlog),
-    ...fromTechnicalDebt(backlog),
-    ...fromArchitecturalComplexity(architecture),
+export function analyzeImprovements(docs = {}) {
+  return analyzeImprovementsWithTrace(docs).candidates;
+}
+
+/**
+ * Like analyzeImprovements, but also returns per-stage diagnostics.
+ * @param {object} docs
+ * @returns {{ candidates: Array, stages: Array }}
+ */
+export function analyzeImprovementsWithTrace({ architecture = '', decisions = '', executionModel = '', backlog = '', strategy = '' } = {}) {
+  const stages = [];
+
+  function runStage(name, inputFile, inputText, fn, args) {
+    const inputPresent = Boolean(inputText && inputText.trim());
+    const inputSize = inputText ? inputText.length : 0;
+    const produced = fn(...args);
+    stages.push({ stage: name, inputFile, inputPresent, inputSize, candidatesProduced: produced.length, rejectionReason: produced.length > 0 ? null : inputPresent ? `No matching patterns found in ${inputFile}` : `${inputFile} is absent or empty` });
+    return produced;
+  }
+
+  const raw = [
+    ...runStage('Ownership Risks (execution-model.md)', '.ai/execution-model.md', executionModel, fromOwnershipRisks, [executionModel]),
+    ...runStage('Implicit Persistence (decisions.md)', '.ai/decisions.md', decisions, fromImplicitPersistence, [decisions]),
+    ...runStage('Execution Model Risks (execution-model.md)', '.ai/execution-model.md', executionModel, fromExecutionModelRisks, [executionModel]),
+    ...runStage('Strategic Drift (strategy.md vs architecture.md)', '.ai/strategy.md + .ai/architecture.md', strategy + architecture, fromStrategicDrift, [strategy, architecture, backlog]),
+    ...runStage('Technical Debt (backlog.md)', '.ai/backlog.md', backlog, fromTechnicalDebt, [backlog]),
+    ...runStage('Architectural Complexity (architecture.md)', '.ai/architecture.md', architecture, fromArchitecturalComplexity, [architecture]),
   ];
 
   // Deduplicate by evidence fingerprint (case-insensitive, first 120 chars)
   const seen = new Set();
-  return candidates.filter(({ evidence }) => {
+  const candidates = raw.filter(({ evidence }) => {
     const key = evidence.toLowerCase().slice(0, 120);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  return { candidates, stages };
 }
