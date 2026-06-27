@@ -83,6 +83,20 @@ Code should be interpreted through Goals, Architecture, Decisions, Backlog, and 
 
 const baselineStep = { id: 'baseline-files', label: 'Baseline Files' };
 
+// Generator step IDs whose failure does not block Control Plane recommendation generation.
+// These steps produce supplementary artifacts (validation evidence, prompts, optional intelligence).
+// Their failure is reported in the refresh result but does not prevent decision ranking or
+// recommendation-trace.md from being written.
+const nonCriticalStepIds = new Set([
+  'validation',          // validate-intel.mjs — runs npm test/build; build failures are common
+  'prompts:architect',   // generated prompts — not required for recommendation
+  'prompts:builder',
+  'prompts:reviewer',
+  'prompts:debugger',
+  'execution-model',     // supplementary intelligence artifact
+  'ai-handoff-validation', // post-generation validation check
+]);
+
 const generatorSteps = [
   { id: 'architecture', label: 'Architecture', command: ['node', [join(appRoot, 'scripts/audit.mjs')]] },
   { id: 'backlog', label: 'Backlog', command: ['node', [join(appRoot, 'scripts/backlog.mjs')]] },
@@ -388,7 +402,7 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   await writeFile(join(repositoryPath, '.ai', 'intelligence-snapshot.json'), JSON.stringify(data.status, null, 2));
   await writeFile(join(repositoryPath, '.ai', 'intelligence-diff.json'), JSON.stringify(data.diff, null, 2));
   await writeFile(timelinePath, JSON.stringify(timeline.slice(-100), null, 2));
-  const nextImprovement = await generateNextImprovement(repositoryPath, { validationCompletions: options.validationCompletions ?? [] });
+  const nextImprovement = await generateNextImprovement(repositoryPath, { validationCompletions: options.validationCompletions ?? [], generatorFailures: options.generatorFailures ?? [] });
   data.recommendation = {
     title: nextImprovement.choice.title,
     actionability: nextImprovement.choice.actionability,
@@ -601,17 +615,26 @@ async function handleRefresh(request, response) {
   }
 
   const failed = results.filter((result) => result.exitCode !== 0);
-  if (failed.length === 0) {
+  const criticalFailed = failed.filter((result) => !nonCriticalStepIds.has(result.id));
+  const nonCriticalFailed = failed.filter((result) => nonCriticalStepIds.has(result.id));
+  if (criticalFailed.length === 0) {
     writeEvent(response, { type: 'step-started', id: 'verification', label: 'Intelligence Verification' });
-    await persistControlPlane(resolvedPath, previousSnapshot, new Date(startedAt), { validationCompletions });
+    await persistControlPlane(resolvedPath, previousSnapshot, new Date(startedAt), { validationCompletions, generatorFailures: nonCriticalFailed });
     writeEvent(response, { type: 'step-finished', id: 'verification', label: 'Intelligence Verification', exitCode: 0, durationMs: Date.now() - startedAt, output: 'Generated .ai/intelligence-verification.json' });
   }
+  const overallSuccess = failed.length === 0;
+  const partialSuccess = criticalFailed.length === 0 && nonCriticalFailed.length > 0;
   writeEvent(response, {
-    type: failed.length === 0 ? 'success' : 'failure',
+    type: overallSuccess ? 'success' : (partialSuccess ? 'partial-success' : 'failure'),
     repositoryPath: resolvedPath,
     aiPath: join(resolvedPath, '.ai'),
     results,
-    summary: failed.length === 0 ? 'Repository intelligence refreshed.' : `${failed.length} generator(s) failed.`,
+    failedSteps: failed.map((r) => ({ id: r.id, label: r.label, critical: !nonCriticalStepIds.has(r.id) })),
+    summary: overallSuccess
+      ? 'Repository intelligence refreshed.'
+      : partialSuccess
+        ? `Repository intelligence refreshed. ${nonCriticalFailed.length} non-critical generator(s) failed: ${nonCriticalFailed.map((r) => r.label).join(', ')}.`
+        : `${criticalFailed.length} critical generator(s) failed. Recommendation generation skipped.`,
   });
   response.end();
 }
@@ -661,4 +684,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   });
 }
 
-export { summarizeSnapshot, understandingSummary, recommendationDetails, validationState, productThesisState, readControlPlane, persistControlPlane };
+export { summarizeSnapshot, understandingSummary, recommendationDetails, validationState, productThesisState, readControlPlane, persistControlPlane, nonCriticalStepIds };
