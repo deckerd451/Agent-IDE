@@ -18,10 +18,23 @@ test('workflow engine supports every package type with one deterministic workflo
   ]) assert.match(workflowSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
 
-test('every workflow step exposes exactly one primary action and deterministic progress', () => {
+test('finite state machine enumerates every repository state and forces state-changing primary actions', () => {
+  for (const expected of [
+    'Repository Not Connected',
+    'Refresh Repository Intelligence',
+    'Repository Analysis Running',
+    'Recommendation Ready',
+    'Workflow In Progress',
+    'Waiting for External Work (Codex / ChatGPT / User)',
+    'Validate Result',
+    'Refresh Repository',
+    'Complete',
+    'Next Recommendation Ready',
+  ]) assert.match(workflowSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(workflowSource, /repositoryState: RepositoryWorkflowState/);
+  assert.match(workflowSource, /nextState: RepositoryWorkflowState/);
   assert.match(workflowSource, /currentPrimaryAction: currentStep\.primaryAction/);
-  assert.match(workflowSource, /progressPercentage: Math\.round\(\(completedSteps\.length \/ checklist\.length\) \* 100\)/);
-  assert.match(workflowSource, /estimatedRemainingSteps: Math\.max\(0, checklist\.length - completedSteps\.length\)/);
+  assert.match(workflowSource, /nextRepositoryState: currentStep\.nextState/);
   assert.doesNotMatch(workflowSource, /Math\.random|Date\.now/);
 });
 
@@ -32,13 +45,12 @@ test('workflow state persists locally and resumes after reload', () => {
   assert.match(appSource, /window\.localStorage\.setItem\(workflowStateStorageKey, JSON\.stringify\(workflowState\)\)/);
 });
 
-test('homepage shows a single recommendation card while diagnostics remain collapsed', () => {
-  for (const expected of ['Next Repository Improvement', 'Next Improvement', 'Repository improving', 'recommendationReason', 'singleRecommendationMeta', 'Advanced Repository Intelligence']) {
+test('work queue presents one primary workflow action while diagnostics remain advanced', () => {
+  for (const expected of ['Work Queue', 'Repository improving', 'recommendationReason', 'singleRecommendationMeta', 'Advanced Repository Intelligence', 'Refresh Repository Intelligence', 'Open Current Workflow']) {
     assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
-  for (const expected of ['Generate Implementation Prompt', 'Generate Validation Prompt', 'Review Decision', 'See Next Recommendation']) {
-    assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  }
+  assert.match(appSource, /function primaryHomepageAction\(workflow\?: Workflow \| null\)/);
+  assert.match(appSource, /return workflow\.currentPrimaryAction/);
   assert.match(appSource, /<details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced<\/summary>/);
 });
 
