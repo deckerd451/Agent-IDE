@@ -342,10 +342,104 @@ function inferInvariants(docs, entityRows) {
 }
 
 // ---------------------------------------------------------------------------
+// Source Code Inspection: detect ownership risks directly from source files
+// ---------------------------------------------------------------------------
+
+async function inspectSourceFiles(repositoryPath) {
+  const findings = [];
+
+  async function readSrc(relPath) {
+    return readIfExists(join(repositoryPath, relPath));
+  }
+
+  const [workflowTs, appTsx, serverMjs, nextImprovementMjs] = await Promise.all([
+    readSrc('src/workflow.ts'),
+    readSrc('src/App.tsx'),
+    readSrc('scripts/server.mjs'),
+    readSrc('scripts/next-improvement.mjs'),
+  ]);
+
+  // 1. Detect client-owned workflow state storage key
+  const workflowStorageKeyMatch = workflowTs.match(/workflowStateStorageKey\s*=\s*['"]([^'"]+)['"]/);
+  if (workflowStorageKeyMatch) {
+    findings.push({
+      category: 'Ownership',
+      confidence: 'High',
+      observation: 'Workflow progression state is persisted in browser localStorage under a client-owned key. This means workflow state is invisible to the server and non-reproducible across browsers.',
+      evidence: `src/workflow.ts: workflowStateStorageKey = "${workflowStorageKeyMatch[1]}"`,
+      sourceFiles: ['src/workflow.ts', 'src/App.tsx'],
+    });
+  }
+
+  // 2. Detect client-owned validation completion storage key
+  const completionStorageKeyMatch = workflowTs.match(/validationCompletionStorageKey\s*=\s*['"]([^'"]+)['"]/);
+  if (completionStorageKeyMatch) {
+    findings.push({
+      category: 'Ownership',
+      confidence: 'High',
+      observation: 'Recommendation-affecting completion state is client-owned. Validation completion records that suppress server-side recommendation selection are stored in browser localStorage, not on disk.',
+      evidence: `src/workflow.ts: validationCompletionStorageKey = "${completionStorageKeyMatch[1]}"`,
+      sourceFiles: ['src/workflow.ts', 'src/App.tsx', 'scripts/next-improvement.mjs'],
+    });
+  }
+
+  // 3. Detect client → server completion record flow (client supplies suppression state to server)
+  const clientSendsCompletions = appTsx.includes('validationCompletions') && appTsx.includes('/api/repository/refresh');
+  const serverReceivesCompletions = serverMjs.includes('validationCompletions');
+  const serverUsesForSuppression = nextImprovementMjs.includes('validationCompletions') && nextImprovementMjs.includes('validationAlreadyCompleted');
+  if (clientSendsCompletions && serverReceivesCompletions && serverUsesForSuppression) {
+    findings.push({
+      category: 'Determinism',
+      confidence: 'High',
+      observation: 'Recommendation generation is not fully server-deterministic. The server receives client-supplied completion records that suppress recommendation selection. Two clients with different localStorage state will produce different recommendations from the same repository.',
+      evidence: 'src/App.tsx sends validationCompletions in /api/repository/refresh payload; scripts/next-improvement.mjs uses these to set validationAlreadyCompleted and suppress ai-handoff-validation',
+      sourceFiles: ['src/App.tsx', 'scripts/server.mjs', 'scripts/next-improvement.mjs'],
+    });
+  }
+
+  // 4. Detect localStorage writes for workflow state in App.tsx
+  const localStorageWriteCount = (appTsx.match(/localStorage\.setItem/g) ?? []).length;
+  if (localStorageWriteCount > 0) {
+    findings.push({
+      category: 'Persistence',
+      confidence: 'High',
+      observation: `Client persists ${localStorageWriteCount} distinct state write(s) to localStorage. Browser-local persistence means repository recommendation state is not reproducible from a fresh browser session.`,
+      evidence: `src/App.tsx: ${localStorageWriteCount} localStorage.setItem calls`,
+      sourceFiles: ['src/App.tsx'],
+    });
+  }
+
+  // 5. Detect ValidationCompletionRecord type used as cross-boundary contract
+  const hasValidationCompletionRecord = workflowTs.includes('ValidationCompletionRecord') && nextImprovementMjs.includes('validationCompletions');
+  if (hasValidationCompletionRecord) {
+    findings.push({
+      category: 'Source of Truth',
+      confidence: 'High',
+      observation: 'Multiple ownership boundaries affect recommendation selection. ValidationCompletionRecord is a client-defined type that crosses the client/server boundary to influence server-side recommendation suppression. The canonical source of recommendation state is split: current recommendation lives in .ai/decision-ranking.json (server) but suppression state lives in browser localStorage (client).',
+      evidence: 'src/workflow.ts defines ValidationCompletionRecord; scripts/next-improvement.mjs consumes it via validationCompletions option',
+      sourceFiles: ['src/workflow.ts', 'scripts/next-improvement.mjs'],
+    });
+  }
+
+  return findings;
+}
+
+function renderOwnershipRisks(sourceFindings) {
+  if (sourceFindings.length === 0) return '- No ownership risks detected from source code inspection.';
+  return sourceFindings.map((f) => [
+    `- **${f.observation}**`,
+    `  - Category: ${f.category}`,
+    `  - Confidence: ${f.confidence}`,
+    `  - Evidence: ${f.evidence}`,
+    `  - Source Files: ${f.sourceFiles.join(', ')}`,
+  ].join('\n')).join('\n');
+}
+
+// ---------------------------------------------------------------------------
 // Architectural Risks
 // ---------------------------------------------------------------------------
 
-function inferRisks(docs, entityRows, ownershipResult) {
+function inferRisks(docs, entityRows, ownershipResult, sourceFindings) {
   const risks = [];
 
   // From repository-health.md risks section
@@ -356,6 +450,15 @@ function inferRisks(docs, entityRows, ownershipResult) {
       observation: risk,
       evidence: '.ai/repository-health.md (Risks)',
       category: 'Repository Health',
+    });
+  }
+
+  // From source code inspection — highest-confidence risks, emitted first so they rank highest
+  for (const finding of sourceFindings) {
+    risks.push({
+      observation: finding.observation,
+      evidence: finding.evidence,
+      category: finding.category,
     });
   }
 
@@ -583,7 +686,8 @@ export async function generateExecutionModel(repositoryPath = process.cwd()) {
   const pipelineStages = inferPipelineStages(docs);
   const stateTransitions = inferStateTransitions(docs);
   const invariants = inferInvariants(docs, entityRows);
-  const risks = inferRisks(docs, entityRows, ownershipResult);
+  const sourceFindings = await inspectSourceFiles(repositoryPath);
+  const risks = inferRisks(docs, entityRows, ownershipResult, sourceFindings);
   const confidence = computeConfidence(docs, entityRows, invariants, risks);
   const repositoryPurpose = inferRepositoryPurpose(docs);
 
@@ -621,6 +725,10 @@ export async function generateExecutionModel(repositoryPath = process.cwd()) {
     '## Architectural Invariants',
     '',
     renderInvariants(invariants),
+    '',
+    '## Ownership Risks',
+    '',
+    renderOwnershipRisks(sourceFindings),
     '',
     '## Architectural Risks',
     '',

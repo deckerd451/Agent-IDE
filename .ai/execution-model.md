@@ -109,18 +109,61 @@ Agent IDE makes repository understanding the primary developer interface for AI-
   - Confidence: High
   - Evidence: .ai/validation.md (Commands Run)
 
+## Ownership Risks
+
+- **Workflow progression state is persisted in browser localStorage under a client-owned key. This means workflow state is invisible to the server and non-reproducible across browsers.**
+  - Category: Ownership
+  - Confidence: High
+  - Evidence: src/workflow.ts: workflowStateStorageKey = "agent-ide:workflow-state"
+  - Source Files: src/workflow.ts, src/App.tsx
+- **Recommendation-affecting completion state is client-owned. Validation completion records that suppress server-side recommendation selection are stored in browser localStorage, not on disk.**
+  - Category: Ownership
+  - Confidence: High
+  - Evidence: src/workflow.ts: validationCompletionStorageKey = "agent-ide:validation-completions"
+  - Source Files: src/workflow.ts, src/App.tsx, scripts/next-improvement.mjs
+- **Recommendation generation is not fully server-deterministic. The server receives client-supplied completion records that suppress recommendation selection. Two clients with different localStorage state will produce different recommendations from the same repository.**
+  - Category: Determinism
+  - Confidence: High
+  - Evidence: src/App.tsx sends validationCompletions in /api/repository/refresh payload; scripts/next-improvement.mjs uses these to set validationAlreadyCompleted and suppress ai-handoff-validation
+  - Source Files: src/App.tsx, scripts/server.mjs, scripts/next-improvement.mjs
+- **Client persists 4 distinct state write(s) to localStorage. Browser-local persistence means repository recommendation state is not reproducible from a fresh browser session.**
+  - Category: Persistence
+  - Confidence: High
+  - Evidence: src/App.tsx: 4 localStorage.setItem calls
+  - Source Files: src/App.tsx
+- **Multiple ownership boundaries affect recommendation selection. ValidationCompletionRecord is a client-defined type that crosses the client/server boundary to influence server-side recommendation suppression. The canonical source of recommendation state is split: current recommendation lives in .ai/decision-ranking.json (server) but suppression state lives in browser localStorage (client).**
+  - Category: Source of Truth
+  - Confidence: High
+  - Evidence: src/workflow.ts defines ValidationCompletionRecord; scripts/next-improvement.mjs consumes it via validationCompletions option
+  - Source Files: src/workflow.ts, scripts/next-improvement.mjs
+
 ## Architectural Risks
 
 - **Validation has low confidence**
   - Category: Repository Health
   - Evidence: .ai/repository-health.md (Risks)
+- **Workflow progression state is persisted in browser localStorage under a client-owned key. This means workflow state is invisible to the server and non-reproducible across browsers.**
+  - Category: Ownership
+  - Evidence: src/workflow.ts: workflowStateStorageKey = "agent-ide:workflow-state"
+- **Recommendation-affecting completion state is client-owned. Validation completion records that suppress server-side recommendation selection are stored in browser localStorage, not on disk.**
+  - Category: Ownership
+  - Evidence: src/workflow.ts: validationCompletionStorageKey = "agent-ide:validation-completions"
+- **Recommendation generation is not fully server-deterministic. The server receives client-supplied completion records that suppress recommendation selection. Two clients with different localStorage state will produce different recommendations from the same repository.**
+  - Category: Determinism
+  - Evidence: src/App.tsx sends validationCompletions in /api/repository/refresh payload; scripts/next-improvement.mjs uses these to set validationAlreadyCompleted and suppress ai-handoff-validation
+- **Client persists 4 distinct state write(s) to localStorage. Browser-local persistence means repository recommendation state is not reproducible from a fresh browser session.**
+  - Category: Persistence
+  - Evidence: src/App.tsx: 4 localStorage.setItem calls
+- **Multiple ownership boundaries affect recommendation selection. ValidationCompletionRecord is a client-defined type that crosses the client/server boundary to influence server-side recommendation suppression. The canonical source of recommendation state is split: current recommendation lives in .ai/decision-ranking.json (server) but suppression state lives in browser localStorage (client).**
+  - Category: Source of Truth
+  - Evidence: src/workflow.ts defines ValidationCompletionRecord; scripts/next-improvement.mjs consumes it via validationCompletions option
 
 ## Execution Confidence
 
 - Overall Confidence: **High** (100% of intelligence files present)
 - Evidence Count: 6 populated sources
 - Invariant Count: 12
-- Architectural Risk Count: 1
+- Architectural Risk Count: 6
 
 **Evidence Sources:**
 - .ai/goals.md
@@ -129,6 +172,9 @@ Agent IDE makes repository understanding the primary developer interface for AI-
 - .ai/decisions.md
 - .ai/validation.md
 - .ai/repository-health.md
+
+**Unresolved Ambiguities:**
+- Multiple ownership detected for at least one concept
 
 **Inferred Assumptions:**
 - Generated intelligence files are regenerated atomically on each refresh
