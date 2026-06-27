@@ -62,6 +62,7 @@ type ProgressSummary = {
   repositoryQualityDelta: string;
   confidenceDelta: string;
   verificationDelta: string;
+  aiHandoffDelta: string;
   currentTopPriority: string;
   newlyResolvedIssues: string[];
   newlyIntroducedIssues: string[];
@@ -104,6 +105,21 @@ type DocumentState = {
 };
 
 const handoffWrapper = 'Using only this repository intelligence package, explain the product, current focus, strategic bet, risks, and safest next development step. Do not assume source-code access.';
+const validationPromptInstructions = `Using only this Context Package:
+
+1. Explain the repository in 60 seconds.
+2. State the product thesis.
+3. State the current product bet.
+4. State the current highest-priority repository issue.
+5. Explain why it was selected.
+6. Describe the safest next implementation step.
+7. List every assumption you are making.
+8. Identify every ambiguity, contradiction, or missing repository intelligence.
+9. Give a confidence score (0–100) for every answer.
+
+Do not assume source-code access.
+Do not assume prior conversation context.
+Only use evidence present in the Context Package.`;
 
 const promptFiles = ['prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'] as const;
 const promptRoles = [
@@ -383,6 +399,10 @@ function actionForTask(candidate: DecisionCandidate | null | undefined, recommen
   return candidate?.ownerAction ?? quality?.recommendedAction ?? recommendation.explanation;
 }
 
+function buildValidationPrompt(contextPackage: string) {
+  return `${validationPromptInstructions}\n\n---\n\n${contextPackage}`;
+}
+
 function hasUsefulValue(value?: string | null) {
   return Boolean(value && !/^(not specified|none detected|none|n\/?a)$/i.test(value.trim()));
 }
@@ -402,6 +422,7 @@ function buildProgressSummary(previous: ControlPlane | null, current: ControlPla
     repositoryQualityDelta: formatDelta(previous?.quality?.overallScore, current.quality?.overallScore),
     confidenceDelta: formatDelta(previous?.quality?.confidence.score, current.quality?.confidence.score),
     verificationDelta: formatDelta(previous?.verification?.score, current.verification?.score),
+    aiHandoffDelta: formatDelta(previous?.aiHandoffValidation?.overallScore, current.aiHandoffValidation?.overallScore),
     currentTopPriority: currentTop?.title ?? current.recommendation.title,
     newlyResolvedIssues: [...previousIssues].filter((issue) => !currentIssues.has(issue)),
     newlyIntroducedIssues: [...currentIssues].filter((issue) => !previousIssues.has(issue)),
@@ -470,11 +491,69 @@ function CanonicalEditPanel({ proposal, repositoryPath }: { proposal: CanonicalE
   );
 }
 
+function ValidationWorkspace({ data, documents, task, onFinish }: { data: ControlPlane; documents: Record<string, DocumentState>; task?: DecisionCandidate | null; onFinish: () => void }) {
+  const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
+  const validationPrompt = buildValidationPrompt(contextPackage);
+  const promptActions = [
+    ['Copy Validation Prompt', validationPrompt],
+    ['Copy Context Package', contextPackage],
+    ['Copy Architect Prompt', data.packages.architect || documents['prompts/architect.md']?.content || ''],
+    ['Copy Builder Prompt', data.packages.builder || documents['prompts/builder.md']?.content || ''],
+    ['Copy Reviewer Prompt', data.packages.reviewer || documents['prompts/reviewer.md']?.content || ''],
+    ['Copy Debugger Prompt', data.packages.debugger || documents['prompts/debugger.md']?.content || ''],
+  ] as const;
+  const repositoryEvidence = [task?.evidence, data.recommendation.evidenceSource, data.recommendation.explanation].filter((item): item is string => hasUsefulValue(item));
+  const validationInputs = [task?.ownerAction, task?.expectedCompletionTarget, data.recommendation.prompt].filter((item): item is string => hasUsefulValue(item));
+
+  return (
+    <>
+      <section className="controlCard validationWorkspace" aria-label="Validation Workspace">
+        <p className="kicker">Validation Workspace</p>
+        <h2>Validation Goal</h2>
+        <p>{task?.title ?? data.recommendation.title}</p>
+        <div className="workMetaGrid">
+          <div><small>Why this validation matters</small><strong>{task?.reason ?? data.recommendation.whyItMatters}</strong></div>
+          <div><small>Current validation score</small><strong>{data.aiHandoffValidation ? `${data.aiHandoffValidation.overallScore}/100` : 'Not available'}</strong></div>
+          <div><small>Previous validation score</small><strong>{data.qualityHistory.length > 1 ? 'Available in refresh history' : 'Not available'}</strong></div>
+          <div><small>Expected outcome</small><strong>{task?.expectedCompletionTarget ?? 'A fresh AI can reconstruct repository intelligence from the Context Package.'}</strong></div>
+        </div>
+        <h3>Repository evidence used</h3>
+        {repositoryEvidence.length ? <ul>{repositoryEvidence.map((item) => <li key={item}>{item}</li>)}</ul> : <p>No repository evidence loaded for this validation.</p>}
+        <h3>Validation inputs</h3>
+        {validationInputs.length ? <ul>{validationInputs.slice(0, 2).map((item) => <li key={item}>{item}</li>)}</ul> : <p>Use the validation prompt and Context Package below.</p>}
+      </section>
+
+      <section className="controlCard implementationWorkflow" aria-label="Validation Actions">
+        <h2>Validation Actions</h2>
+        <div className="handoffGrid">
+          <button disabled={!validationPrompt} onClick={() => void copyText(validationPrompt)} type="button">Run Validation</button>
+          {promptActions.map(([label, content]) => <button disabled={!content} key={label} onClick={() => void copyText(content)} type="button">{label}</button>)}
+        </div>
+        <details open><summary>Validation Prompt</summary><pre>{validationPrompt}</pre></details>
+        <details><summary>Context Package</summary><pre>{contextPackage}</pre></details>
+      </section>
+
+      <section className="controlCard finishWorkCard">
+        <h2>Validation Complete</h2>
+        <div className="qualityGrid">
+          <div><small>Repository Quality Delta</small><strong>Refresh Intelligence after finishing to calculate.</strong></div>
+          <div><small>Verification Delta</small><strong>Refresh Intelligence after finishing to calculate.</strong></div>
+          <div><small>AI Handoff Delta</small><strong>Refresh Intelligence after finishing to calculate.</strong></div>
+          <div><small>Completed Validation</small><strong>{task?.title ?? data.recommendation.title}</strong></div>
+          <div><small>Next Task</small><strong>Return to Homepage → Refresh Intelligence → Advance Today's Work</strong></div>
+        </div>
+        <button className="primaryCta" onClick={onFinish} type="button">Finish Validation</button>
+      </section>
+    </>
+  );
+}
+
 function WorkItemPage({ data, repositoryPath, documents, onBack, onFinish }: { data: ControlPlane; repositoryPath?: string; documents: Record<string, DocumentState>; onBack: () => void; onFinish: () => void }) {
   const task = firstCandidate(data, 1);
   const title = humanTaskTitle(task, data.recommendation.title);
   const canonicalEditProposal = buildCanonicalEditProposal(data);
   const isProductDecision = data.recommendation.packageType === 'product-decision';
+  const isValidationExperiment = data.recommendation.packageType === 'validation-experiment';
   const affectedFile = filePathForTask(task, data.recommendation);
   const acceptance = [task?.expectedCompletionTarget, task?.ownerAction].filter((item): item is string => hasUsefulValue(item));
   const lineage = data.evidenceLineage?.sources ?? Object.values(data.evidenceLineage?.categories ?? {}).flat();
@@ -497,28 +576,30 @@ function WorkItemPage({ data, repositoryPath, documents, onBack, onFinish }: { d
             <div><small>Priority</small><strong>{task ? `#${task.rank} · ${task.priorityScore}` : 'Decision Ranking #1'}</strong></div>
             <div><small>Package type</small><strong>{data.recommendation.packageType ?? 'implementation'}</strong></div>
             <div><small>Actionability</small><strong>{task?.actionability ?? data.recommendation.actionability ?? 'Not classified'}</strong></div>
-            <div><small>Repository owner vs AI responsibility</small><strong>{isProductDecision ? 'Repository owner approves canonical intent; AI does not infer product intent.' : 'AI may implement using prompts; repository owner reviews changes.'}</strong></div>
+            <div><small>Repository owner vs AI responsibility</small><strong>{isProductDecision ? 'Repository owner approves canonical intent; AI does not infer product intent.' : isValidationExperiment ? 'Fresh AI validates repository intelligence from generated context only; no repository intelligence changes.' : 'AI may implement using prompts; repository owner reviews changes.'}</strong></div>
           </div>
         </div>
         <button className="primaryCta" onClick={onBack} type="button">Back to Work Queue</button>
       </section>
 
-      <section className="controlCard"><h2>Acceptance Criteria</h2>{acceptance.length ? <ul>{acceptance.map((item) => <li key={item}>{item}</li>)}</ul> : <p>{data.recommendation.explanation}</p>}</section>
-      <section className="controlCard"><h2>Supporting Evidence</h2><p>{task?.evidence ?? data.recommendation.evidenceSource}</p></section>
-      <section className="controlCard"><h2>Evidence Lineage</h2>{lineage?.length ? <ul>{lineage.slice(0, 8).map((item) => <li key={`${item.file}-${item.group}`}><strong>{item.group}</strong> — {item.file} · {item.ancestry}</li>)}</ul> : <p>No lineage artifact loaded for this task.</p>}</section>
+      {isValidationExperiment ? <ValidationWorkspace data={data} documents={documents} task={task} onFinish={onFinish} /> : <>
+        <section className="controlCard"><h2>Acceptance Criteria</h2>{acceptance.length ? <ul>{acceptance.map((item) => <li key={item}>{item}</li>)}</ul> : <p>{data.recommendation.explanation}</p>}</section>
+        <section className="controlCard"><h2>Supporting Evidence</h2><p>{task?.evidence ?? data.recommendation.evidenceSource}</p></section>
+        <section className="controlCard"><h2>Evidence Lineage</h2>{lineage?.length ? <ul>{lineage.slice(0, 8).map((item) => <li key={`${item.file}-${item.group}`}><strong>{item.group}</strong> — {item.file} · {item.ancestry}</li>)}</ul> : <p>No lineage artifact loaded for this task.</p>}</section>
 
-      {isProductDecision && canonicalEditProposal && <CanonicalEditPanel proposal={canonicalEditProposal} repositoryPath={repositoryPath} />}
+        {isProductDecision && canonicalEditProposal && <CanonicalEditPanel proposal={canonicalEditProposal} repositoryPath={repositoryPath} />}
 
-      {!isProductDecision && (
+        {!isProductDecision && (
         <section className="controlCard implementationWorkflow" aria-label="AI implementation workflow">
           <h2>AI Implementation Workflow</h2>
           <div className="workMetaGrid"><div><small>Affected files</small><strong>{affectedFile ? <code>{affectedFile}</code> : 'See context package and builder prompt'}</strong></div></div>
           <div className="handoffGrid"><button disabled={!prompts[0][1]} onClick={() => void copyText(prompts[0][1])} type="button">Launch Builder</button>{prompts.map(([label, content]) => <button disabled={!content} key={label} onClick={() => void copyText(content)} type="button">Copy {label}</button>)}</div>
           {prompts.map(([label, content]) => content ? <details key={label}><summary>{label}</summary><pre>{content}</pre></details> : null)}
         </section>
-      )}
+        )}
 
-      <section className="controlCard finishWorkCard"><h2>Finish Work</h2><p>Finish Work returns to the homepage and recommends Refresh Intelligence. It does not modify the repository or regenerate intelligence.</p><button className="primaryCta" onClick={onFinish} type="button">Finish Work</button></section>
+        <section className="controlCard finishWorkCard"><h2>Finish Work</h2><p>Finish Work returns to the homepage and recommends Refresh Intelligence. It does not modify the repository or regenerate intelligence.</p><button className="primaryCta" onClick={onFinish} type="button">Finish Work</button></section>
+      </>}
     </div>
   );
 }
@@ -629,6 +710,7 @@ function ControlPlaneDashboardContent({ data, progressSummary, repositoryPath, o
               <div><small>Repository quality delta</small><strong>{progressSummary.repositoryQualityDelta}</strong></div>
               <div><small>Confidence delta</small><strong>{progressSummary.confidenceDelta}</strong></div>
               <div><small>Verification delta</small><strong>{progressSummary.verificationDelta}</strong></div>
+              <div><small>AI Handoff delta</small><strong>{progressSummary.aiHandoffDelta || 'No baseline'}</strong></div>
               <div><small>Current top priority</small><strong>{humanTaskTitle(topWork, progressSummary.currentTopPriority)}</strong></div>
             </div>
             <div className="answerGrid"><div><h2>Newly resolved tasks</h2>{progressSummary.newlyResolvedIssues.length ? <ul>{progressSummary.newlyResolvedIssues.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div><div><h2>New tasks</h2>{progressSummary.newlyIntroducedIssues.length ? <ul>{progressSummary.newlyIntroducedIssues.map((item) => <li key={item}>{item}</li>)}</ul> : <p>None detected.</p>}</div></div>
