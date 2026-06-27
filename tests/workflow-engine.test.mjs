@@ -46,7 +46,7 @@ test('workflow state persists locally and resumes after reload', () => {
 });
 
 test('work queue presents one primary workflow action while diagnostics remain advanced', () => {
-  for (const expected of ['Work Queue', 'Repository improving', 'recommendationReason', 'singleRecommendationMeta', 'Advanced Repository Intelligence', 'Refresh Repository Intelligence', 'Open Current Workflow']) {
+  for (const expected of ['Work Queue', 'Repository improving', 'recommendationReason', 'singleRecommendationCard', 'Advanced Repository Intelligence', 'Refresh Repository Intelligence', 'stepToUserTask', 'currentTaskCard', 'Repository is up to date']) {
     assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
   assert.match(appSource, /function primaryHomepageAction\(workflow\?: Workflow \| null\)/);
@@ -99,4 +99,31 @@ test('repository intelligence, rankings, and prompts are preserved by workflow-l
   for (const expected of ['decisionRanking', 'data.recommendation.prompt', 'data.packages.builder', 'data.packages.reviewer', 'data.packages.debugger', 'buildValidationPrompt']) {
     assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+});
+
+test('same recommendation after refresh emits visible loop diagnostic', () => {
+  assert.match(appSource, /sameRecommendationLoop/);
+  assert.match(appSource, /loopDiagnostic/);
+  assert.match(appSource, /same recommendation loop detected/);
+  assert.match(appSource, /loop diagnostic/);
+  assert.match(appSource, /refreshedTitle === prevTitle/);
+});
+
+test('UX hides all FSM internals and exposes only user tasks', () => {
+  assert.match(appSource, /function stepToUserTask/);
+  assert.match(appSource, /function CurrentTaskCard/);
+  assert.match(appSource, /function UpToDateCard/);
+  assert.match(appSource, /Repository is up to date/);
+  assert.match(appSource, /Copy this repository context into ChatGPT/);
+  assert.match(appSource, /Copy this validation prompt into ChatGPT/);
+  assert.match(appSource, /Copy this implementation prompt into your coding agent/);
+  assert.doesNotMatch(appSource, /Recommendation Ready/);
+  assert.doesNotMatch(appSource, /Workflow In Progress/);
+  assert.doesNotMatch(appSource, /Waiting for External Work/);
+});
+
+test('auto-refresh triggers when workflow advances to refresh-repository state', () => {
+  assert.match(appSource, /next\.repositoryState === 'Refresh Repository'/);
+  assert.match(appSource, /refreshIntelligence\(\{ clearWorkflow: true, previousTitle \}\)/);
+  assert.match(appSource, /const previousTitle = controlPlane\.recommendation\.title/);
 });
