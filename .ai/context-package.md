@@ -1,6 +1,6 @@
 # Context Package
 
-Generated: 2026-06-27T21:13:18.203Z
+Generated: 2026-06-27T23:09:17.678Z
 
 ## Product Thesis
 Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
@@ -163,7 +163,7 @@ Tie Breakers:
 No serious repository intelligence issue is detected, so the safest next step is validating that the generated AI handoff package is usable as-is.
 
 ## Validation Summary
-- Low
+- Medium
 
 - `npm run build`
 - `npm run test`
@@ -214,7 +214,7 @@ No serious repository intelligence issue is detected, so the safest next step is
 - Evidence lines present
 - Backlog noise not detected
 - Validation commands detected
-- Validation confidence Low
+- Validation confidence Medium
 - Xcode validation metadata not detected
 - Canonical editing target .ai/goals.md
 - Manual sections preserved in canonical goals
@@ -224,9 +224,9 @@ No serious repository intelligence issue is detected, so the safest next step is
 - Canonical fields supported by repository evidence 2 / 2
 - Generated artifacts are regenerated, not manually edited.
 
-- Validation has low confidence
+- No repository health risks detected.
 
-Strengthen validation coverage with additional deterministic scripts, then refresh validation and repository health.
+Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
 
 ## Confidence Explanation
 Confidence is derived from repository-local canonical, independent, and generated evidence lineage. See Repository Health Evidence Lineage and Intelligence Quality confidence fields for the deterministic calculation.

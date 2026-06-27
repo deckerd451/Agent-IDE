@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-06-26T13:59:09.453Z",
-  "overallScore": 92,
+  "timestamp": "2026-06-27T23:09:17.796Z",
+  "overallScore": 83,
   "canonicalIntelligenceQuality": {
     "score": 90,
     "completenessScore": 83,
@@ -111,6 +111,91 @@
         "missing": []
       }
     },
+    "strategyFields": {
+      "canonicalFile": ".ai/goals.md",
+      "canonicalSection": "## Manual Strategy Notes",
+      "requiredFields": [
+        {
+          "key": "currentProductBet",
+          "label": "Current Product Bet",
+          "canonicalFile": ".ai/goals.md",
+          "canonicalSection": "## Manual Strategy Notes",
+          "optional": false,
+          "classification": "Missing",
+          "state": "Missing",
+          "present": false,
+          "evidence": [],
+          "placeholders": [],
+          "manualUpdate": "- Current Product Bet:\n  [Repository owner: describe the primary product hypothesis currently being tested.]",
+          "why": "This field records the primary product hypothesis currently being tested and is required to strengthen repository strategy quality."
+        },
+        {
+          "key": "strategicDifferentiator",
+          "label": "Strategic Differentiator",
+          "canonicalFile": ".ai/goals.md",
+          "canonicalSection": "## Manual Strategy Notes",
+          "optional": false,
+          "classification": "Missing",
+          "state": "Missing",
+          "present": false,
+          "evidence": [],
+          "placeholders": [],
+          "manualUpdate": "- Strategic Differentiator:\n  [Repository owner: describe what makes this repository strategy meaningfully different.]",
+          "why": "This field records what the product strategy should optimize around or emphasize differently from alternatives."
+        },
+        {
+          "key": "whatNotToBuild",
+          "label": "What Not To Build",
+          "canonicalFile": ".ai/goals.md",
+          "canonicalSection": "## Manual Strategy Notes",
+          "optional": false,
+          "classification": "Missing",
+          "state": "Missing",
+          "present": false,
+          "evidence": [],
+          "placeholders": [],
+          "manualUpdate": "- What Not To Build:\n  [Repository owner: describe explicit product boundaries or non-goals.]",
+          "why": "This field records product boundaries so generated implementation work avoids unsupported directions."
+        },
+        {
+          "key": "repositoryPrinciples",
+          "label": "Repository Principles",
+          "canonicalFile": ".ai/goals.md",
+          "canonicalSection": "## Manual Strategy Notes",
+          "optional": true,
+          "classification": "Missing",
+          "state": "Missing",
+          "present": false,
+          "evidence": [],
+          "placeholders": [],
+          "manualUpdate": "- Repository Principles:\n  [Repository owner: describe durable principles that should guide repository decisions.]",
+          "why": "This optional field records durable repository-level decision principles for future work."
+        },
+        {
+          "key": "strategyEvidence",
+          "label": "Strategy Evidence",
+          "canonicalFile": ".ai/goals.md",
+          "canonicalSection": "## Manual Strategy Notes",
+          "optional": false,
+          "classification": "Missing",
+          "state": "Missing",
+          "present": false,
+          "evidence": [],
+          "placeholders": [],
+          "manualUpdate": "- Strategy Evidence:\n  [Repository owner: cite repository-local files, decisions, or docs that support the strategy.]",
+          "why": "This field records repository-local evidence supporting the strategy so future generated intelligence can trace owner intent."
+        }
+      ],
+      "missing": [
+        "Current Product Bet",
+        "Strategic Differentiator",
+        "What Not To Build",
+        "Strategy Evidence"
+      ],
+      "percent": 0,
+      "classification": "Missing",
+      "threshold": "Missing = no required canonical strategy fields present; Partial = some required fields present; Present = all required fields present. Repository Principles is optional."
+    },
     "evidenceSynthesis": {
       "schemaVersion": 1,
       "supportedFields": 2,
@@ -129,7 +214,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:59:09.458Z",
+            "generatedAt": "2026-06-27T23:09:17.797Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -160,7 +245,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:59:09.459Z",
+            "generatedAt": "2026-06-27T23:09:17.797Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -253,7 +338,7 @@
           ],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:59:09.476Z",
+            "generatedAt": "2026-06-27T23:09:17.798Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -352,7 +437,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:59:09.476Z",
+            "generatedAt": "2026-06-27T23:09:17.798Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -445,7 +530,7 @@
           ],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:59:09.479Z",
+            "generatedAt": "2026-06-27T23:09:17.800Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -544,7 +629,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:59:09.480Z",
+            "generatedAt": "2026-06-27T23:09:17.800Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -575,7 +660,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:59:09.480Z",
+            "generatedAt": "2026-06-27T23:09:17.800Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -606,7 +691,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-26T13:59:09.480Z",
+            "generatedAt": "2026-06-27T23:09:17.800Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -630,7 +715,7 @@
     },
     "evidenceLineage": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-26T13:59:09.481Z",
+      "generatedAt": "2026-06-27T23:09:17.800Z",
       "categories": {
         "Canonical": [
           {
@@ -912,15 +997,15 @@
     "sourceOfTruth": "goals.md"
   },
   "generatedExportQuality": {
-    "score": 96,
+    "score": 99,
     "coverageScore": 100,
     "freshnessScore": 100,
     "promptsFreshnessOnly": true,
-    "aiHandoffReadinessScore": 88,
+    "aiHandoffReadinessScore": 96,
     "aiHandoffValidation": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-26T13:59:08.613Z",
-      "overallScore": 88,
+      "generatedAt": "2026-06-27T23:09:17.808Z",
+      "overallScore": 96,
       "status": "Ready",
       "categories": {
         "repositoryExplanation": {
@@ -956,7 +1041,7 @@
         "decisionRanking": {
           "label": "Decision ranking",
           "status": "Present",
-          "evidence": "Context Package exposes ## Decision Ranking."
+          "evidence": "Context Package exposes ## Decision Ranking with selected issue, deterministic selection explanation, and ranked candidates."
         },
         "highestPriorityIssue": {
           "label": "Highest-priority issue",
@@ -1000,14 +1085,8 @@
       ],
       "hiddenInformation": [],
       "contradictions": [],
-      "missingExplanations": [
-        "Decision ranking rationale",
-        "Recommendation rationale"
-      ],
-      "suggestedImprovements": [
-        "Add decision ranking rationale to generated explanations.",
-        "Add recommendation rationale to generated explanations."
-      ]
+      "missingExplanations": [],
+      "suggestedImprovements": []
     }
   },
   "coverage": {
@@ -1037,7 +1116,7 @@
   },
   "freshness": {
     "score": 100,
-    "lastRefresh": "2026-06-26T13:59:09.453Z",
+    "lastRefresh": "2026-06-27T23:09:17.796Z",
     "filesChanged": 0,
     "staleDocuments": [],
     "canonicalStaleDocuments": [],
@@ -1084,9 +1163,23 @@
     "overallRepositoryConfidence": "High"
   },
   "verification": {
-    "score": 100,
-    "status": "Verified",
-    "failures": []
+    "score": 40,
+    "status": "Failed",
+    "failures": [
+      "strategy.md: Artifact timestamp is older than refresh start.",
+      "architecture.md: Artifact timestamp is older than refresh start.",
+      "backlog.md: Artifact timestamp is older than refresh start.",
+      "validation.md: Artifact timestamp is older than refresh start.",
+      "decisions.md: Artifact timestamp is older than refresh start.",
+      "repository-health.md: Artifact timestamp is older than refresh start.",
+      "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
+      "prompts/architect.md: Artifact timestamp is older than refresh start.",
+      "prompts/builder.md: Artifact timestamp is older than refresh start.",
+      "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
+      "prompts/debugger.md: Artifact timestamp is older than refresh start.",
+      "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
+      "Explanation contradiction: selected recommendation is not referenced by generated package."
+    ]
   },
   "drift": {
     "productThesisChanged": false,
@@ -1109,8 +1202,8 @@
   "explanations": {
     "aiHandoffValidation": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-26T13:59:08.613Z",
-      "overallScore": 88,
+      "generatedAt": "2026-06-27T23:09:17.808Z",
+      "overallScore": 96,
       "status": "Ready",
       "categories": {
         "repositoryExplanation": {
@@ -1146,7 +1239,7 @@
         "decisionRanking": {
           "label": "Decision ranking",
           "status": "Present",
-          "evidence": "Context Package exposes ## Decision Ranking."
+          "evidence": "Context Package exposes ## Decision Ranking with selected issue, deterministic selection explanation, and ranked candidates."
         },
         "highestPriorityIssue": {
           "label": "Highest-priority issue",
@@ -1190,14 +1283,8 @@
       ],
       "hiddenInformation": [],
       "contradictions": [],
-      "missingExplanations": [
-        "Decision ranking rationale",
-        "Recommendation rationale"
-      ],
-      "suggestedImprovements": [
-        "Add decision ranking rationale to generated explanations.",
-        "Add recommendation rationale to generated explanations."
-      ]
+      "missingExplanations": [],
+      "suggestedImprovements": []
     },
     "completeness": {
       "id": "canonical-completeness",
@@ -1723,7 +1810,7 @@
     "quality": {
       "id": "intelligence-quality",
       "title": "Intelligence Quality Evaluation",
-      "score": 92,
+      "score": 83,
       "components": {
         "canonicalCompleteness": {
           "score": 83,
@@ -1756,7 +1843,7 @@
           ]
         },
         "verification": {
-          "score": 100,
+          "score": 40,
           "rule": "Verification score is the percent of expected artifacts verified.",
           "evidence": ".ai/intelligence-verification.json"
         }
@@ -1766,6 +1853,71 @@
           "rule": "Missing Current Product Bet",
           "points": 10,
           "evidence": ".ai/goals.md"
+        },
+        {
+          "rule": "strategy.md: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "architecture.md: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "backlog.md: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "validation.md: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "decisions.md: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "repository-health.md: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "prompts/architect.md: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "prompts/builder.md: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "prompts/debugger.md: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "Explanation contradiction: selected recommendation is not referenced by generated package.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
         }
       ]
     },
@@ -1800,5 +1952,5 @@
     }
   },
   "trend": "Stable",
-  "recommendedAction": "Keep refreshing intelligence after meaningful repository changes."
+  "recommendedAction": "Refresh Repository Intelligence: strategy.md: Artifact timestamp is older than refresh start."
 }

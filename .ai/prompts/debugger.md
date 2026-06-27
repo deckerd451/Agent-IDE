@@ -89,7 +89,7 @@ High
 
 # Architecture
 
-Last Audit: 2026-06-27T21:12:47.221Z
+Last Audit: 2026-06-27T23:08:25.837Z
 Confidence: 95%
 
 ## Product Thesis
@@ -171,7 +171,7 @@ Current Focus Evidence:
 
 # Backlog
 
-Last Audit: 2026-06-27T21:12:47.377Z
+Last Audit: 2026-06-27T23:08:26.131Z
 Confidence: 95%
 
 ## High Priority
@@ -209,12 +209,12 @@ Confidence: 95%
 # Validation
 
 ## Last Validation
-- 2026-06-27T21:13:13.073Z
+- 2026-06-27T23:08:39.119Z
 
 ## Confidence
-- Low
+- Medium
 
-## Overall Status: Failing
+## Overall Status: Passing
 
 ## Commands Run
 - `npm run build`
@@ -222,43 +222,42 @@ Confidence: 95%
 
 ## Results
 ### npm run build
-- Status: FAIL
-- Exit code: 1
-- Duration: 1.4s
+- Status: PASS
+- Exit code: 0
+- Duration: 5.0s
 - Output summary:
 ```text
-  src/App.tsx(1501,177): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1501,292): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1504,139): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1504,181): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1504,193): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1504,198): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1507,7): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1508,5): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/main.tsx(1,28): error TS2307: Cannot find module 'react' or its corresponding type declarations.
-  src/main.tsx(2,28): error TS2307: Cannot find module 'react-dom/client' or its corresponding type declarations.
-  src/main.tsx(4,8): error TS2882: Cannot find module or type declarations for side-effect import of './styles.css'.
-  src/main.tsx(7,3): error TS2875: This JSX tag requires the module path 'react/jsx-runtime' to exist, but none could be found. Make sure you have types for the appropriate package installed.
+  npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+  > agent-ide@0.1.0 build
+  > tsc -b && vite build
+  vite v8.1.0 building client environment for production...
+  transforming...✓ 18 modules transformed.
+  rendering chunks...
+  computing gzip size...
+  dist/index.html                   0.39 kB │ gzip:  0.26 kB
+  dist/assets/index-o4m7tovk.css   16.49 kB │ gzip:  3.81 kB
+  dist/assets/index-DSaPgd1F.js   263.60 kB │ gzip: 76.37 kB
+  ✓ built in 302ms
 ```
 
 ### npm run test
 - Status: PASS
 - Exit code: 0
-- Duration: 2.6s
+- Duration: 7.8s
 - Output summary:
 ```text
-    duration_ms: 0.273195
-    type: 'test'
+    ---
+    duration_ms: 0.567458
     ...
-  1..160
-  # tests 160
+  1..180
+  # tests 180
   # suites 0
-  # pass 160
+  # pass 180
   # fail 0
   # cancelled 0
   # skipped 0
   # todo 0
-  # duration_ms 2354.092571
+  # duration_ms 7282.404287
 ```
 
 ## Xcode Project Validation
@@ -277,8 +276,8 @@ Confidence: 95%
 
 # Repository Health
 
-Last Audit: 2026-06-26T13:59:08.292Z
-Overall Health: Healthy
+Last Audit: 2026-06-27T21:13:18.148Z
+Overall Health: Needs Attention
 Confidence: High
 
 ## Intelligence Completeness
@@ -332,7 +331,7 @@ Confidence: High
 - Evidence lines present
 - Backlog noise not detected
 - Validation commands detected
-- Validation confidence Medium
+- Validation confidence Low
 - Xcode validation metadata not detected
 - Canonical editing target .ai/goals.md
 - Manual sections preserved in canonical goals
@@ -343,7 +342,7 @@ Confidence: High
 - Generated artifacts are regenerated, not manually edited.
 
 ## Risks
-- No repository health risks detected.
+- Validation has low confidence
 
 ## Repository Intelligence Explanation
 ### Evidence Synthesis: Current Product Bet
@@ -362,7 +361,12 @@ Confidence: High
 - Suggested Canonical Wording: Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 - Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
 
-- No repository health findings require explanation.
+### Finding: Validation has low confidence
+- Rule: Repository health risk detector matched deterministic local evidence.
+- Computed: Risk present
+- Threshold: Risk absent for Healthy state.
+- Result: Needs Attention
+- Evidence: Validation has low confidence
 
 ## AI Handoff Validation
 - Overall score: 88/100 (Ready)
@@ -396,7 +400,7 @@ Confidence: High
 - Add recommendation rationale to generated explanations.
 
 ## Recommended Next Step
-Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
+Strengthen validation coverage with additional deterministic scripts, then refresh validation and repository health.
 
 ## Manual Health Notes
 
@@ -409,7 +413,7 @@ Keep the intelligence layer current by running Refresh Intelligence after meanin
 
 # Decisions
 
-Last Audit: 2026-06-27T21:12:52.312Z
+Last Audit: 2026-06-27T23:08:39.262Z
 Confidence: 95%
 
 ## Active Decisions
@@ -541,7 +545,7 @@ Do not build broad automation before repository understanding is consistently re
 ```markdown
 # Architecture
 
-Last Audit: 2026-06-27T21:12:47.221Z
+Last Audit: 2026-06-27T23:08:25.837Z
 Confidence: 95%
 
 ## Product Thesis
@@ -672,7 +676,7 @@ High
 ```markdown
 # Backlog
 
-Last Audit: 2026-06-27T21:12:47.377Z
+Last Audit: 2026-06-27T23:08:26.131Z
 Confidence: 95%
 
 ## High Priority
@@ -711,7 +715,7 @@ Confidence: 95%
 ```markdown
 # Decisions
 
-Last Audit: 2026-06-27T21:12:52.312Z
+Last Audit: 2026-06-27T23:08:39.262Z
 Confidence: 95%
 
 ## Active Decisions
@@ -791,12 +795,12 @@ Generated decision records should include context, reason, and consequences, and
 # Validation
 
 ## Last Validation
-- 2026-06-27T21:13:13.073Z
+- 2026-06-27T23:08:39.119Z
 
 ## Confidence
-- Low
+- Medium
 
-## Overall Status: Failing
+## Overall Status: Passing
 
 ## Commands Run
 - `npm run build`
@@ -804,43 +808,42 @@ Generated decision records should include context, reason, and consequences, and
 
 ## Results
 ### npm run build
-- Status: FAIL
-- Exit code: 1
-- Duration: 1.4s
+- Status: PASS
+- Exit code: 0
+- Duration: 5.0s
 - Output summary:
 ```text
-  src/App.tsx(1501,177): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1501,292): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1504,139): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1504,181): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1504,193): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1504,198): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1507,7): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/App.tsx(1508,5): error TS7026: JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
-  src/main.tsx(1,28): error TS2307: Cannot find module 'react' or its corresponding type declarations.
-  src/main.tsx(2,28): error TS2307: Cannot find module 'react-dom/client' or its corresponding type declarations.
-  src/main.tsx(4,8): error TS2882: Cannot find module or type declarations for side-effect import of './styles.css'.
-  src/main.tsx(7,3): error TS2875: This JSX tag requires the module path 'react/jsx-runtime' to exist, but none could be found. Make sure you have types for the appropriate package installed.
+  npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+  > agent-ide@0.1.0 build
+  > tsc -b && vite build
+  vite v8.1.0 building client environment for production...
+  transforming...✓ 18 modules transformed.
+  rendering chunks...
+  computing gzip size...
+  dist/index.html                   0.39 kB │ gzip:  0.26 kB
+  dist/assets/index-o4m7tovk.css   16.49 kB │ gzip:  3.81 kB
+  dist/assets/index-DSaPgd1F.js   263.60 kB │ gzip: 76.37 kB
+  ✓ built in 302ms
 ```
 
 ### npm run test
 - Status: PASS
 - Exit code: 0
-- Duration: 2.6s
+- Duration: 7.8s
 - Output summary:
 ```text
-    duration_ms: 0.273195
-    type: 'test'
+    ---
+    duration_ms: 0.567458
     ...
-  1..160
-  # tests 160
+  1..180
+  # tests 180
   # suites 0
-  # pass 160
+  # pass 180
   # fail 0
   # cancelled 0
   # skipped 0
   # todo 0
-  # duration_ms 2354.092571
+  # duration_ms 7282.404287
 ```
 
 ## Xcode Project Validation
@@ -889,8 +892,8 @@ Generated decision records should include context, reason, and consequences, and
 ```markdown
 # Repository Health
 
-Last Audit: 2026-06-26T13:59:08.292Z
-Overall Health: Healthy
+Last Audit: 2026-06-27T21:13:18.148Z
+Overall Health: Needs Attention
 Confidence: High
 
 ## Intelligence Completeness
@@ -944,7 +947,7 @@ Confidence: High
 - Evidence lines present
 - Backlog noise not detected
 - Validation commands detected
-- Validation confidence Medium
+- Validation confidence Low
 - Xcode validation metadata not detected
 - Canonical editing target .ai/goals.md
 - Manual sections preserved in canonical goals
@@ -955,7 +958,7 @@ Confidence: High
 - Generated artifacts are regenerated, not manually edited.
 
 ## Risks
-- No repository health risks detected.
+- Validation has low confidence
 
 ## Repository Intelligence Explanation
 ### Evidence Synthesis: Current Product Bet
@@ -974,7 +977,12 @@ Confidence: High
 - Suggested Canonical Wording: Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 - Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
 
-- No repository health findings require explanation.
+### Finding: Validation has low confidence
+- Rule: Repository health risk detector matched deterministic local evidence.
+- Computed: Risk present
+- Threshold: Risk absent for Healthy state.
+- Result: Needs Attention
+- Evidence: Validation has low confidence
 
 ## AI Handoff Validation
 - Overall score: 88/100 (Ready)
@@ -1008,7 +1016,7 @@ Confidence: High
 - Add recommendation rationale to generated explanations.
 
 ## Recommended Next Step
-Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
+Strengthen validation coverage with additional deterministic scripts, then refresh validation and repository health.
 
 ## Manual Health Notes
 ```

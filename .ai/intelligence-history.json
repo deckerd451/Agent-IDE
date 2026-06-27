@@ -400,5 +400,49 @@
     "trend": "Stable",
     "regressions": [],
     "improvements": []
+  },
+  {
+    "timestamp": "2026-06-27T23:08:41.188Z",
+    "overallScore": 92,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-27T23:08:41.264Z",
+    "overallScore": 83,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Needs Attention",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-27T23:09:17.729Z",
+    "overallScore": 84,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
+  },
+  {
+    "timestamp": "2026-06-27T23:09:17.796Z",
+    "overallScore": 83,
+    "coverageScore": 100,
+    "consistencyScore": 100,
+    "freshnessScore": 100,
+    "confidenceScore": 90,
+    "trend": "Stable",
+    "regressions": [],
+    "improvements": []
   }
 ]

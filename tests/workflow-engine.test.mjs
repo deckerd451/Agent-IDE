@@ -76,9 +76,10 @@ test('copy-only buttons are demoted and cannot be the sole primary CTA', () => {
   assert.doesNotMatch(appSource, /<button className="primaryCta"[^>]*copyText/);
 });
 
-test('terminal refresh step persists validation completion before refresh and clears workflow state after', () => {
-  assert.match(appSource, /isTerminalRefreshStep && currentWorkflow\.type === 'Validation'/);
-  assert.match(appSource, /completionRecordPersistedBeforeRefresh: true/);
+test('terminal refresh step does not persist recommendation-affecting validation completion state before refresh and clears workflow state after', () => {
+  assert.doesNotMatch(appSource, /localStorage\.setItem\(validationCompletionStorageKey/);
+  assert.doesNotMatch(appSource, /persistValidationCompletion/);
+  assert.match(appSource, /completionRecordPersistedBeforeRefresh: false/);
   assert.match(appSource, /clearWorkflow: isTerminalRefreshStep/);
   assert.match(appSource, /window\.localStorage\.removeItem\(workflowStateStorageKey\)/);
   assert.match(appSource, /workflowStateCleared: true/);
@@ -89,7 +90,7 @@ test('terminal refresh step persists validation completion before refresh and cl
   assert.match(appSource, /controlPlaneUpdated/);
   assert.match(appSource, /finalRecommendationTitle/);
   assert.match(appSource, /suppressionApplied/);
-  for (const expected of ['refresh step detected', 'refresh started', 'refresh completed', 'refresh error', 'control plane updated', 'completion record persisted before refresh', 'workflow state cleared', 'final recommendation title', 'suppression applied']) {
+  for (const expected of ['refresh step detected', 'refresh started', 'refresh completed', 'refresh error', 'control plane updated', 'workflow state cleared', 'final recommendation title', 'suppression applied']) {
     assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });

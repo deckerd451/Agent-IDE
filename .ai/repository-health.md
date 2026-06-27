@@ -1,7 +1,7 @@
 # Repository Health
 
-Last Audit: 2026-06-27T21:13:18.148Z
-Overall Health: Needs Attention
+Last Audit: 2026-06-27T23:08:40.229Z
+Overall Health: Healthy
 Confidence: High
 
 ## Intelligence Completeness
@@ -55,7 +55,7 @@ Confidence: High
 - Evidence lines present
 - Backlog noise not detected
 - Validation commands detected
-- Validation confidence Low
+- Validation confidence Medium
 - Xcode validation metadata not detected
 - Canonical editing target .ai/goals.md
 - Manual sections preserved in canonical goals
@@ -66,7 +66,7 @@ Confidence: High
 - Generated artifacts are regenerated, not manually edited.
 
 ## Risks
-- Validation has low confidence
+- No repository health risks detected.
 
 ## Repository Intelligence Explanation
 ### Evidence Synthesis: Current Product Bet
@@ -85,12 +85,7 @@ Confidence: High
 - Suggested Canonical Wording: Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 - Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
 
-### Finding: Validation has low confidence
-- Rule: Repository health risk detector matched deterministic local evidence.
-- Computed: Risk present
-- Threshold: Risk absent for Healthy state.
-- Result: Needs Attention
-- Evidence: Validation has low confidence
+- No repository health findings require explanation.
 
 ## AI Handoff Validation
 - Overall score: 88/100 (Ready)
@@ -124,6 +119,6 @@ Confidence: High
 - Add recommendation rationale to generated explanations.
 
 ## Recommended Next Step
-Strengthen validation coverage with additional deterministic scripts, then refresh validation and repository health.
+Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
 
 ## Manual Health Notes

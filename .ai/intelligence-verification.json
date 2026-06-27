@@ -1,73 +1,96 @@
 {
   "schemaVersion": 1,
-  "verifiedAt": "2026-06-26T13:59:09.798Z",
-  "refreshStartedAt": null,
-  "status": "Verified",
-  "score": 100,
-  "failureCount": 0,
-  "failureReason": null,
-  "summary": "All displayed intelligence verified.",
-  "failures": [],
+  "verifiedAt": "2026-06-27T23:09:17.815Z",
+  "refreshStartedAt": "2026-06-27T23:09:17.449Z",
+  "status": "Failed",
+  "score": 47,
+  "failureCount": 10,
+  "failureReason": "strategy.md: Artifact timestamp is older than refresh start.",
+  "summary": "10 verification failures detected.",
+  "failures": [
+    "strategy.md: Artifact timestamp is older than refresh start.",
+    "architecture.md: Artifact timestamp is older than refresh start.",
+    "backlog.md: Artifact timestamp is older than refresh start.",
+    "validation.md: Artifact timestamp is older than refresh start.",
+    "decisions.md: Artifact timestamp is older than refresh start.",
+    "repository-health.md: Artifact timestamp is older than refresh start.",
+    "prompts/architect.md: Artifact timestamp is older than refresh start.",
+    "prompts/builder.md: Artifact timestamp is older than refresh start.",
+    "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
+    "prompts/debugger.md: Artifact timestamp is older than refresh start."
+  ],
   "artifacts": [
     {
       "artifact": "strategy.md",
-      "generatedAt": "2026-06-26T12:34:14.946Z",
-      "generatedHash": "dbb3bfde5c52e37250ffdde20bbcb4895768c39d951c8e3b56fdd46d9b575eda",
-      "displayedHash": "dbb3bfde5c52e37250ffdde20bbcb4895768c39d951c8e3b56fdd46d9b575eda",
-      "status": "Verified",
-      "failures": []
+      "generatedAt": "2026-06-27T23:08:39.419Z",
+      "generatedHash": "56d96677382d8bbee74136716af912df7fc856275f114193661dfd9c4dc3330d",
+      "displayedHash": "56d96677382d8bbee74136716af912df7fc856275f114193661dfd9c4dc3330d",
+      "status": "Failed",
+      "failures": [
+        "Artifact timestamp is older than refresh start."
+      ]
     },
     {
       "artifact": "architecture.md",
-      "generatedAt": "2026-06-26T13:54:11.954Z",
-      "generatedHash": "6e220477645ee325512a21bfc59eeaf459c03837b7b04398d06ebbd962d6f54e",
-      "displayedHash": "6e220477645ee325512a21bfc59eeaf459c03837b7b04398d06ebbd962d6f54e",
-      "status": "Verified",
-      "failures": []
+      "generatedAt": "2026-06-27T23:08:25.834Z",
+      "generatedHash": "b9b9ac32f25a02a97bc62c71693550d5b5df522d4eaba8f0bd79c2cd63df5135",
+      "displayedHash": "b9b9ac32f25a02a97bc62c71693550d5b5df522d4eaba8f0bd79c2cd63df5135",
+      "status": "Failed",
+      "failures": [
+        "Artifact timestamp is older than refresh start."
+      ]
     },
     {
       "artifact": "backlog.md",
-      "generatedAt": "2026-06-26T13:54:11.954Z",
-      "generatedHash": "5199875b3c3f202ec0d49fbc169e31d3c0003ce1e48706c3014fead1cbbc2682",
-      "displayedHash": "5199875b3c3f202ec0d49fbc169e31d3c0003ce1e48706c3014fead1cbbc2682",
-      "status": "Verified",
-      "failures": []
+      "generatedAt": "2026-06-27T23:08:26.130Z",
+      "generatedHash": "505ac56b91f743271faaee7c798776863d0e766644f23493bfa70a2c30ee684d",
+      "displayedHash": "505ac56b91f743271faaee7c798776863d0e766644f23493bfa70a2c30ee684d",
+      "status": "Failed",
+      "failures": [
+        "Artifact timestamp is older than refresh start."
+      ]
     },
     {
       "artifact": "validation.md",
-      "generatedAt": "2026-06-26T13:54:11.958Z",
-      "generatedHash": "424e4d84181764728aa1a80b1dfd10d1c2f5d54dae15147e4b4ee5d95e52120a",
-      "displayedHash": "424e4d84181764728aa1a80b1dfd10d1c2f5d54dae15147e4b4ee5d95e52120a",
-      "status": "Verified",
-      "failures": []
+      "generatedAt": "2026-06-27T23:08:39.119Z",
+      "generatedHash": "aa05225e3cde0820c9e3f21df572b1e7de19fbd31a04e6229b31cd574583268a",
+      "displayedHash": "aa05225e3cde0820c9e3f21df572b1e7de19fbd31a04e6229b31cd574583268a",
+      "status": "Failed",
+      "failures": [
+        "Artifact timestamp is older than refresh start."
+      ]
     },
     {
       "artifact": "decisions.md",
-      "generatedAt": "2026-06-26T13:54:11.954Z",
-      "generatedHash": "8ffb5d7186c3f9ddf9ed5380726cba7d995b42435fb25c362f1efd48500b7353",
-      "displayedHash": "8ffb5d7186c3f9ddf9ed5380726cba7d995b42435fb25c362f1efd48500b7353",
-      "status": "Verified",
-      "failures": []
+      "generatedAt": "2026-06-27T23:08:39.259Z",
+      "generatedHash": "837fb9f11f5ca43a21e94367b5686f2385dee1e64e1496b3ba9971c5b3854039",
+      "displayedHash": "837fb9f11f5ca43a21e94367b5686f2385dee1e64e1496b3ba9971c5b3854039",
+      "status": "Failed",
+      "failures": [
+        "Artifact timestamp is older than refresh start."
+      ]
     },
     {
       "artifact": "repository-health.md",
-      "generatedAt": "2026-06-26T13:59:08.290Z",
-      "generatedHash": "70463ffeb60a19140b5eae0dd9fff58fde0b3574824ed8b31e0338689ec86fbe",
-      "displayedHash": "70463ffeb60a19140b5eae0dd9fff58fde0b3574824ed8b31e0338689ec86fbe",
-      "status": "Verified",
-      "failures": []
+      "generatedAt": "2026-06-27T23:08:40.227Z",
+      "generatedHash": "f9c0d2e7eb18908a53e08532cf13998ae37af5a14f93ecb8f571f950fd325d51",
+      "displayedHash": "f9c0d2e7eb18908a53e08532cf13998ae37af5a14f93ecb8f571f950fd325d51",
+      "status": "Failed",
+      "failures": [
+        "Artifact timestamp is older than refresh start."
+      ]
     },
     {
       "artifact": "context-package.md",
-      "generatedAt": "2026-06-26T13:59:08.450Z",
-      "generatedHash": "9472cee99aca3e48e2819eee59c328702c4545feddc592feb2118d39a4743912",
-      "displayedHash": "9472cee99aca3e48e2819eee59c328702c4545feddc592feb2118d39a4743912",
+      "generatedAt": "2026-06-27T23:09:17.683Z",
+      "generatedHash": "bac98374e47603c26979b81fa78736a3fc845f2f0ceb7c44df4dd88652577916",
+      "displayedHash": "bac98374e47603c26979b81fa78736a3fc845f2f0ceb7c44df4dd88652577916",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "next-improvement-prompt.md",
-      "generatedAt": "2026-06-26T13:54:11.958Z",
+      "generatedAt": "2026-06-27T23:09:17.539Z",
       "generatedHash": "b637f16b71de0fdcac30e97a5f1fa027ddbaa1f90efe3501c8f39819b567aef1",
       "displayedHash": "b637f16b71de0fdcac30e97a5f1fa027ddbaa1f90efe3501c8f39819b567aef1",
       "status": "Verified",
@@ -75,31 +98,31 @@
     },
     {
       "artifact": "intelligence-quality.json",
-      "generatedAt": "2026-06-26T13:59:09.494Z",
-      "generatedHash": "4417510cd4f702834439c1fea0291a32b02988c9d80abd8377a50e5693803142",
-      "displayedHash": "4417510cd4f702834439c1fea0291a32b02988c9d80abd8377a50e5693803142",
+      "generatedAt": "2026-06-27T23:09:17.811Z",
+      "generatedHash": "2635c0741fda9301984a038b9de258dad14fbf35870a19e7b3d0a132d6e6a793",
+      "displayedHash": "2635c0741fda9301984a038b9de258dad14fbf35870a19e7b3d0a132d6e6a793",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "intelligence-history.json",
-      "generatedAt": "2026-06-26T13:59:09.494Z",
-      "generatedHash": "938638abc29835782ed7b77b3ff26a0e4cd623104d7f581a88656c9d2962abb6",
-      "displayedHash": "938638abc29835782ed7b77b3ff26a0e4cd623104d7f581a88656c9d2962abb6",
+      "generatedAt": "2026-06-27T23:09:17.811Z",
+      "generatedHash": "bd32e9b4a078cba6f1605e83177d8b53793f18f5684d57ab8457d9215aa17154",
+      "displayedHash": "bd32e9b4a078cba6f1605e83177d8b53793f18f5684d57ab8457d9215aa17154",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "intelligence-snapshot.json",
-      "generatedAt": "2026-06-26T13:54:11.958Z",
-      "generatedHash": "ec00c486964ed1fa12de573f8e750ddb27a8ed86ce710eeff1c50ad1388cb855",
-      "displayedHash": "ec00c486964ed1fa12de573f8e750ddb27a8ed86ce710eeff1c50ad1388cb855",
+      "generatedAt": "2026-06-27T23:09:17.523Z",
+      "generatedHash": "2570f3c13c79ee0f289c4050d12733881f031eb498bd075264a915c62e122e18",
+      "displayedHash": "2570f3c13c79ee0f289c4050d12733881f031eb498bd075264a915c62e122e18",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "intelligence-diff.json",
-      "generatedAt": "2026-06-26T12:34:14.942Z",
+      "generatedAt": "2026-06-27T23:09:17.523Z",
       "generatedHash": "dd09980983af997edb0e286b40d6d137a86ab68d14da953c2b4120b764b567c9",
       "displayedHash": "dd09980983af997edb0e286b40d6d137a86ab68d14da953c2b4120b764b567c9",
       "status": "Verified",
@@ -107,59 +130,67 @@
     },
     {
       "artifact": "intelligence-timeline.json",
-      "generatedAt": "2026-06-26T13:54:11.958Z",
-      "generatedHash": "c4791a7eae0a4f08b5b236f21449c4c6f8bc3b1b008a4dd70a2806d44c79acf0",
-      "displayedHash": "c4791a7eae0a4f08b5b236f21449c4c6f8bc3b1b008a4dd70a2806d44c79acf0",
+      "generatedAt": "2026-06-27T23:09:17.523Z",
+      "generatedHash": "f41386e2e752c01b27e6763092e0c2304135d3705c4589008596b58a9d1eab68",
+      "displayedHash": "f41386e2e752c01b27e6763092e0c2304135d3705c4589008596b58a9d1eab68",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "intelligence-explanations.json",
-      "generatedAt": "2026-06-26T13:59:09.650Z",
-      "generatedHash": "bb02b1f813b5b239f9ed30ea7093a38bc74a9f567e55ea87a9775c087e52b8ca",
-      "displayedHash": "bb02b1f813b5b239f9ed30ea7093a38bc74a9f567e55ea87a9775c087e52b8ca",
+      "generatedAt": "2026-06-27T23:09:17.811Z",
+      "generatedHash": "82ec1927e19b97ffc29a1ff77d0a45c291e6e723de67558921c2170606254762",
+      "displayedHash": "82ec1927e19b97ffc29a1ff77d0a45c291e6e723de67558921c2170606254762",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "ai-handoff-validation.json",
-      "generatedAt": "2026-06-26T13:59:09.230Z",
-      "generatedHash": "9a2befd2cac596f66c80c268aa557b8f2563da8d22e7494ca24716db9043ba73",
-      "displayedHash": "9a2befd2cac596f66c80c268aa557b8f2563da8d22e7494ca24716db9043ba73",
+      "generatedAt": "2026-06-27T23:09:17.807Z",
+      "generatedHash": "fe94c7ad265c4bcc13137e21b6938fbdc9e1abcd892699857822c4d78c7fb6e9",
+      "displayedHash": "fe94c7ad265c4bcc13137e21b6938fbdc9e1abcd892699857822c4d78c7fb6e9",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "prompts/architect.md",
-      "generatedAt": "2026-06-26T12:34:14.942Z",
-      "generatedHash": "b9b120c22209d31061a24b752c643705941b2f69370a1d2a8bc10d46c07888bb",
-      "displayedHash": "b9b120c22209d31061a24b752c643705941b2f69370a1d2a8bc10d46c07888bb",
-      "status": "Verified",
-      "failures": []
+      "generatedAt": "2026-06-27T23:08:39.567Z",
+      "generatedHash": "74320a181e70ebed39e6a59c3d48dd5e61cc45802b632cb77c21e36e1bd12b66",
+      "displayedHash": "74320a181e70ebed39e6a59c3d48dd5e61cc45802b632cb77c21e36e1bd12b66",
+      "status": "Failed",
+      "failures": [
+        "Artifact timestamp is older than refresh start."
+      ]
     },
     {
       "artifact": "prompts/builder.md",
-      "generatedAt": "2026-06-26T12:34:14.946Z",
-      "generatedHash": "3b6ca34ef1b07ee88127c7922a4471d64b57b9cdc9b802c90773403855af8043",
-      "displayedHash": "3b6ca34ef1b07ee88127c7922a4471d64b57b9cdc9b802c90773403855af8043",
-      "status": "Verified",
-      "failures": []
+      "generatedAt": "2026-06-27T23:08:39.715Z",
+      "generatedHash": "658872a2486f93bf35ff805e92617a01cabb2ea2f57f834c4e6143bc609551ed",
+      "displayedHash": "658872a2486f93bf35ff805e92617a01cabb2ea2f57f834c4e6143bc609551ed",
+      "status": "Failed",
+      "failures": [
+        "Artifact timestamp is older than refresh start."
+      ]
     },
     {
       "artifact": "prompts/reviewer.md",
-      "generatedAt": "2026-06-26T12:34:14.946Z",
-      "generatedHash": "1ed67622bcd2d725edef5d82bfc44a03f08337f2f854a771bd25adf30c65076c",
-      "displayedHash": "1ed67622bcd2d725edef5d82bfc44a03f08337f2f854a771bd25adf30c65076c",
-      "status": "Verified",
-      "failures": []
+      "generatedAt": "2026-06-27T23:08:39.867Z",
+      "generatedHash": "b23186eca69380925d94bae691f5ecac17d679255394c5adf3e2ee7cdeb29c9d",
+      "displayedHash": "b23186eca69380925d94bae691f5ecac17d679255394c5adf3e2ee7cdeb29c9d",
+      "status": "Failed",
+      "failures": [
+        "Artifact timestamp is older than refresh start."
+      ]
     },
     {
       "artifact": "prompts/debugger.md",
-      "generatedAt": "2026-06-26T12:34:14.946Z",
-      "generatedHash": "99b01260c20604c4b79cf49ecc8285ac4b0d0228da398abdf37644576fee2037",
-      "displayedHash": "99b01260c20604c4b79cf49ecc8285ac4b0d0228da398abdf37644576fee2037",
-      "status": "Verified",
-      "failures": []
+      "generatedAt": "2026-06-27T23:08:40.007Z",
+      "generatedHash": "38702a528d3d6bdb1fd31088a81b969d82e163447f8d08ad309eeebabfb3c5ef",
+      "displayedHash": "38702a528d3d6bdb1fd31088a81b969d82e163447f8d08ad309eeebabfb3c5ef",
+      "status": "Failed",
+      "failures": [
+        "Artifact timestamp is older than refresh start."
+      ]
     }
   ],
   "crossChecks": []
