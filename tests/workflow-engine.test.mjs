@@ -50,8 +50,27 @@ test('work queue presents one primary workflow action while diagnostics remain a
     assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
   assert.match(appSource, /function primaryHomepageAction\(workflow\?: Workflow \| null\)/);
-  assert.match(appSource, /return workflow\.currentPrimaryAction/);
+  assert.match(appSource, /return outcomeWorkflowText\(workflow\.currentPrimaryAction\)/);
   assert.match(appSource, /<details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced<\/summary>/);
+});
+
+
+test('clicking the visible Work Queue primary CTA routes through workflow advancement', () => {
+  assert.match(appSource, /function WorkflowPrimaryButton\(\{ workflow, onPrimaryAction \}: \{ workflow: Workflow; onPrimaryAction: \(\) => void \}\)/);
+  assert.match(appSource, /data-workflow-primary-action="true" onClick=\{onPrimaryAction\}/);
+  assert.match(appSource, /\{workflow \? <WorkflowPrimaryButton workflow=\{workflow\} onPrimaryAction=\{onPrimaryAction\} \/> : <button className="primaryCta"/);
+  assert.match(appSource, /await performWorkflowStepAction\(currentWorkflow, controlPlane\);\s*const task = firstCandidate\(controlPlane, 1\);\s*const next = advanceWorkflow\(workflowInputForTask\(controlPlane\.recommendation, task\), workflowState\);\s*window\.localStorage\.setItem\(workflowStateStorageKey, JSON\.stringify\(next\)\);\s*setWorkflowState\(next\);/);
+  assert.match(workflowSource, /\{ id: 'copy-context-package', label: 'Copy Context Package', primaryAction: 'Copy Context Package', state: 'Recommendation Ready', nextState: 'Workflow In Progress' \},\s*\{ id: 'copy-validation-prompt', label: 'Copy Validation Prompt', primaryAction: 'Copy Validation Prompt', state: 'Workflow In Progress'/);
+});
+
+test('copy-only buttons are demoted and cannot be the sole primary CTA', () => {
+  const workflowPrimaryStart = appSource.indexOf('function WorkflowPrimaryButton');
+  const workflowPrimaryEnd = appSource.indexOf('function WorkflowProgress', workflowPrimaryStart);
+  const workflowPrimarySource = appSource.slice(workflowPrimaryStart, workflowPrimaryEnd);
+  assert.doesNotMatch(workflowPrimarySource, /copyText\(/);
+  assert.match(workflowPrimarySource, /onClick=\{onPrimaryAction\}/);
+  assert.match(appSource, /Copy-only: \{label\}/);
+  assert.doesNotMatch(appSource, /<button className="primaryCta"[^>]*copyText/);
 });
 
 test('repository intelligence, rankings, and prompts are preserved by workflow-layer refactor', () => {
