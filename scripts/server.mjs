@@ -378,7 +378,7 @@ async function readControlPlane(repositoryPath) {
   return { status: snapshot, aiHandoffValidation, decisionRanking, evidenceLineage, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
 }
 
-async function persistControlPlane(repositoryPath, previousSnapshot, refreshStartedAt = new Date()) {
+async function persistControlPlane(repositoryPath, previousSnapshot, refreshStartedAt = new Date(), options = {}) {
   const data = await readControlPlane(repositoryPath);
   data.diff = diffSnapshots(previousSnapshot, data.status);
   const timelinePath = join(repositoryPath, '.ai', 'intelligence-timeline.json');
@@ -387,7 +387,7 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   await writeFile(join(repositoryPath, '.ai', 'intelligence-snapshot.json'), JSON.stringify(data.status, null, 2));
   await writeFile(join(repositoryPath, '.ai', 'intelligence-diff.json'), JSON.stringify(data.diff, null, 2));
   await writeFile(timelinePath, JSON.stringify(timeline.slice(-100), null, 2));
-  const nextImprovement = await generateNextImprovement(repositoryPath);
+  const nextImprovement = await generateNextImprovement(repositoryPath, { validationCompletions: options.validationCompletions ?? [] });
   data.recommendation = {
     title: nextImprovement.choice.title,
     actionability: nextImprovement.choice.actionability,
@@ -572,7 +572,7 @@ async function ensureBaselineFiles(repositoryPath) {
 }
 
 async function handleRefresh(request, response) {
-  const { repositoryPath } = await readJson(request);
+  const { repositoryPath, validationCompletions = [] } = await readJson(request);
   const resolvedPath = await validateRepositoryPath(repositoryPath);
   await mkdir(join(resolvedPath, '.ai'), { recursive: true });
   const previousSnapshot = JSON.parse(await readFile(join(resolvedPath, '.ai', 'intelligence-snapshot.json'), 'utf8').catch(() => 'null'));
@@ -600,7 +600,7 @@ async function handleRefresh(request, response) {
   const failed = results.filter((result) => result.exitCode !== 0);
   if (failed.length === 0) {
     writeEvent(response, { type: 'step-started', id: 'verification', label: 'Intelligence Verification' });
-    await persistControlPlane(resolvedPath, previousSnapshot, new Date(startedAt));
+    await persistControlPlane(resolvedPath, previousSnapshot, new Date(startedAt), { validationCompletions });
     writeEvent(response, { type: 'step-finished', id: 'verification', label: 'Intelligence Verification', exitCode: 0, durationMs: Date.now() - startedAt, output: 'Generated .ai/intelligence-verification.json' });
   }
   writeEvent(response, {

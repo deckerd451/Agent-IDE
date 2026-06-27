@@ -5,6 +5,24 @@ import { canonicalManualGoalsSuggestedUpdate, evaluateCanonicalStrategyCompleten
 import { renderSynthesisMarkdown } from './evidence-synthesis.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md'];
+
+export function contextSnapshotHash(value = '') {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) hash = ((hash << 5) + hash + value.charCodeAt(index)) >>> 0;
+  return `djb2-${hash.toString(16).padStart(8, '0')}`;
+}
+
+function completedValidationMatches(record, { repositoryPath, workflowKey, selectedIssueId, contextPackageHash }) {
+  return record?.repositoryPath === repositoryPath
+    && record?.workflowKey === workflowKey
+    && record?.selectedIssueId === selectedIssueId
+    && record?.contextPackageHash === contextPackageHash;
+}
+
+function upToDateIssue(contextPackageHash) {
+  return selectedIssue({ id: 'repository-up-to-date', category: 'repository status', severity: 'low', actionability: 'validation-experiment', source: 'Validation completed for this intelligence snapshot.', title: 'Repository is up to date', evidence: `Validation completed for this intelligence snapshot.${contextPackageHash ? ` Context package hash: ${contextPackageHash}.` : ''}`, reason: 'No high-priority improvement detected. Refresh after repository changes to generate the next recommendation.', recommendedAction: 'Refresh after repository changes to generate the next recommendation.' });
+}
+
 const constraints = ['local-first','deterministic','no LLM calls','no cloud','no telemetry','preserve manual sections','keep changes small and reviewable'];
 
 async function readText(repositoryPath, file) {
@@ -155,6 +173,11 @@ const issueDetails = {
     requirements: ['Run a local AI handoff dry run using the generated context package and prompts as static inputs.', 'Document whether the package contains enough context for an outside builder to choose safe first edits.', 'Do not request code changes unless adding or documenting a validation workflow.'],
     acceptance: ['AI handoff validation is documented with deterministic local evidence.', 'Any missing context or acceptance-test gaps are recorded in the appropriate manual section of \`.ai/goals.md\`.', 'No unrelated code changes are requested.'],
   },
+  'repository-up-to-date': {
+    problem: 'Validation completed for this intelligence snapshot, and no high-priority improvement is currently detected.',
+    requirements: ['Do not rerun the same validation experiment for the same context package.', 'Refresh after repository changes to generate the next recommendation.'],
+    acceptance: ['The completed validation stays suppressed for this intelligence snapshot.', 'A materially changed context package can surface a new validation recommendation.'],
+  },
   'missing-intelligence': {
     problem: 'Repository intelligence is missing, preventing generated prompts and handoffs from relying on the `.ai/goals.md` source of truth and generated context.',
     requirements: ['Restore only the missing intelligence named in Current Evidence.', 'Use repository-local evidence and preserve existing manual sections.', 'Do not mix this work with backlog, strategy, validation, or handoff issues.'],
@@ -181,7 +204,7 @@ export function chooseNextImprovement({ health = '', quality = null, audit = '',
   return chooseNextImprovementWithCandidates({ health, quality, audit, backlog, strategy, contextPackage, goals }).selectedIssue;
 }
 
-export function chooseNextImprovementWithCandidates({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '' }) {
+export function chooseNextImprovementWithCandidates({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '', repositoryPath = '', validationCompletions = [] }) {
   const risks = healthRisks(health);
   const coverage = quality?.coverage ?? {};
   const issues = [];
@@ -227,7 +250,12 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
     const evidence = backlogRisk ?? `Backlog contains ${backlogCount(backlog)} items, exceeding the noise threshold of 25.`;
     issues.push(selectedIssue({ id: 'backlog-noise', category: 'backlog filtering bugs', severity: 'medium', actionability: 'code-fixable', source: evidence, title: 'Reduce Backlog Noise', evidence, reason: 'A noisy backlog hides the highest-leverage next implementation work.', recommendedAction: 'Remove, merge, or downgrade noisy backlog items.' }));
   }
-  const candidates = issues.length ? issues : [selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', actionability: 'validation-experiment', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' })];
+  const contextHash = contextPackage.trim() ? contextSnapshotHash(contextPackage) : undefined;
+  const validationWorkflowKey = 'Validation:validation-experiment:Run AI Handoff Validation';
+  const validationAlreadyCompleted = validationCompletions.some((record) => completedValidationMatches(record, { repositoryPath, workflowKey: validationWorkflowKey, selectedIssueId: 'ai-handoff-validation', contextPackageHash: contextHash }));
+  const candidates = issues.length ? issues : (validationAlreadyCompleted
+    ? [upToDateIssue(contextHash)]
+    : [selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', actionability: 'validation-experiment', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' })]);
   const decisionRanking = buildDecisionRanking(candidates);
   return { selectedIssue: decisionRanking.candidates[0], candidates: decisionRanking.candidates, decisionRanking };
 }
@@ -378,10 +406,10 @@ export function renderPrompt(choice) {
   return renderImplementationPackage(selected, details, ranking);
 }
 
-export async function generateNextImprovement(repositoryPath = process.cwd()) {
+export async function generateNextImprovement(repositoryPath = process.cwd(), options = {}) {
   const resolved = resolve(repositoryPath);
   const [goals, health, quality, audit, backlog, strategy, contextPackage] = await Promise.all([readText(resolved, 'goals.md'), readText(resolved, 'repository-health.md'), readJson(resolved, 'intelligence-quality.json'), readText(resolved, 'intelligence-audit.md'), readText(resolved, 'backlog.md'), readText(resolved, 'strategy.md'), readText(resolved, 'context-package.md')]);
-  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage });
+  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage, repositoryPath: resolved, validationCompletions: options.validationCompletions ?? [] });
   selectedIssue.explanation = explainRecommendation(selectedIssue, candidates);
   decisionRanking.explanation = explainDecisionRanking(decisionRanking);
   const prompt = renderPrompt({ selectedIssue, decisionRanking });
