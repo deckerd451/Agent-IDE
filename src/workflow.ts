@@ -45,7 +45,18 @@ export type WorkflowState = {
   completedStepIds: string[];
 };
 
+export type ValidationCompletionRecord = {
+  workflowKey: string;
+  completedAt: string;
+  repositoryPath: string;
+  selectedIssueId: string;
+  recommendationTitle: string;
+  contextPackageHash?: string;
+  refreshTimestamp?: string;
+};
+
 export const workflowStateStorageKey = 'agent-ide:workflow-state';
+export const validationCompletionStorageKey = 'agent-ide:validation-completions';
 
 export type WorkflowInput = {
   packageType?: 'implementation' | 'product-decision' | 'validation-experiment';
@@ -163,6 +174,20 @@ export function advanceWorkflow(input: WorkflowInput, current?: WorkflowState | 
   const completedStepIds = Array.from(new Set([...(current?.workflowKey === key ? current.completedStepIds : []), currentStep.id]));
   const nextStep = definition.steps[currentIndex + 1];
   return { workflowKey: key, currentStepId: nextStep?.id ?? currentStep.id, repositoryState: nextStep?.state ?? currentStep.nextState, completedStepIds, status: nextStep ? 'In Progress' : 'Ready To Refresh' };
+}
+
+export function contextSnapshotHash(value = '') {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) hash = ((hash << 5) + hash + value.charCodeAt(index)) >>> 0;
+  return `djb2-${hash.toString(16).padStart(8, '0')}`;
+}
+
+export function validationCompletionKey(record: Pick<ValidationCompletionRecord, 'repositoryPath' | 'workflowKey' | 'selectedIssueId' | 'contextPackageHash' | 'refreshTimestamp'>) {
+  return [record.repositoryPath, record.workflowKey, record.selectedIssueId, record.contextPackageHash ?? record.refreshTimestamp ?? 'unknown-snapshot'].join('::');
+}
+
+export function validationCompletionMatchesSnapshot(record: ValidationCompletionRecord, input: { repositoryPath: string; workflowKey: string; selectedIssueId: string; contextPackageHash?: string; refreshTimestamp?: string }) {
+  return validationCompletionKey(record) === validationCompletionKey(input);
 }
 
 export function workflowDefinitionsForTests() {

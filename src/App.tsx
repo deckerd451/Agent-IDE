@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { sections, type Section } from './sections';
-import { advanceWorkflow, createWorkflow, workflowKey, workflowStateStorageKey, type Workflow, type WorkflowState } from './workflow';
+import { advanceWorkflow, contextSnapshotHash, createWorkflow, validationCompletionStorageKey, workflowKey, workflowStateStorageKey, type ValidationCompletionRecord, type Workflow, type WorkflowState } from './workflow';
 
 type WorkflowDiagnostics = {
   lastPrimaryActionClicked: string;
@@ -164,6 +164,24 @@ function readWorkflowState(): WorkflowState | null {
   } catch {
     return null;
   }
+}
+
+
+function readValidationCompletions(): ValidationCompletionRecord[] {
+  try {
+    const raw = window.localStorage.getItem(validationCompletionStorageKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistValidationCompletion(record: ValidationCompletionRecord) {
+  const completions = readValidationCompletions();
+  const key = [record.repositoryPath, record.workflowKey, record.selectedIssueId, record.contextPackageHash ?? record.refreshTimestamp ?? 'unknown-snapshot'].join('::');
+  const next = [record, ...completions.filter((item) => [item.repositoryPath, item.workflowKey, item.selectedIssueId, item.contextPackageHash ?? item.refreshTimestamp ?? 'unknown-snapshot'].join('::') !== key)].slice(0, 100);
+  window.localStorage.setItem(validationCompletionStorageKey, JSON.stringify(next));
 }
 
 function workflowIndex(workflow: Workflow | null | undefined) {
@@ -1142,7 +1160,7 @@ export function App() {
       const response = await fetch(new URL('/api/repository/refresh', serverBaseUrl), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repositoryPath }),
+        body: JSON.stringify({ repositoryPath, validationCompletions: readValidationCompletions() }),
       });
 
       if (!response.ok || !response.body) {
@@ -1268,8 +1286,21 @@ export function App() {
     setWorkflowState(next);
     setWorkflowDiagnostics((current) => ({ ...current, setWorkflowStateRan: true }));
     if (next.status === 'Ready To Refresh') {
+      if (currentWorkflow.type === 'Validation') {
+        const task = firstCandidate(controlPlane, 1);
+        const contextPackage = controlPlane.packages.context || documents['context-package.md']?.content || '';
+        persistValidationCompletion({
+          workflowKey: next.workflowKey,
+          completedAt: new Date().toISOString(),
+          repositoryPath: connectedPath || repositoryPath,
+          selectedIssueId: task?.id ?? 'ai-handoff-validation',
+          recommendationTitle: controlPlane.recommendation.title,
+          contextPackageHash: contextPackage ? contextSnapshotHash(contextPackage) : undefined,
+          refreshTimestamp: controlPlane.status.timestamp,
+        });
+      }
       setIsWorkItemOpen(false);
-      setFinishNotice('Workflow complete. Primary Action: Refresh Repository Intelligence.');
+      setFinishNotice(currentWorkflow.type === 'Validation' ? 'Validation completed for this intelligence snapshot. Refresh after repository changes to generate the next recommendation.' : 'Workflow complete. Primary Action: Refresh Repository Intelligence.');
     }
   }
 
