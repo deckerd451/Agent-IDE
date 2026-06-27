@@ -127,3 +127,22 @@ test('auto-refresh triggers when workflow advances to refresh-repository state',
   assert.match(appSource, /refreshIntelligence\(\{ clearWorkflow: true, previousTitle \}\)/);
   assert.match(appSource, /const previousTitle = controlPlane\.recommendation\.title/);
 });
+
+test('implementation workflow first step is copy-implementation-prompt', () => {
+  const implementationBlock = workflowSource.match(/Implementation:\s*\{[\s\S]*?steps:\s*\[([\s\S]*?)\]/)?.[1] ?? '';
+  const firstStep = implementationBlock.match(/\{\s*id:\s*'([^']+)'/)?.[1];
+  assert.equal(firstStep, 'copy-implementation-prompt', 'first step of Implementation workflow must be copy-implementation-prompt');
+});
+
+test('implementation prompt is visible at both copy-implementation-prompt and open-codex steps', () => {
+  const copyStep = appSource.match(/case 'copy-implementation-prompt':[^\n]+/)?.[0] ?? '';
+  const openCodexStep = appSource.match(/case 'open-codex':[^\n]+/)?.[0] ?? '';
+  assert.match(copyStep, /artifactType: 'implementation-prompt'/, 'copy-implementation-prompt must show implementation-prompt artifact');
+  assert.match(openCodexStep, /artifactType: 'implementation-prompt'/, 'open-codex must keep implementation-prompt artifact visible');
+});
+
+test('implementation prompt artifact renders builder package content', () => {
+  const artifactFn = appSource.match(/function TaskArtifact[\s\S]*?(?=\nfunction )/)?.[0] ?? '';
+  assert.match(artifactFn, /artifactType === 'implementation-prompt'/, 'TaskArtifact must handle implementation-prompt');
+  assert.match(artifactFn, /data\.packages\.builder/, 'implementation-prompt must render data.packages.builder');
+});
