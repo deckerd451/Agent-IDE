@@ -3,8 +3,9 @@ import { join, resolve } from 'node:path';
 import { explainDecisionRanking, explainRecommendation, renderExplanationMarkdown } from './intelligence-explanations.mjs';
 import { canonicalManualGoalsSuggestedUpdate, evaluateCanonicalStrategyCompleteness } from './canonical-completeness.mjs';
 import { renderSynthesisMarkdown } from './evidence-synthesis.mjs';
+import { analyzeImprovements } from './improvement-analyzer.mjs';
 
-const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md'];
+const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md','architecture.md','decisions.md','execution-model.md'];
 
 export function contextSnapshotHash(value = '') {
   let hash = 5381;
@@ -77,7 +78,7 @@ function packageTypeForActionability(actionability) {
 
 function selectedIssue({ id, category, severity = 'high', actionability, source, title, evidence, reason, recommendedAction }) {
   const resolvedActionability = actionability ?? issueActionability(id, source);
-  return { id, kind: id, category, severity, actionability: resolvedActionability, packageType: packageTypeForActionability(resolvedActionability), source, title, evidence: evidence || source, reason, recommendedAction };
+  return { id, kind: id, class: 'maintenance', category, severity, actionability: resolvedActionability, packageType: packageTypeForActionability(resolvedActionability), source, title, evidence: evidence || source, reason, recommendedAction };
 }
 
 function issueActionability(id, source = '') {
@@ -121,12 +122,21 @@ export function issuePriority(issue) {
 }
 
 export function expectedRepositoryImprovement(issue) {
+  if (issue?.expectedImprovementValues) {
+    const base = issue.expectedImprovementValues;
+    return { ...base, total: Object.values(base).reduce((sum, value) => sum + value, 0) };
+  }
   const base = improvementById[issue?.id] ?? { repositoryHealth: 3, canonicalCompleteness: 0, quality: 2, verification: 1, handoffReadiness: 2 };
   return { ...base, total: Object.values(base).reduce((sum, value) => sum + value, 0) };
 }
 
+function classRank(issue) {
+  // Repository improvements always rank above repository maintenance
+  return issue?.class === 'improvement' ? 0 : 1;
+}
+
 function compareCandidates(a, b) {
-  return b.priorityScore - a.priorityScore || b.expectedImprovement.total - a.expectedImprovement.total || actionabilityRank(a) - actionabilityRank(b) || severityRank(a) - severityRank(b) || a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
+  return classRank(a) - classRank(b) || b.priorityScore - a.priorityScore || b.expectedImprovement.total - a.expectedImprovement.total || actionabilityRank(a) - actionabilityRank(b) || severityRank(a) - severityRank(b) || a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
 }
 
 export function buildDecisionRanking(issues) {
@@ -203,13 +213,21 @@ const issueDetails = {
     requirements: ['Refresh only the stale `.ai/goals.md` owner intent cited in Current Evidence.', 'Use current repository-local evidence.', 'Avoid unrelated backlog, strategy, validation, or handoff changes.'],
     acceptance: ['The stale intelligence is refreshed or documented with evidence.', 'Generated intelligence can be refreshed without stale warnings.', 'Manual sections remain intact.'],
   },
+  'architectural-improvement': {
+    problem: 'An architectural improvement opportunity was identified from deterministic repository intelligence analysis.',
+    requirements: ['Investigate the evidence cited before making any changes.', 'Apply only the improvement described in Recommended Action.', 'Keep the change narrowly scoped.', 'Preserve all manual intelligence sections.'],
+    acceptance: ['The cited architectural issue is resolved or documented as accepted.', 'No new architectural risks are introduced.', 'Manual sections remain intact.'],
+  },
 };
 
-export function chooseNextImprovement({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '' }) {
-  return chooseNextImprovementWithCandidates({ health, quality, audit, backlog, strategy, contextPackage, goals }).selectedIssue;
+export function chooseNextImprovement({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '', architecture = '', decisions = '', executionModel = '' }) {
+  return chooseNextImprovementWithCandidates({ health, quality, audit, backlog, strategy, contextPackage, goals, architecture, decisions, executionModel }).selectedIssue;
 }
 
-export function chooseNextImprovementWithCandidates({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '', repositoryPath = '', validationCompletions = [] }) {
+export function chooseNextImprovementWithCandidates({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '', repositoryPath = '', validationCompletions = [], architecture = '', decisions = '', executionModel = '' }) {
+  // --- Repository Improvement Analysis ---
+  // Improvements must dominate maintenance recommendations.
+  const improvementCandidates = analyzeImprovements({ architecture, decisions, executionModel, backlog, strategy });
   const risks = healthRisks(health);
   const coverage = quality?.coverage ?? {};
   const issues = [];
@@ -265,9 +283,12 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
     const mismatch = validationCompletions[0];
     console.error('[refresh:diagnostic] suppression skipped — first record mismatch details:', JSON.stringify({ storedPath: mismatch.repositoryPath, resolvedPath: repositoryPath, pathMatch: mismatch.repositoryPath === repositoryPath, storedKey: mismatch.workflowKey, expectedKey: validationWorkflowKey, keyMatch: mismatch.workflowKey === validationWorkflowKey, storedIssueId: mismatch.selectedIssueId, issueMatch: mismatch.selectedIssueId === 'ai-handoff-validation', storedHash: mismatch.contextPackageHash, computedHash: contextHash, hashMatch: mismatch.contextPackageHash === contextHash }));
   }
-  const candidates = issues.length ? issues : (validationAlreadyCompleted
+  // Merge: improvements always appear first (enforced by classRank comparator).
+  // Maintenance fallback only when there are no improvements and health is stable.
+  const maintenanceIssues = issues.length ? issues : (validationAlreadyCompleted
     ? [upToDateIssue(contextHash)]
     : [selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', actionability: 'validation-experiment', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' })]);
+  const candidates = [...improvementCandidates, ...maintenanceIssues];
   const decisionRanking = buildDecisionRanking(candidates);
   console.error('[refresh:diagnostic] selected recommendation:', decisionRanking.candidates[0]?.id, '|', decisionRanking.candidates[0]?.title);
   return { selectedIssue: decisionRanking.candidates[0], candidates: decisionRanking.candidates, decisionRanking };
@@ -412,7 +433,7 @@ function renderValidationPackage(selected, details, ranking) {
 export function renderPrompt(choice) {
   const selected = choice.selectedIssue ?? choice;
   selected.packageType ??= packageTypeForActionability(selected.actionability);
-  const details = issueDetails[selected.id] ?? issueDetails[selected.kind] ?? issueDetails['missing-intelligence'];
+  const details = selected.details ?? issueDetails[selected.id] ?? issueDetails[selected.kind] ?? issueDetails['missing-intelligence'];
   const ranking = choice.decisionRanking ?? selected.decisionRanking;
   if (selected.packageType === 'product-decision') return renderProductDecisionPackage(selected, details, ranking);
   if (selected.packageType === 'validation-experiment') return renderValidationPackage(selected, details, ranking);
@@ -421,8 +442,8 @@ export function renderPrompt(choice) {
 
 export async function generateNextImprovement(repositoryPath = process.cwd(), options = {}) {
   const resolved = resolve(repositoryPath);
-  const [goals, health, quality, audit, backlog, strategy, contextPackage] = await Promise.all([readText(resolved, 'goals.md'), readText(resolved, 'repository-health.md'), readJson(resolved, 'intelligence-quality.json'), readText(resolved, 'intelligence-audit.md'), readText(resolved, 'backlog.md'), readText(resolved, 'strategy.md'), readText(resolved, 'context-package.md')]);
-  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage, repositoryPath: resolved, validationCompletions: options.validationCompletions ?? [] });
+  const [goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel] = await Promise.all([readText(resolved, 'goals.md'), readText(resolved, 'repository-health.md'), readJson(resolved, 'intelligence-quality.json'), readText(resolved, 'intelligence-audit.md'), readText(resolved, 'backlog.md'), readText(resolved, 'strategy.md'), readText(resolved, 'context-package.md'), readText(resolved, 'architecture.md'), readText(resolved, 'decisions.md'), readText(resolved, 'execution-model.md')]);
+  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, repositoryPath: resolved, validationCompletions: options.validationCompletions ?? [] });
   selectedIssue.explanation = explainRecommendation(selectedIssue, candidates);
   decisionRanking.explanation = explainDecisionRanking(decisionRanking);
   const prompt = renderPrompt({ selectedIssue, decisionRanking });
