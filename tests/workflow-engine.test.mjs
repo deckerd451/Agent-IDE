@@ -32,10 +32,14 @@ test('workflow state persists locally and resumes after reload', () => {
   assert.match(appSource, /window\.localStorage\.setItem\(workflowStateStorageKey, JSON\.stringify\(workflowState\)\)/);
 });
 
-test('homepage shows workflow dashboard while diagnostics remain collapsed', () => {
-  for (const expected of ['Current Goal', 'Current Step', 'Estimated Remaining', 'After This', 'Recent Progress', 'Quick Actions', 'Advanced Repository Intelligence']) {
+test('homepage shows a single recommendation card while diagnostics remain collapsed', () => {
+  for (const expected of ['Next Repository Improvement', 'Next Improvement', 'Repository improving', 'recommendationReason', 'singleRecommendationMeta', 'Advanced Repository Intelligence']) {
     assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+  for (const expected of ['Generate Implementation Prompt', 'Generate Validation Prompt', 'Review Decision', 'See Next Recommendation']) {
+    assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  assert.match(appSource, /<details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced<\/summary>/);
 });
 
 test('repository intelligence, rankings, and prompts are preserved by workflow-layer refactor', () => {

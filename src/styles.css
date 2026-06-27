@@ -955,6 +955,64 @@ h1 {
   margin: 0 0 16px;
 }
 
+.singleRecommendationCard {
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+
+.repositoryIdentity {
+  color: #aeb8c9;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  font-weight: 800;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.repositoryIdentity span {
+  background: rgba(7, 11, 18, 0.54);
+  border: 1px solid #273246;
+  border-radius: 999px;
+  padding: 7px 10px;
+}
+
+.recommendationReason {
+  font-size: 1.05rem;
+  max-width: 72ch;
+}
+
+.singleRecommendationMeta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.singleRecommendationMeta div {
+  background: rgba(7, 11, 18, 0.5);
+  border: 1px solid #273246;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.singleRecommendationMeta small {
+  color: #7f8ca3;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 7px;
+  text-transform: uppercase;
+}
+
+.singleRecommendationMeta strong {
+  color: #f4f7fb;
+  display: block;
+  font-size: 0.98rem;
+  line-height: 1.4;
+}
+
 .workMetaGrid {
   display: grid;
   gap: 10px;
@@ -1022,6 +1080,10 @@ h1 {
 
 @media (max-width: 900px) {
   .todayWorkCard {
+    grid-template-columns: 1fr;
+  }
+
+  .singleRecommendationMeta {
     grid-template-columns: 1fr;
   }
 
