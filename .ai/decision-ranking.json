@@ -16,27 +16,27 @@
   ],
   "candidates": [
     {
-      "id": "ai-handoff-validation",
-      "kind": "ai-handoff-validation",
+      "id": "validation",
+      "kind": "validation",
       "class": "maintenance",
-      "category": "AI handoff validation",
-      "severity": "low",
-      "actionability": "validation-experiment",
-      "packageType": "validation-experiment",
-      "source": "No serious repository intelligence issue detected.",
-      "title": "Run AI Handoff Validation",
-      "evidence": "No serious repository intelligence issue detected.",
-      "reason": "When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.",
-      "recommendedAction": "Run and document a local AI handoff validation dry run.",
-      "priorityScore": 10,
-      "priority": 10,
+      "category": "validation detector gaps",
+      "severity": "medium",
+      "actionability": "code-fixable",
+      "packageType": "implementation",
+      "source": "Medium",
+      "title": "Improve Validation Confidence",
+      "evidence": "Medium",
+      "reason": "Implementation packages should be backed by known local checks that prove changes still work.",
+      "recommendedAction": "Update validation intelligence with deterministic local checks and known gaps.",
+      "priorityScore": 92,
+      "priority": 92,
       "expectedImprovement": {
-        "repositoryHealth": 2,
+        "repositoryHealth": 7,
         "canonicalCompleteness": 0,
-        "quality": 2,
-        "verification": 4,
-        "handoffReadiness": 3,
-        "total": 11
+        "quality": 5,
+        "verification": 10,
+        "handoffReadiness": 5,
+        "total": 27
       },
       "rank": 1,
       "selected": true,
@@ -46,36 +46,36 @@
         "rule": "Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.",
         "candidateIssues": [
           {
-            "id": "ai-handoff-validation",
-            "title": "Run AI Handoff Validation",
-            "category": "AI handoff validation",
-            "priority": 10,
-            "actionability": "validation-experiment",
-            "evidence": "No serious repository intelligence issue detected."
+            "id": "validation",
+            "title": "Improve Validation Confidence",
+            "category": "validation detector gaps",
+            "priority": 92,
+            "actionability": "code-fixable",
+            "evidence": "Medium"
           }
         ],
         "selected": {
-          "id": "ai-handoff-validation",
-          "title": "Run AI Handoff Validation",
-          "priority": 10
+          "id": "validation",
+          "title": "Improve Validation Confidence",
+          "priority": 92
         },
         "computed": {
-          "selectedPriority": 10,
-          "highestPriority": 10
+          "selectedPriority": 92,
+          "highestPriority": 92
         },
         "classification": "Consistent",
         "reason": "Highest deterministic priority requiring action.",
-        "recommendation": "Run and document a local AI handoff validation dry run."
+        "recommendation": "Update validation intelligence with deterministic local checks and known gaps."
       }
     }
   ],
   "selectedIssue": {
-    "id": "ai-handoff-validation",
-    "title": "Run AI Handoff Validation",
+    "id": "validation",
+    "title": "Improve Validation Confidence",
     "rank": 1,
-    "priorityScore": 10
+    "priorityScore": 92
   },
-  "selectionExplanation": "Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.",
+  "selectionExplanation": "Improve Validation Confidence is ranked #1 with priority 92 and total expected improvement +27.",
   "explanation": {
     "id": "decision-ranking",
     "title": "Decision Ranking Explanation",
@@ -96,37 +96,37 @@
     "candidateOrdering": [
       {
         "rank": 1,
-        "id": "ai-handoff-validation",
-        "title": "Run AI Handoff Validation",
-        "priorityScore": 10,
+        "id": "validation",
+        "title": "Improve Validation Confidence",
+        "priorityScore": 92,
         "expectedImprovement": {
-          "repositoryHealth": 2,
+          "repositoryHealth": 7,
           "canonicalCompleteness": 0,
-          "quality": 2,
-          "verification": 4,
-          "handoffReadiness": 3,
-          "total": 11
+          "quality": 5,
+          "verification": 10,
+          "handoffReadiness": 5,
+          "total": 27
         },
         "selected": true
       }
     ],
     "expectedImprovementCalculations": {
-      "ai-handoff-validation": {
-        "repositoryHealth": 2,
+      "validation": {
+        "repositoryHealth": 7,
         "canonicalCompleteness": 0,
-        "quality": 2,
-        "verification": 4,
-        "handoffReadiness": 3,
-        "total": 11
+        "quality": 5,
+        "verification": 10,
+        "handoffReadiness": 5,
+        "total": 27
       }
     },
     "selected": {
-      "id": "ai-handoff-validation",
-      "title": "Run AI Handoff Validation",
+      "id": "validation",
+      "title": "Improve Validation Confidence",
       "rank": 1,
-      "priorityScore": 10
+      "priorityScore": 92
     },
     "classification": "Consistent",
-    "reason": "Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11."
+    "reason": "Improve Validation Confidence is ranked #1 with priority 92 and total expected improvement +27."
   }
 }
