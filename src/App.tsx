@@ -181,9 +181,7 @@ function buildCanonicalEditProposal(data: ControlPlane): CanonicalEditProposal |
 
 const sidebarGroups: Array<{ label: string; items: Section['id'][] }> = [
   { label: 'Work', items: ['Control Plane'] },
-  { label: 'Repository', items: ['Goals', 'Architecture', 'Strategy', 'Backlog'] },
-  { label: 'History', items: ['Decisions'] },
-  { label: 'Advanced', items: ['Validation', 'Repository Health', 'Prompt Center', 'Context Package', 'Agents', 'Code'] },
+  { label: 'Advanced', items: ['Goals', 'Architecture', 'Strategy', 'Backlog', 'Decisions', 'Validation', 'Repository Health', 'Prompt Center', 'Context Package', 'Agents', 'Code'] },
 ];
 
 function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section: Section) => void }) {
@@ -361,7 +359,7 @@ function PromptCenter({ connectedPath, documents, loadFile }: { connectedPath: s
 
 
 function WelcomeDashboard() {
-  const workflow = ['Connect Repository', 'See Next Recommendation', 'Open Today’s Work', 'Complete Improvement'];
+  const workflow = ['Connect Repository', 'Refresh Repository Intelligence', 'Execute Current Workflow', 'Validate Result', 'Refresh Repository'];
   return (
     <div className="controlPlane welcomeDashboard">
       <section className="heroCard" aria-label="Agent IDE workflow welcome">
@@ -456,7 +454,6 @@ function outcomeWorkflowText(value?: string | null) {
   if (!value) return '';
   return value
     .replace(/Run AI Handoff Validation/gi, 'Validate AI Understanding')
-    .replace(/Refresh Intelligence/gi, 'See Next Recommendation')
     .replace(/Copy Validation Prompt/gi, 'Copy Understanding Check')
     .replace(/Copy Context Package/gi, 'Prepare AI Context');
 }
@@ -657,11 +654,9 @@ function ControlPlaneDashboard({ data, progressSummary, workflow, onOpenWorkItem
   return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} repositoryPath={repositoryPath} onOpenWorkItem={onOpenWorkItem} onRefresh={onRefresh} onViewStrategy={onViewStrategy} />;
 }
 
-function primaryHomepageAction(packageType?: ControlPlaneRecommendation['packageType'], completionState?: Workflow['completionState']) {
-  if (completionState === 'Ready To Refresh' || completionState === 'Complete') return 'See Next Recommendation';
-  if (packageType === 'product-decision') return 'Review Decision';
-  if (packageType === 'validation-experiment') return 'Generate Validation Prompt';
-  return 'Generate Implementation Prompt';
+function primaryHomepageAction(workflow?: Workflow | null) {
+  if (!workflow) return 'Refresh Repository Intelligence';
+  return workflow.currentPrimaryAction;
 }
 
 function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenWorkItem, onRefresh, onViewStrategy, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; repositoryPath?: string; onOpenWorkItem: () => void; onRefresh: () => void; onViewStrategy: () => void }) {
@@ -706,8 +701,8 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenW
   const afterThis = firstCandidate(data, 2);
   const diffEntries = meaningfulDiffEntries(data.diff);
   const taskTitle = humanTaskTitle(topWork, data.recommendation.title);
-  const primaryAction = primaryHomepageAction(data.recommendation.packageType, workflow?.completionState);
-  const isReadyToRefresh = primaryAction === 'See Next Recommendation';
+  const primaryAction = primaryHomepageAction(workflow);
+  const isReadyToRefresh = workflow?.repositoryState === 'Refresh Repository' || workflow?.completionState === 'Ready To Refresh';
   const repositoryName = data.status.repositoryName || repositoryPath?.split(/[\\/]/).filter(Boolean).pop() || 'Connected repository';
   const confidence = data.status.currentConfidence || `${data.quality?.confidence.score ?? data.verification?.score ?? 0}%`;
   const estimatedTime = workflow ? `${Math.max(1, workflow.estimatedRemainingSteps) * 4} minutes` : 'About 4 minutes';
@@ -721,17 +716,17 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenW
     <div className="controlPlane compactDashboard">
       <section className="todayWorkCard singleRecommendationCard" aria-label="Next Repository Improvement">
         <div>
-          <p className="kicker">Next Improvement</p>
+          <p className="kicker">Work Queue</p>
           <div className="repositoryIdentity">
             <span>{repositoryName}</span>
             <span>{workflow?.completionState === 'Ready To Refresh' ? 'Next improvement ready' : 'Repository improving'}</span>
             <span>{confidence} confidence</span>
           </div>
-          <h2>{isReadyToRefresh ? 'Next recommendation is ready' : taskTitle}</h2>
+          <h2>{isReadyToRefresh ? 'Refresh repository intelligence' : taskTitle}</h2>
           <p className="recommendationReason">{topWork?.reason ?? data.recommendation.whyItMatters}</p>
           <div className="singleRecommendationMeta" aria-label="Recommendation summary">
             <div><small>Repository</small><strong>{repositoryName}</strong></div>
-            <div><small>Recommendation</small><strong>{isReadyToRefresh ? 'Refresh repository intelligence' : taskTitle}</strong></div>
+            <div><small>Workflow</small><strong>{isReadyToRefresh ? 'Refresh repository intelligence' : taskTitle}</strong></div><div><small>State</small><strong>{workflow?.repositoryState ?? 'Recommendation Ready'}</strong></div>
             <div><small>Estimated Time</small><strong>{estimatedTime}</strong></div>
             <div><small>Expected Impact</small><strong>{topWork ? `+${topWork.expectedImprovement.total}` : 'Ready to generate'}</strong></div>
           </div>
@@ -769,7 +764,7 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenW
 
       <section className="controlCard todayProgressCard" aria-label="Today's Progress"><p className="kicker">Improvement Queue</p><div className="progressStats"><div><small>Completed</small><strong>{progressSummary?.hasBaseline && progressSummary.completedTask !== 'No completed task detected' ? 1 : 0}</strong></div><div><small>Remaining</small><strong>{data.decisionRanking?.candidates?.length ?? 1}</strong></div><div><small>Estimated Remaining</small><strong>{Math.max(1, data.decisionRanking?.candidates?.length ?? 1) * 4} minutes</strong></div></div></section>
 
-      <section className="controlCard handoffCard quickAiActions" aria-label="Quick Actions"><p className="kicker">Quick Actions</p><div className="handoffGrid"><button onClick={workflow?.completionState === 'Ready To Refresh' ? onRefresh : onOpenWorkItem} type="button">{workflow?.completionState === 'Ready To Refresh' ? 'See Next Recommendation' : 'Open Current Workspace'}</button><button className="secondaryCta" onClick={onViewStrategy} type="button">View Strategy</button></div></section>
+      <section className="controlCard handoffCard quickAiActions" aria-label="Quick Actions"><p className="kicker">Quick Actions</p><div className="handoffGrid"><button onClick={workflow?.completionState === 'Ready To Refresh' ? onRefresh : onOpenWorkItem} type="button">{workflow?.completionState === 'Ready To Refresh' ? 'Refresh Repository Intelligence' : 'Open Current Workflow'}</button><button className="secondaryCta" onClick={onViewStrategy} type="button">View Strategy</button></div></section>
 
             <details className="controlCard disclosureCard" aria-label="Repository Health"><summary>Repository Health</summary><div className="dashboardGrid statusGrid">
         {statusCards.map(([label, value]) => <article className="metricCard" key={String(label)}><small>{label}</small><strong>{value || 'Unknown'}</strong></article>)}
@@ -793,7 +788,7 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenW
         <section className="controlCard warningCard" aria-label="Repository intelligence verification warning">
           <h2>Recommendation Verification</h2>
           <p>⚠ Displayed intelligence does not match the latest generated intelligence.</p>
-          <p><b>Recommended action:</b> See Next Recommendation.</p>
+          <p><b>Recommended action:</b> Refresh Repository Intelligence.</p>
         </section>
       )}
 
@@ -1179,11 +1174,11 @@ export function App() {
               value={repositoryPath}
             />
             <button disabled={isRefreshing || !repositoryPath.trim()} onClick={refreshIntelligence} type="button">
-              {isRefreshing ? 'Finding recommendation…' : 'See Next Recommendation'}
+              {isRefreshing ? 'Repository analysis running…' : 'Refresh Repository Intelligence'}
             </button>
           </div>
           <p>
-            Agent IDE reviews the local repository and recommends the safest next improvement. Advanced generated artifacts remain available after refresh.
+            Agent IDE refreshes repository intelligence and turns the top deterministic recommendation into executable workflow steps. Advanced generated artifacts remain available after refresh.
           </p>
           {connectedPath && <small>Connected: {connectedPath}</small>}
           {error && <div className="summary failure">{error}</div>}
@@ -1216,7 +1211,7 @@ export function App() {
           <small>{document?.sourcePath ?? (connectedPath ? `${connectedPath}/.ai/${selected.markdownFile}` : `.ai/${selected.markdownFile}`)}</small>
         </section>}
 
-        {selected.id === 'Control Plane' && isWorkItemOpen && controlPlane && currentWorkflow && <WorkItemPage data={controlPlane} repositoryPath={connectedPath || repositoryPath} documents={documents} workflow={currentWorkflow} onBack={() => setIsWorkItemOpen(false)} onAdvance={() => { const task = firstCandidate(controlPlane, 1); const next = advanceWorkflow(workflowInputForTask(controlPlane.recommendation, task), workflowState); setWorkflowState(next); if (next.status === 'Ready To Refresh') { setIsWorkItemOpen(false); setFinishNotice("Today's Work Complete. Primary Action: See Next Recommendation."); } }} />}
+        {selected.id === 'Control Plane' && isWorkItemOpen && controlPlane && currentWorkflow && <WorkItemPage data={controlPlane} repositoryPath={connectedPath || repositoryPath} documents={documents} workflow={currentWorkflow} onBack={() => setIsWorkItemOpen(false)} onAdvance={() => { const task = firstCandidate(controlPlane, 1); const next = advanceWorkflow(workflowInputForTask(controlPlane.recommendation, task), workflowState); setWorkflowState(next); if (next.status === 'Ready To Refresh') { setIsWorkItemOpen(false); setFinishNotice("Workflow complete. Primary Action: Refresh Repository Intelligence."); void refreshIntelligence(); } }} />}
         {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} repositoryPath={connectedPath || repositoryPath} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onRefresh={() => void refreshIntelligence()} onViewStrategy={() => setSelectedId('Strategy')} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
