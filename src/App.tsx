@@ -542,8 +542,8 @@ function CanonicalEditPanel({ proposal, repositoryPath }: { proposal: CanonicalE
   );
 }
 
-function WorkflowProgress({ workflow, onAdvance }: { workflow: Workflow; onAdvance: () => void }) {
-  return <section className="controlCard workflowRenderer" aria-label="Workflow Progress"><p className="kicker">{workflow.type} Workflow</p><h2>{workflow.goal}</h2><div className="workMetaGrid"><div><small>Repository Status</small><strong>{outcomeWorkflowText(workflow.currentStep.label)}</strong></div><div><small>Current Status</small><strong>{workflow.completionState}</strong></div><div><small>Estimated Remaining</small><strong>{workflow.estimatedRemainingSteps} steps</strong></div><div><small>Progress</small><strong>{workflow.progressPercentage}%</strong></div></div><h3>Completed Steps</h3>{workflow.completedSteps.length ? <ul>{workflow.completedSteps.map((step) => <li key={step.id}>✓ {outcomeWorkflowText(step.label)}</li>)}</ul> : <p>No steps completed yet.</p>}<h3>Remaining Steps</h3><ol className="workspaceChecklist">{workflow.checklist.map((step) => <li className={step.id === workflow.currentStep.id ? 'activeStep' : step.status === 'Complete' ? 'completedStep' : ''} key={step.id}>{outcomeWorkflowText(step.label)}</li>)}</ol><button className="primaryCta" onClick={onAdvance} type="button">{outcomeWorkflowText(workflow.currentPrimaryAction)}</button></section>;
+function WorkflowProgress({ workflow, onPrimaryAction }: { workflow: Workflow; onPrimaryAction: () => void }) {
+  return <section className="controlCard workflowRenderer" aria-label="Workflow Progress"><p className="kicker">{workflow.type} Workflow</p><h2>{workflow.goal}</h2><div className="workMetaGrid"><div><small>Repository State</small><strong>{outcomeWorkflowText(workflow.repositoryState)}</strong></div><div><small>Current Step</small><strong>{outcomeWorkflowText(workflow.currentStep.label)}</strong></div><div><small>Next Repository State</small><strong>{outcomeWorkflowText(workflow.nextRepositoryState)}</strong></div><div><small>Progress</small><strong>{workflow.progressPercentage}%</strong></div></div><h3>Completed Steps</h3>{workflow.completedSteps.length ? <ul>{workflow.completedSteps.map((step) => <li key={step.id}>✓ {outcomeWorkflowText(step.label)}</li>)}</ul> : <p>No steps completed yet.</p>}<h3>Remaining Steps</h3><ol className="workspaceChecklist">{workflow.checklist.map((step) => <li className={step.id === workflow.currentStep.id ? 'activeStep' : step.status === 'Complete' ? 'completedStep' : ''} key={step.id}>{outcomeWorkflowText(step.label)}</li>)}</ol><button className="primaryCta" onClick={onPrimaryAction} type="button">{outcomeWorkflowText(workflow.currentPrimaryAction)}</button></section>;
 }
 
 function ValidationWorkspace({ data, documents, task }: { data: ControlPlane; documents: Record<string, DocumentState>; task?: DecisionCandidate | null }) {
@@ -592,12 +592,11 @@ function ValidationWorkspace({ data, documents, task }: { data: ControlPlane; do
   );
 }
 
-function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onAdvance }: { data: ControlPlane; repositoryPath?: string; documents: Record<string, DocumentState>; workflow: Workflow; onBack: () => void; onAdvance: () => void }) {
+function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onPrimaryAction }: { data: ControlPlane; repositoryPath?: string; documents: Record<string, DocumentState>; workflow: Workflow; onBack: () => void; onPrimaryAction: () => void }) {
   const task = firstCandidate(data, 1);
   const title = humanTaskTitle(task, data.recommendation.title);
   const canonicalEditProposal = buildCanonicalEditProposal(data);
   const workspaceType = workflow.type;
-  const primaryAction = outcomeWorkflowText(workflow.currentPrimaryAction);
   const isProductDecision = data.recommendation.packageType === 'product-decision';
   const isValidationExperiment = data.recommendation.packageType === 'validation-experiment';
   const affectedFile = filePathForTask(task, data.recommendation);
@@ -627,7 +626,7 @@ function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onAdv
         <button className="secondaryCta" onClick={onBack} type="button">Back to Work Queue</button>
       </section>
 
-      <WorkflowProgress workflow={workflow} onAdvance={onAdvance} />
+      <WorkflowProgress workflow={workflow} onPrimaryAction={onPrimaryAction} />
       {isValidationExperiment ? <ValidationWorkspace data={data} documents={documents} task={task} /> : <>
         <section className="controlCard"><h2>What done looks like</h2>{acceptance.length ? <ul>{acceptance.map((item) => <li key={item}>{item}</li>)}</ul> : <p>{data.recommendation.explanation}</p>}</section>
         <details className="controlCard disclosureCard"><summary>Advanced Details</summary><section><h2>Evidence</h2><p>{task?.evidence ?? data.recommendation.evidenceSource}</p></section><div className="workMetaGrid"><div><small>Priority</small><strong>{task ? `#${task.rank} · ${task.priorityScore}` : 'Decision Ranking #1'}</strong></div><div><small>Package type</small><strong>{data.recommendation.packageType ?? 'implementation'}</strong></div><div><small>Actionability</small><strong>{task?.actionability ?? data.recommendation.actionability ?? 'Not classified'}</strong></div><div><small>File to edit</small><strong>{affectedFile ? <code>{affectedFile}</code> : 'See workflow metadata'}</strong></div></div><section><h2>Evidence Lineage</h2>{lineage?.length ? <ul>{lineage.slice(0, 8).map((item) => <li key={`${item.file}-${item.group}`}><strong>{item.group}</strong> — {item.file} · {item.ancestry}</li>)}</ul> : <p>No lineage artifact loaded for this task.</p>}</section></details>
@@ -638,7 +637,7 @@ function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onAdv
         <section className="controlCard implementationWorkflow" aria-label="Improvement workflow">
           <h2>Complete this improvement</h2>
           <div className="workMetaGrid"><div><small>Affected files</small><strong>{affectedFile ? <code>{affectedFile}</code> : 'See context package and builder prompt'}</strong></div></div>
-          <div className="handoffGrid"><button disabled={!prompts[0][1]} onClick={() => void copyText(prompts[0][1])} type="button">{primaryAction}</button>{prompts.map(([label, content]) => <button disabled={!content} key={label} onClick={() => void copyText(content)} type="button">Copy {label}</button>)}</div>
+          <div className="handoffGrid">{prompts.map(([label, content]) => <button disabled={!content} key={label} onClick={() => void copyText(content)} type="button">Copy {label}</button>)}</div>
           {prompts.map(([label, content]) => content ? <details key={label}><summary>{label}</summary><pre>{content}</pre></details> : null)}
         </section>
         )}
@@ -649,9 +648,9 @@ function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onAdv
   );
 }
 
-function ControlPlaneDashboard({ data, progressSummary, workflow, onOpenWorkItem, onRefresh, onViewStrategy, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; repositoryPath?: string; onOpenWorkItem: () => void; onRefresh: () => void; onViewStrategy: () => void }) {
+function ControlPlaneDashboard({ data, progressSummary, workflow, onPrimaryAction, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; repositoryPath?: string; onPrimaryAction: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
   if (!data) return <WelcomeDashboard />;
-  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} repositoryPath={repositoryPath} onOpenWorkItem={onOpenWorkItem} onRefresh={onRefresh} onViewStrategy={onViewStrategy} />;
+  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onOpenWorkItem={onOpenWorkItem} onViewStrategy={onViewStrategy} />;
 }
 
 function primaryHomepageAction(workflow?: Workflow | null) {
@@ -659,7 +658,7 @@ function primaryHomepageAction(workflow?: Workflow | null) {
   return workflow.currentPrimaryAction;
 }
 
-function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenWorkItem, onRefresh, onViewStrategy, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; repositoryPath?: string; onOpenWorkItem: () => void; onRefresh: () => void; onViewStrategy: () => void }) {
+function ControlPlaneDashboardContent({ data, progressSummary, workflow, onPrimaryAction, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; repositoryPath?: string; onPrimaryAction: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
       return {
@@ -727,11 +726,12 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenW
           <div className="singleRecommendationMeta" aria-label="Recommendation summary">
             <div><small>Repository</small><strong>{repositoryName}</strong></div>
             <div><small>Workflow</small><strong>{isReadyToRefresh ? 'Refresh repository intelligence' : taskTitle}</strong></div><div><small>State</small><strong>{workflow?.repositoryState ?? 'Recommendation Ready'}</strong></div>
+            <div><small>Current Step</small><strong>{workflow ? outcomeWorkflowText(workflow.currentStep.label) : 'Refresh Repository Intelligence'}</strong></div>
             <div><small>Estimated Time</small><strong>{estimatedTime}</strong></div>
             <div><small>Expected Impact</small><strong>{topWork ? `+${topWork.expectedImprovement.total}` : 'Ready to generate'}</strong></div>
           </div>
         </div>
-        <button className="primaryCta" onClick={isReadyToRefresh ? onRefresh : onOpenWorkItem} type="button">{primaryAction}</button>
+        <button className="primaryCta" onClick={onPrimaryAction} type="button">{primaryAction}</button>
       </section>
 
       <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced</summary>
@@ -764,7 +764,7 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, onOpenW
 
       <section className="controlCard todayProgressCard" aria-label="Today's Progress"><p className="kicker">Improvement Queue</p><div className="progressStats"><div><small>Completed</small><strong>{progressSummary?.hasBaseline && progressSummary.completedTask !== 'No completed task detected' ? 1 : 0}</strong></div><div><small>Remaining</small><strong>{data.decisionRanking?.candidates?.length ?? 1}</strong></div><div><small>Estimated Remaining</small><strong>{Math.max(1, data.decisionRanking?.candidates?.length ?? 1) * 4} minutes</strong></div></div></section>
 
-      <section className="controlCard handoffCard quickAiActions" aria-label="Quick Actions"><p className="kicker">Quick Actions</p><div className="handoffGrid"><button onClick={workflow?.completionState === 'Ready To Refresh' ? onRefresh : onOpenWorkItem} type="button">{workflow?.completionState === 'Ready To Refresh' ? 'Refresh Repository Intelligence' : 'Open Current Workflow'}</button><button className="secondaryCta" onClick={onViewStrategy} type="button">View Strategy</button></div></section>
+      <section className="controlCard handoffCard quickAiActions" aria-label="Quick Actions"><p className="kicker">Quick Actions</p><div className="handoffGrid"><button onClick={onOpenWorkItem} type="button">Open Current Workflow</button><button className="secondaryCta" onClick={onViewStrategy} type="button">View Strategy</button></div></section>
 
             <details className="controlCard disclosureCard" aria-label="Repository Health"><summary>Repository Health</summary><div className="dashboardGrid statusGrid">
         {statusCards.map(([label, value]) => <article className="metricCard" key={String(label)}><small>{label}</small><strong>{value || 'Unknown'}</strong></article>)}
@@ -1150,6 +1150,39 @@ export function App() {
     }
   }
 
+
+  async function performWorkflowStepAction(workflow: Workflow, data: ControlPlane) {
+    const task = firstCandidate(data, 1);
+    const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
+    const validationPrompt = buildValidationPrompt(contextPackage);
+    const actionText: Record<string, string> = {
+      'copy-context-package': contextPackage,
+      'copy-validation-prompt': validationPrompt,
+      'copy-implementation-prompt': data.packages.builder || documents['prompts/builder.md']?.content || data.recommendation.prompt,
+      'review-canonical-edit': data.recommendation.prompt,
+      'inspect-evidence': task?.evidence ?? data.recommendation.evidenceSource,
+    };
+    const textToCopy = actionText[workflow.currentStep.id];
+    if (textToCopy) await copyText(textToCopy);
+  }
+
+  async function handleWorkflowPrimaryAction() {
+    if (!controlPlane || !currentWorkflow) return;
+    setFinishNotice('');
+    if (currentWorkflow.completionState === 'Ready To Refresh' || currentWorkflow.repositoryState === 'Refresh Repository') {
+      await refreshIntelligence();
+      return;
+    }
+    await performWorkflowStepAction(currentWorkflow, controlPlane);
+    const task = firstCandidate(controlPlane, 1);
+    const next = advanceWorkflow(workflowInputForTask(controlPlane.recommendation, task), workflowState);
+    setWorkflowState(next);
+    if (next.status === 'Ready To Refresh') {
+      setIsWorkItemOpen(false);
+      setFinishNotice('Workflow complete. Primary Action: Refresh Repository Intelligence.');
+    }
+  }
+
   return (
     <div className="shell">
       <Sidebar selected={selected} onSelect={(section) => setSelectedId(section.id)} />
@@ -1211,8 +1244,8 @@ export function App() {
           <small>{document?.sourcePath ?? (connectedPath ? `${connectedPath}/.ai/${selected.markdownFile}` : `.ai/${selected.markdownFile}`)}</small>
         </section>}
 
-        {selected.id === 'Control Plane' && isWorkItemOpen && controlPlane && currentWorkflow && <WorkItemPage data={controlPlane} repositoryPath={connectedPath || repositoryPath} documents={documents} workflow={currentWorkflow} onBack={() => setIsWorkItemOpen(false)} onAdvance={() => { const task = firstCandidate(controlPlane, 1); const next = advanceWorkflow(workflowInputForTask(controlPlane.recommendation, task), workflowState); setWorkflowState(next); if (next.status === 'Ready To Refresh') { setIsWorkItemOpen(false); setFinishNotice("Workflow complete. Primary Action: Refresh Repository Intelligence."); void refreshIntelligence(); } }} />}
-        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} repositoryPath={connectedPath || repositoryPath} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onRefresh={() => void refreshIntelligence()} onViewStrategy={() => setSelectedId('Strategy')} />}
+        {selected.id === 'Control Plane' && isWorkItemOpen && controlPlane && currentWorkflow && <WorkItemPage data={controlPlane} repositoryPath={connectedPath || repositoryPath} documents={documents} workflow={currentWorkflow} onBack={() => setIsWorkItemOpen(false)} onPrimaryAction={() => void handleWorkflowPrimaryAction()} />}
+        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} repositoryPath={connectedPath || repositoryPath} onPrimaryAction={() => void handleWorkflowPrimaryAction()} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onViewStrategy={() => setSelectedId('Strategy')} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}
