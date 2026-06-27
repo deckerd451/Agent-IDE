@@ -41,8 +41,9 @@ test('all prompt steps are classified as non-critical', () => {
   }
 });
 
-test('execution-model and ai-handoff-validation are classified as non-critical', () => {
+test('execution-model, repository-judgment, and ai-handoff-validation are classified as non-critical', () => {
   assert.ok(nonCriticalStepIds.has('execution-model'), 'execution-model must be non-critical');
+  assert.ok(nonCriticalStepIds.has('repository-judgment'), 'repository-judgment must be non-critical shadow-mode output');
   assert.ok(nonCriticalStepIds.has('ai-handoff-validation'), 'ai-handoff-validation must be non-critical');
 });
 

@@ -11,7 +11,8 @@ export type SectionId =
   | 'Repository Health'
   | 'Prompt Center'
   | 'Context Package'
-  | 'Execution Model';
+  | 'Execution Model'
+  | 'Repository Judgment (Shadow Mode)';
 
 export type Section = {
   id: SectionId;
@@ -92,6 +93,12 @@ export const sections: Section[] = [
     eyebrow: 'Advanced handoff',
     summary: 'A compact generated context package for pasting repository intelligence into GPT, Claude, Cursor, Codex, and other assistants.',
     markdownFile: 'context-package.md',
+  },
+  {
+    id: 'Repository Judgment (Shadow Mode)',
+    eyebrow: 'Shadow Mode',
+    summary: 'Future deterministic repository judgment candidates. Does not affect the current recommendation.',
+    markdownFile: 'repository-judgment.md',
   },
   {
     id: 'Execution Model',
