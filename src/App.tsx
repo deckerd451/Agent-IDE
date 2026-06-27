@@ -2,6 +2,16 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { sections, type Section } from './sections';
 import { advanceWorkflow, createWorkflow, workflowKey, workflowStateStorageKey, type Workflow, type WorkflowState } from './workflow';
 
+type WorkflowDiagnostics = {
+  lastPrimaryActionClicked: string;
+  lastStepActionResult: string;
+  performWorkflowStepActionRan: boolean;
+  advanceWorkflowRan: boolean;
+  setWorkflowStateRan: boolean;
+  localStoragePersistenceSucceeded: boolean;
+  currentLocalStorageValue: string;
+};
+
 type RefreshEvent = {
   type: string;
   id?: string;
@@ -154,6 +164,11 @@ function readWorkflowState(): WorkflowState | null {
   } catch {
     return null;
   }
+}
+
+function workflowIndex(workflow: Workflow | null | undefined) {
+  if (!workflow) return -1;
+  return workflow.checklist.findIndex((step) => step.id === workflow.currentStep.id);
 }
 
 
@@ -546,6 +561,30 @@ function WorkflowPrimaryButton({ workflow, onPrimaryAction }: { workflow: Workfl
   return <button className="primaryCta" data-workflow-primary-action="true" onClick={onPrimaryAction} type="button">{outcomeWorkflowText(workflow.currentPrimaryAction)}</button>;
 }
 
+function WorkflowDiagnosticsDisclosure({ workflow, diagnostics }: { workflow: Workflow | null | undefined; diagnostics: WorkflowDiagnostics }) {
+  if (!import.meta.env.DEV) return null;
+  const currentIndex = workflowIndex(workflow);
+  const nextStep = workflow?.checklist[currentIndex + 1];
+  const rows = [
+    ['workflow key', workflow?.workflowKey ?? 'No workflow'],
+    ['workflow index', String(currentIndex)],
+    ['repositoryState', workflow?.repositoryState ?? 'No workflow'],
+    ['nextRepositoryState', workflow?.nextRepositoryState ?? 'No workflow'],
+    ['current step id', workflow?.currentStep.id ?? 'No workflow'],
+    ['current step label', workflow?.currentStep.label ?? 'No workflow'],
+    ['current primary action', workflow?.currentPrimaryAction ?? 'No workflow'],
+    ['next step id', nextStep?.id ?? 'No next step'],
+    ['last primary action clicked', diagnostics.lastPrimaryActionClicked || 'None'],
+    ['last step action result', diagnostics.lastStepActionResult || 'None'],
+    ['whether performWorkflowStepAction ran', String(diagnostics.performWorkflowStepActionRan)],
+    ['whether advanceWorkflow ran', String(diagnostics.advanceWorkflowRan)],
+    ['whether setWorkflowState ran', String(diagnostics.setWorkflowStateRan)],
+    ['whether localStorage persistence succeeded', String(diagnostics.localStoragePersistenceSucceeded)],
+    ['current localStorage value for workflowStateStorageKey', diagnostics.currentLocalStorageValue || 'Empty'],
+  ] as const;
+  return <details className="controlCard disclosureCard workflowDiagnostics" aria-label="Development Diagnostics"><summary>Development Diagnostics</summary><dl>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></details>;
+}
+
 function WorkflowProgress({ workflow, onPrimaryAction }: { workflow: Workflow; onPrimaryAction: () => void }) {
   return <section className="controlCard workflowRenderer" aria-label="Workflow Progress"><p className="kicker">{workflow.type} Workflow</p><h2>{workflow.goal}</h2><div className="workMetaGrid"><div><small>Repository State</small><strong>{outcomeWorkflowText(workflow.repositoryState)}</strong></div><div><small>Current Step</small><strong>{outcomeWorkflowText(workflow.currentStep.label)}</strong></div><div><small>Next Repository State</small><strong>{outcomeWorkflowText(workflow.nextRepositoryState)}</strong></div><div><small>Progress</small><strong>{workflow.progressPercentage}%</strong></div></div><h3>Completed Steps</h3>{workflow.completedSteps.length ? <ul>{workflow.completedSteps.map((step) => <li key={step.id}>✓ {outcomeWorkflowText(step.label)}</li>)}</ul> : <p>No steps completed yet.</p>}<h3>Remaining Steps</h3><ol className="workspaceChecklist">{workflow.checklist.map((step) => <li className={step.id === workflow.currentStep.id ? 'activeStep' : step.status === 'Complete' ? 'completedStep' : ''} key={step.id}>{outcomeWorkflowText(step.label)}</li>)}</ol><WorkflowPrimaryButton workflow={workflow} onPrimaryAction={onPrimaryAction} /></section>;
 }
@@ -652,9 +691,9 @@ function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onPri
   );
 }
 
-function ControlPlaneDashboard({ data, progressSummary, workflow, onPrimaryAction, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; repositoryPath?: string; onPrimaryAction: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
+function ControlPlaneDashboard({ data, progressSummary, workflow, diagnostics, onPrimaryAction, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; diagnostics: WorkflowDiagnostics; repositoryPath?: string; onPrimaryAction: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
   if (!data) return <WelcomeDashboard />;
-  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onOpenWorkItem={onOpenWorkItem} onViewStrategy={onViewStrategy} />;
+  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} diagnostics={diagnostics} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onOpenWorkItem={onOpenWorkItem} onViewStrategy={onViewStrategy} />;
 }
 
 function primaryHomepageAction(workflow?: Workflow | null) {
@@ -662,7 +701,7 @@ function primaryHomepageAction(workflow?: Workflow | null) {
   return outcomeWorkflowText(workflow.currentPrimaryAction);
 }
 
-function ControlPlaneDashboardContent({ data, progressSummary, workflow, onPrimaryAction, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; repositoryPath?: string; onPrimaryAction: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
+function ControlPlaneDashboardContent({ data, progressSummary, workflow, diagnostics, onPrimaryAction, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; diagnostics: WorkflowDiagnostics; repositoryPath?: string; onPrimaryAction: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
       return {
@@ -737,6 +776,7 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, onPrima
         </div>
         {workflow ? <WorkflowPrimaryButton workflow={workflow} onPrimaryAction={onPrimaryAction} /> : <button className="primaryCta" onClick={onPrimaryAction} type="button">{primaryAction}</button>}
       </section>
+      <WorkflowDiagnosticsDisclosure workflow={workflow} diagnostics={diagnostics} />
 
       <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced</summary>
       {afterThis && (
@@ -993,6 +1033,15 @@ export function App() {
   const [isWorkItemOpen, setIsWorkItemOpen] = useState(false);
   const [finishNotice, setFinishNotice] = useState('');
   const [workflowState, setWorkflowState] = useState<WorkflowState | null>(readWorkflowState);
+  const [workflowDiagnostics, setWorkflowDiagnostics] = useState<WorkflowDiagnostics>(() => ({
+    lastPrimaryActionClicked: '',
+    lastStepActionResult: '',
+    performWorkflowStepActionRan: false,
+    advanceWorkflowRan: false,
+    setWorkflowStateRan: false,
+    localStoragePersistenceSucceeded: false,
+    currentLocalStorageValue: window.localStorage.getItem(workflowStateStorageKey) ?? '',
+  }));
 
   const currentWorkflow = useMemo(() => {
     if (!controlPlane) return null;
@@ -1049,7 +1098,14 @@ export function App() {
   }, [selectedId]);
 
   useEffect(() => {
-    if (workflowState) window.localStorage.setItem(workflowStateStorageKey, JSON.stringify(workflowState));
+    if (workflowState) {
+      window.localStorage.setItem(workflowStateStorageKey, JSON.stringify(workflowState));
+      setWorkflowDiagnostics((current) => ({
+        ...current,
+        localStoragePersistenceSucceeded: true,
+        currentLocalStorageValue: window.localStorage.getItem(workflowStateStorageKey) ?? '',
+      }));
+    }
   }, [workflowState]);
 
   useEffect(() => {
@@ -1162,6 +1218,7 @@ export function App() {
     const actionText: Record<string, string> = {
       'copy-context-package': contextPackage,
       'copy-validation-prompt': validationPrompt,
+      'copy-understanding-check': validationPrompt,
       'copy-implementation-prompt': data.packages.builder || documents['prompts/builder.md']?.content || data.recommendation.prompt,
       'review-canonical-edit': data.recommendation.prompt,
       'inspect-evidence': task?.evidence ?? data.recommendation.evidenceSource,
@@ -1173,15 +1230,43 @@ export function App() {
   async function handleWorkflowPrimaryAction() {
     if (!controlPlane || !currentWorkflow) return;
     setFinishNotice('');
+    setError('');
+    setWorkflowDiagnostics({
+      lastPrimaryActionClicked: currentWorkflow.currentPrimaryAction,
+      lastStepActionResult: 'Started',
+      performWorkflowStepActionRan: false,
+      advanceWorkflowRan: false,
+      setWorkflowStateRan: false,
+      localStoragePersistenceSucceeded: false,
+      currentLocalStorageValue: window.localStorage.getItem(workflowStateStorageKey) ?? '',
+    });
     if (currentWorkflow.completionState === 'Ready To Refresh' || currentWorkflow.repositoryState === 'Refresh Repository') {
       await refreshIntelligence();
       return;
     }
-    await performWorkflowStepAction(currentWorkflow, controlPlane);
+    try {
+      await performWorkflowStepAction(currentWorkflow, controlPlane);
+      setWorkflowDiagnostics((current) => ({ ...current, performWorkflowStepActionRan: true, lastStepActionResult: 'Completed' }));
+    } catch (copyError) {
+      const message = copyError instanceof Error ? copyError.message : String(copyError);
+      setError(`Workflow action failed: ${message}`);
+      setWorkflowDiagnostics((current) => ({ ...current, performWorkflowStepActionRan: true, lastStepActionResult: `Failed: ${message}`, currentLocalStorageValue: window.localStorage.getItem(workflowStateStorageKey) ?? '' }));
+      return;
+    }
     const task = firstCandidate(controlPlane, 1);
     const next = advanceWorkflow(workflowInputForTask(controlPlane.recommendation, task), workflowState);
-    window.localStorage.setItem(workflowStateStorageKey, JSON.stringify(next));
+    setWorkflowDiagnostics((current) => ({ ...current, advanceWorkflowRan: true }));
+    try {
+      window.localStorage.setItem(workflowStateStorageKey, JSON.stringify(next));
+      setWorkflowDiagnostics((current) => ({ ...current, localStoragePersistenceSucceeded: true, currentLocalStorageValue: window.localStorage.getItem(workflowStateStorageKey) ?? '' }));
+    } catch (storageError) {
+      const message = storageError instanceof Error ? storageError.message : String(storageError);
+      setError(`Workflow persistence failed: ${message}`);
+      setWorkflowDiagnostics((current) => ({ ...current, localStoragePersistenceSucceeded: false, lastStepActionResult: `Persistence failed: ${message}`, currentLocalStorageValue: window.localStorage.getItem(workflowStateStorageKey) ?? '' }));
+      return;
+    }
     setWorkflowState(next);
+    setWorkflowDiagnostics((current) => ({ ...current, setWorkflowStateRan: true }));
     if (next.status === 'Ready To Refresh') {
       setIsWorkItemOpen(false);
       setFinishNotice('Workflow complete. Primary Action: Refresh Repository Intelligence.');
@@ -1250,7 +1335,7 @@ export function App() {
         </section>}
 
         {selected.id === 'Control Plane' && isWorkItemOpen && controlPlane && currentWorkflow && <WorkItemPage data={controlPlane} repositoryPath={connectedPath || repositoryPath} documents={documents} workflow={currentWorkflow} onBack={() => setIsWorkItemOpen(false)} onPrimaryAction={() => void handleWorkflowPrimaryAction()} />}
-        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} repositoryPath={connectedPath || repositoryPath} onPrimaryAction={() => void handleWorkflowPrimaryAction()} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onViewStrategy={() => setSelectedId('Strategy')} />}
+        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} diagnostics={workflowDiagnostics} repositoryPath={connectedPath || repositoryPath} onPrimaryAction={() => void handleWorkflowPrimaryAction()} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onViewStrategy={() => setSelectedId('Strategy')} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}

@@ -23,6 +23,7 @@ export type WorkflowStep = {
 };
 
 export type Workflow = {
+  workflowKey: string;
   type: WorkflowType;
   goal: string;
   repositoryState: RepositoryWorkflowState;
@@ -81,7 +82,7 @@ const workflowDefinitions: Record<WorkflowType, { goal: string; steps: StepDefin
     goal: 'Verify repository intelligence with a fresh AI handoff.',
     steps: [
       { id: 'copy-context-package', label: 'Copy Context Package', primaryAction: 'Copy Context Package', state: 'Recommendation Ready', nextState: 'Workflow In Progress' },
-      { id: 'copy-validation-prompt', label: 'Copy Validation Prompt', primaryAction: 'Copy Validation Prompt', state: 'Workflow In Progress', nextState: 'Waiting for External Work (Codex / ChatGPT / User)' },
+      { id: 'copy-understanding-check', label: 'Copy Understanding Check', primaryAction: 'Copy Understanding Check', state: 'Workflow In Progress', nextState: 'Waiting for External Work (Codex / ChatGPT / User)' },
       { id: 'open-chatgpt', label: 'Open ChatGPT', primaryAction: 'Open ChatGPT', state: 'Waiting for External Work (Codex / ChatGPT / User)', nextState: 'Workflow In Progress' },
       { id: 'paste-response', label: 'Paste the AI response back into Agent IDE', primaryAction: 'Paste Validation Response', state: 'Workflow In Progress', nextState: 'Validate Result' },
       { id: 'run-validation', label: 'Run validation', primaryAction: 'Run Validation', state: 'Validate Result', nextState: 'Refresh Repository' },
@@ -139,6 +140,7 @@ export function createWorkflow(input: WorkflowInput, state?: WorkflowState | nul
   const currentStep = checklist[currentIndex] ?? checklist[0];
   const completedSteps = checklist.filter((step) => step.status === 'Complete');
   return {
+    workflowKey: workflowKey(input),
     type,
     goal: definition.goal,
     repositoryState: stateMatches ? state.repositoryState : currentDefinition.state,

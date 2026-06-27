@@ -59,8 +59,11 @@ test('clicking the visible Work Queue primary CTA routes through workflow advanc
   assert.match(appSource, /function WorkflowPrimaryButton\(\{ workflow, onPrimaryAction \}: \{ workflow: Workflow; onPrimaryAction: \(\) => void \}\)/);
   assert.match(appSource, /data-workflow-primary-action="true" onClick=\{onPrimaryAction\}/);
   assert.match(appSource, /\{workflow \? <WorkflowPrimaryButton workflow=\{workflow\} onPrimaryAction=\{onPrimaryAction\} \/> : <button className="primaryCta"/);
-  assert.match(appSource, /await performWorkflowStepAction\(currentWorkflow, controlPlane\);\s*const task = firstCandidate\(controlPlane, 1\);\s*const next = advanceWorkflow\(workflowInputForTask\(controlPlane\.recommendation, task\), workflowState\);\s*window\.localStorage\.setItem\(workflowStateStorageKey, JSON\.stringify\(next\)\);\s*setWorkflowState\(next\);/);
-  assert.match(workflowSource, /\{ id: 'copy-context-package', label: 'Copy Context Package', primaryAction: 'Copy Context Package', state: 'Recommendation Ready', nextState: 'Workflow In Progress' \},\s*\{ id: 'copy-validation-prompt', label: 'Copy Validation Prompt', primaryAction: 'Copy Validation Prompt', state: 'Workflow In Progress'/);
+  assert.match(appSource, /await performWorkflowStepAction\(currentWorkflow, controlPlane\);[\s\S]*const next = advanceWorkflow\(workflowInputForTask\(controlPlane\.recommendation, task\), workflowState\);[\s\S]*window\.localStorage\.setItem\(workflowStateStorageKey, JSON\.stringify\(next\)\);[\s\S]*setWorkflowState\(next\);/);
+  assert.match(workflowSource, /\{ id: 'copy-context-package', label: 'Copy Context Package', primaryAction: 'Copy Context Package', state: 'Recommendation Ready', nextState: 'Workflow In Progress' \},\s*\{ id: 'copy-understanding-check', label: 'Copy Understanding Check', primaryAction: 'Copy Understanding Check', state: 'Workflow In Progress'/);
+  for (const expected of ['Development Diagnostics', 'lastPrimaryActionClicked', 'performWorkflowStepActionRan', 'advanceWorkflowRan', 'setWorkflowStateRan', 'localStoragePersistenceSucceeded', 'currentLocalStorageValue']) {
+    assert.match(appSource, new RegExp(expected));
+  }
 });
 
 test('copy-only buttons are demoted and cannot be the sole primary CTA', () => {
