@@ -78,6 +78,24 @@ type DecisionCandidate = { rank: number; id: string; title: string; category: st
 
 type AIHandoffValidation = { overallScore: number; status: string; recoverableInformation: string[]; hiddenInformation: string[]; contradictions: string[]; missingExplanations: string[]; suggestedImprovements: string[] };
 
+type RepositoryJudgmentCandidate = {
+  id: string;
+  title: string;
+  category: string;
+  confidence: number;
+  totalScore: number;
+  whyItMatters: string;
+  evidence: Array<{ sourceFile: string; sourceSection?: string; text: string }>;
+};
+
+type RepositoryJudgment = {
+  mode: 'shadow' | string;
+  generatedAt?: string;
+  selectionPolicy?: string;
+  candidates: RepositoryJudgmentCandidate[];
+  markdown?: string;
+} | null;
+
 type ProgressSummary = {
   hasBaseline: boolean;
   completedTask: string;
@@ -97,6 +115,7 @@ type ControlPlane = {
   recommendation: ControlPlaneRecommendation;
   evidenceLineage?: { categories?: Record<string, Array<{ file: string; group: string; category: string; ancestry?: string }>>; sources?: Array<{ file: string; group: string; category: string; ancestry?: string }> };
   aiHandoffValidation?: AIHandoffValidation | null;
+  repositoryJudgment?: RepositoryJudgment;
   decisionRanking?: { selectionExplanation: string; selectedIssue?: { id: string; title: string; rank: number; priorityScore: number }; candidates: DecisionCandidate[] } | null;
   diff: Record<string, string | string[]>;
   quality: QualitySnapshot | null;
@@ -651,6 +670,40 @@ function CanonicalEditPanel({ proposal, repositoryPath }: { proposal: CanonicalE
   );
 }
 
+
+function topRepositoryJudgmentCandidate(data: ControlPlane) {
+  return data.repositoryJudgment?.candidates?.[0] ?? null;
+}
+
+function evidenceSummary(candidate: RepositoryJudgmentCandidate) {
+  return candidate.evidence?.length
+    ? candidate.evidence.slice(0, 3).map((item) => `${item.sourceFile}${item.sourceSection ? ` (${item.sourceSection})` : ''}: ${item.text}`).join(' • ')
+    : 'No evidence summary available.';
+}
+
+function ShadowRecommendationCard({ data }: { data: ControlPlane }) {
+  const shadow = topRepositoryJudgmentCandidate(data);
+  if (!shadow) return null;
+  const productionTitle = data.recommendation.title;
+  return (
+    <section className="controlCard shadowRecommendationCard" aria-label="Shadow Recommendation">
+      <p className="kicker">Shadow Recommendation</p>
+      <h2>{shadow.title}</h2>
+      <p><b>Shadow Mode — not currently driving the Work Queue</b></p>
+      <div className="workMetaGrid compact">
+        <div><small>Category</small><strong>{shadow.category}</strong></div>
+        <div><small>Confidence</small><strong>{shadow.confidence}</strong></div>
+        <div><small>Total score</small><strong>{shadow.totalScore}</strong></div>
+      </div>
+      <p><b>Evidence summary:</b> {evidenceSummary(shadow)}</p>
+      <p><b>Why it matters:</b> {shadow.whyItMatters}</p>
+      <p><b>Production Recommendation:</b> {productionTitle}</p>
+      <p><b>Shadow Recommendation:</b> {shadow.title}</p>
+      <p>Use this to evaluate whether Repository Judgment is ready to become the primary recommendation engine.</p>
+    </section>
+  );
+}
+
 function WorkflowPrimaryButton({ workflow, onPrimaryAction }: { workflow: Workflow; onPrimaryAction: () => void }) {
   return <button className="primaryCta" data-workflow-primary-action="true" onClick={onPrimaryAction} type="button">{outcomeWorkflowText(workflow.currentPrimaryAction)}</button>;
 }
@@ -856,9 +909,19 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
   return (
     <div className="controlPlane compactDashboard">
       <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} />
+      <ShadowRecommendationCard data={data} />
       <WorkflowDiagnosticsDisclosure workflow={workflow} diagnostics={diagnostics} />
 
       <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced</summary>
+      {data.repositoryJudgment && (
+        <details className="controlCard disclosureCard" aria-label="Repository Judgment Raw Artifact Details"><summary>Repository Judgment raw artifact details</summary>
+          <p><b>Mode:</b> {data.repositoryJudgment.mode}</p>
+          <p><b>Generated:</b> {data.repositoryJudgment.generatedAt ?? 'Unknown'}</p>
+          <p><b>Selection policy:</b> {data.repositoryJudgment.selectionPolicy ?? 'Shadow Mode only.'}</p>
+          <pre>{data.repositoryJudgment.markdown ?? JSON.stringify(data.repositoryJudgment, null, 2)}</pre>
+        </details>
+      )}
+
       {afterThis && (
         <section className="controlCard afterThisCard" aria-label="After This">
           <p className="kicker">After This</p>
