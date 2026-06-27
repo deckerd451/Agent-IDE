@@ -1454,7 +1454,7 @@ export function App() {
               type="text"
               value={repositoryPath}
             />
-            <button disabled={isRefreshing || !repositoryPath.trim()} onClick={refreshIntelligence} type="button">
+            <button disabled={isRefreshing || !repositoryPath.trim()} onClick={() => refreshIntelligence()} type="button">
               {isRefreshing ? 'Repository analysis running…' : 'Refresh Repository Intelligence'}
             </button>
           </div>
