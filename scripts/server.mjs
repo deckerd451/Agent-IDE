@@ -118,7 +118,7 @@ const generatorSteps = [
 ];
 
 
-const controlFiles = ['evidence-lineage.json', 'decision-ranking.json', 'repository-judgment.json', 'ai-handoff-validation.json', 'goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'];
+const controlFiles = ['evidence-lineage.json', 'decision-ranking.json', 'repository-judgment.json', 'repository-judgment.md', 'ai-handoff-validation.json', 'goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md'];
 
 async function readAiText(repositoryPath, fileName) {
   return readFile(join(repositoryPath, '.ai', fileName), 'utf8').catch((error) => {
@@ -389,6 +389,7 @@ async function readControlPlane(repositoryPath) {
   const decisionRanking = JSON.parse(await readFile(join(aiDir, 'decision-ranking.json'), 'utf8').catch(() => 'null'));
   const evidenceLineage = JSON.parse(await readFile(join(aiDir, 'evidence-lineage.json'), 'utf8').catch(() => 'null'));
   const repositoryJudgment = JSON.parse(await readFile(join(aiDir, 'repository-judgment.json'), 'utf8').catch(() => 'null'));
+  if (repositoryJudgment && docs['repository-judgment.md']?.trim()) repositoryJudgment.markdown = docs['repository-judgment.md'];
   const timeline = JSON.parse(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => '[]'));
   const aiHandoffValidation = JSON.parse(await readFile(join(aiDir, 'ai-handoff-validation.json'), 'utf8').catch(() => 'null'));
   const recommendation = docs['next-improvement-prompt.md']?.trim()
