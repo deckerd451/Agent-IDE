@@ -22,8 +22,8 @@ export type Section = {
 export const sections: Section[] = [
   {
     id: 'Control Plane',
-    eyebrow: 'Operational dashboard',
-    summary: 'Repository intelligence status, change history, evidence, timeline, and one-click AI handoff packages.',
+    eyebrow: 'Next improvement',
+    summary: 'One clear recommendation, why it matters, estimated effort, and the next action.',
     markdownFile: 'repository-health.md',
   },
   {
@@ -76,19 +76,19 @@ export const sections: Section[] = [
   },
   {
     id: 'Repository Health',
-    eyebrow: 'Intelligence audit',
+    eyebrow: 'Advanced audit',
     summary: 'Quality, completeness, reliability, and next steps for the repository intelligence layer.',
     markdownFile: 'repository-health.md',
   },
   {
     id: 'Prompt Center',
-    eyebrow: 'One-click prompts',
+    eyebrow: 'Advanced prompts',
     summary: 'View, copy, and download generated Architect, Builder, Reviewer, and Debugger prompts.',
     markdownFile: 'prompts/architect.md',
   },
   {
     id: 'Context Package',
-    eyebrow: 'Assistant handoff',
+    eyebrow: 'Advanced handoff',
     summary: 'A compact generated context package for pasting repository intelligence into GPT, Claude, Cursor, Codex, and other assistants.',
     markdownFile: 'context-package.md',
   },
