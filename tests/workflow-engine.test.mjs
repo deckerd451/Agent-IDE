@@ -76,6 +76,21 @@ test('copy-only buttons are demoted and cannot be the sole primary CTA', () => {
   assert.doesNotMatch(appSource, /<button className="primaryCta"[^>]*copyText/);
 });
 
+test('terminal refresh step persists validation completion before refresh and clears workflow state after', () => {
+  assert.match(appSource, /isTerminalRefreshStep && currentWorkflow\.type === 'Validation'/);
+  assert.match(appSource, /completionRecordPersistedBeforeRefresh: true/);
+  assert.match(appSource, /window\.localStorage\.removeItem\(workflowStateStorageKey\)/);
+  assert.match(appSource, /workflowStateClearedAfterRefresh: true/);
+  assert.match(appSource, /refreshStepDetected/);
+  assert.match(appSource, /refreshStarted/);
+  assert.match(appSource, /refreshCompleted/);
+  assert.match(appSource, /refreshedRecommendationTitle/);
+  assert.match(appSource, /suppressionApplied/);
+  for (const expected of ['refresh step detected', 'refresh started', 'refresh completed', 'completion record persisted before refresh', 'workflow state cleared after refresh', 'refreshed recommendation title', 'suppression applied']) {
+    assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+});
+
 test('repository intelligence, rankings, and prompts are preserved by workflow-layer refactor', () => {
   assert.doesNotMatch(workflowSource, /writeFile|spawn|exec|fetch\(/);
   for (const expected of ['decisionRanking', 'data.recommendation.prompt', 'data.packages.builder', 'data.packages.reviewer', 'data.packages.debugger', 'buildValidationPrompt']) {

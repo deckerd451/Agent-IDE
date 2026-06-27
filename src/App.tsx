@@ -10,6 +10,13 @@ type WorkflowDiagnostics = {
   setWorkflowStateRan: boolean;
   localStoragePersistenceSucceeded: boolean;
   currentLocalStorageValue: string;
+  refreshStepDetected?: boolean;
+  refreshStarted?: boolean;
+  refreshCompleted?: boolean;
+  completionRecordPersistedBeforeRefresh?: boolean;
+  workflowStateClearedAfterRefresh?: boolean;
+  refreshedRecommendationTitle?: string;
+  suppressionApplied?: boolean;
 };
 
 type RefreshEvent = {
@@ -599,6 +606,13 @@ function WorkflowDiagnosticsDisclosure({ workflow, diagnostics }: { workflow: Wo
     ['whether setWorkflowState ran', String(diagnostics.setWorkflowStateRan)],
     ['whether localStorage persistence succeeded', String(diagnostics.localStoragePersistenceSucceeded)],
     ['current localStorage value for workflowStateStorageKey', diagnostics.currentLocalStorageValue || 'Empty'],
+    ['refresh step detected', diagnostics.refreshStepDetected === undefined ? 'N/A' : String(diagnostics.refreshStepDetected)],
+    ['refresh started', diagnostics.refreshStarted === undefined ? 'N/A' : String(diagnostics.refreshStarted)],
+    ['refresh completed', diagnostics.refreshCompleted === undefined ? 'N/A' : String(diagnostics.refreshCompleted)],
+    ['completion record persisted before refresh', diagnostics.completionRecordPersistedBeforeRefresh === undefined ? 'N/A' : String(diagnostics.completionRecordPersistedBeforeRefresh)],
+    ['workflow state cleared after refresh', diagnostics.workflowStateClearedAfterRefresh === undefined ? 'N/A' : String(diagnostics.workflowStateClearedAfterRefresh)],
+    ['refreshed recommendation title', diagnostics.refreshedRecommendationTitle ?? 'N/A'],
+    ['suppression applied', diagnostics.suppressionApplied === undefined ? 'N/A' : String(diagnostics.suppressionApplied)],
   ] as const;
   return <details className="controlCard disclosureCard workflowDiagnostics" aria-label="Development Diagnostics"><summary>Development Diagnostics</summary><dl>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></details>;
 }
@@ -1224,6 +1238,10 @@ export function App() {
         const refreshedTask = firstCandidate(refreshedControlPlane, 1);
         const refreshedKey = workflowKey(workflowInputForTask(refreshedControlPlane.recommendation, refreshedTask));
         setWorkflowState((current) => current?.workflowKey === refreshedKey ? current : null);
+        const previousTitle = previousControlPlane?.recommendation?.title;
+        const refreshedTitle = refreshedControlPlane.recommendation?.title;
+        const suppressionApplied = Boolean(previousTitle && previousTitle === controlPlane?.recommendation?.title && refreshedTitle !== previousTitle);
+        setWorkflowDiagnostics((current) => ({ ...current, refreshedRecommendationTitle: refreshedTitle ?? '', suppressionApplied }));
       }
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : String(refreshError));
@@ -1263,7 +1281,30 @@ export function App() {
       currentLocalStorageValue: window.localStorage.getItem(workflowStateStorageKey) ?? '',
     });
     if (currentWorkflow.completionState === 'Ready To Refresh' || currentWorkflow.repositoryState === 'Refresh Repository') {
+      const isTerminalRefreshStep = currentWorkflow.repositoryState === 'Refresh Repository';
+      setWorkflowDiagnostics((current) => ({ ...current, refreshStepDetected: isTerminalRefreshStep }));
+      if (isTerminalRefreshStep && currentWorkflow.type === 'Validation') {
+        const task = firstCandidate(controlPlane, 1);
+        const contextPackage = controlPlane.packages.context || documents['context-package.md']?.content || '';
+        persistValidationCompletion({
+          workflowKey: currentWorkflow.workflowKey,
+          completedAt: new Date().toISOString(),
+          repositoryPath: connectedPath || repositoryPath,
+          selectedIssueId: task?.id ?? 'ai-handoff-validation',
+          recommendationTitle: controlPlane.recommendation.title,
+          contextPackageHash: stableContextPackageHash(contextPackage),
+          refreshTimestamp: controlPlane.status.timestamp,
+        });
+        setWorkflowDiagnostics((current) => ({ ...current, completionRecordPersistedBeforeRefresh: true }));
+      }
+      setWorkflowDiagnostics((current) => ({ ...current, refreshStarted: true }));
       await refreshIntelligence();
+      setWorkflowDiagnostics((current) => ({ ...current, refreshCompleted: true }));
+      if (isTerminalRefreshStep) {
+        window.localStorage.removeItem(workflowStateStorageKey);
+        setWorkflowState(null);
+        setWorkflowDiagnostics((current) => ({ ...current, workflowStateClearedAfterRefresh: true }));
+      }
       return;
     }
     try {

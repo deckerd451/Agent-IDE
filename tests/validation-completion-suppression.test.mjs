@@ -74,3 +74,38 @@ test('changed intelligence snapshot allows validation recommendation to reappear
   assert.equal(result.selectedIssue.id, 'ai-handoff-validation');
   assert.equal(result.selectedIssue.title, 'Run AI Handoff Validation');
 });
+
+test('stableContextPackageHash strips Generated timestamp so hash is stable across refreshes', () => {
+  const base = '# Context Package\n\n## Product Thesis\nsome content\n\n## Current Focus\nfocus here\n';
+  const withTimestamp1 = `# Context Package\n\nGenerated: 2026-06-27T00:00:00.000Z\n\n## Product Thesis\nsome content\n\n## Current Focus\nfocus here\n`;
+  const withTimestamp2 = `# Context Package\n\nGenerated: 2026-06-27T01:23:45.678Z\n\n## Product Thesis\nsome content\n\n## Current Focus\nfocus here\n`;
+
+  const hash1 = stableContextPackageHash(withTimestamp1);
+  const hash2 = stableContextPackageHash(withTimestamp2);
+
+  assert.ok(hash1, 'hash should be defined');
+  assert.equal(hash1, hash2, 'same content with different Generated: timestamps must produce the same stable hash');
+});
+
+test('refresh step scenario: completion record from terminal step suppresses same recommendation', () => {
+  const contextPackageBeforeRefresh = '# Context Package\n\nGenerated: 2026-06-27T10:00:00.000Z\n\n## Product Thesis\nsome content\n';
+  const contextPackageAfterRefresh  = '# Context Package\n\nGenerated: 2026-06-27T10:05:00.000Z\n\n## Product Thesis\nsome content\n';
+
+  const storedHash = stableContextPackageHash(contextPackageBeforeRefresh);
+  const workflowKey = 'Validation:validation-experiment:Run AI Handoff Validation';
+
+  const result = healthyChoice({
+    contextPackage: contextPackageAfterRefresh,
+    validationCompletions: [{
+      workflowKey,
+      completedAt: '2026-06-27T10:04:00.000Z',
+      repositoryPath: '/tmp/repo',
+      selectedIssueId: 'ai-handoff-validation',
+      recommendationTitle: 'Run AI Handoff Validation',
+      contextPackageHash: storedHash,
+    }],
+  });
+
+  assert.notEqual(result.selectedIssue.id, 'ai-handoff-validation', 'workflow must not be stuck on refresh step after terminal refresh action');
+  assert.equal(result.selectedIssue.id, 'repository-up-to-date', 'same repository content with different Generated: timestamp must still suppress the recommendation');
+});
