@@ -18,6 +18,7 @@
     {
       "id": "ai-handoff-validation",
       "kind": "ai-handoff-validation",
+      "class": "maintenance",
       "category": "AI handoff validation",
       "severity": "low",
       "actionability": "validation-experiment",
