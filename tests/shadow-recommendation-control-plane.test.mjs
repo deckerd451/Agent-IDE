@@ -227,3 +227,56 @@ test('blocked engineering task returns clarification prompt instead of empty imp
   assert.match(controlPlane.recommendation.implementationPrompt, /Recommendation requires task clarification/);
   assert.match(controlPlane.recommendation.implementationPrompt, /Missing deterministic evidence/);
 });
+
+test('Ready Repository Judgment uses selected actionable candidate for implementationPrompt', async () => {
+  const dir = await writeControlPlaneFixture({ ready: true });
+  const originalTitle = 'Advance strategy: Control Plane reports repository handoff readiness as Ready.';
+  const actionableTitle = 'Repository documentation identifies actionable follow-up work from: Add backlog quality';
+  const engineeringTask = {
+    schemaVersion: 1,
+    status: 'preserved',
+    originalRecommendation: { id: 'readiness', title: originalTitle },
+    title: actionableTitle,
+    rootCause: 'The selected recommendation is already concrete and implementation-ready.',
+    implementationTarget: 'Define the smallest local, deterministic change needed to add backlog quality.',
+    likelyFiles: ['.ai/backlog.md'],
+    deterministicEvidence: ['Repository documentation identifies actionable follow-up work from: Add backlog quality'],
+    acceptanceCriteria: ['The concrete recommendation is implemented as selected.'],
+    nonGoals: ['Do not broaden scope beyond the selected recommendation.'],
+    clarification: null,
+  };
+  await writeFile(join(dir, '.ai', 'decision-ranking.json'), JSON.stringify({
+    schemaVersion: 1,
+    engineeringTask,
+    originalSelectedRecommendation: engineeringTask.originalRecommendation,
+    candidates: [{
+      rank: 1,
+      selected: true,
+      id: 'backlog-add-quality',
+      kind: 'backlog',
+      class: 'improvement',
+      category: 'backlog',
+      severity: 'high',
+      actionability: 'code-fixable',
+      packageType: 'implementation',
+      title: actionableTitle,
+      evidence: 'Repository documentation identifies actionable follow-up work from: Add backlog quality',
+      reason: 'Repository documentation identifies actionable follow-up work from: Add backlog quality',
+      recommendedAction: 'Define the smallest local, deterministic change needed to add backlog quality.',
+      priorityScore: 99,
+      expectedImprovement: { total: 24, repositoryHealth: 6, canonicalCompleteness: 0, quality: 8, verification: 4, handoffReadiness: 6 },
+      engineeringTask,
+    }],
+    selectedIssue: { id: 'backlog-add-quality', title: actionableTitle, rank: 1, priorityScore: 99 },
+    selectionExplanation: 'Actionable backlog candidate selected after Repository Judgment readiness.',
+  }, null, 2));
+
+  const controlPlane = await readControlPlane(dir);
+  assert.equal(controlPlane.activeRecommendationSource, 'Repository Judgment');
+  assert.equal(controlPlane.recommendation.displayTitle, actionableTitle);
+  assert.match(controlPlane.recommendation.implementationPrompt, new RegExp(`^# ${actionableTitle}`));
+  assert.doesNotMatch(controlPlane.recommendation.implementationPrompt, /^# Advance strategy: Control Plane reports repository handoff readiness as Ready\./);
+  assert.match(controlPlane.recommendation.implementationPrompt, /## Original Repository Judgment Recommendation\n- Title: Advance strategy: Control Plane reports repository handoff readiness as Ready\./);
+  assert.equal(controlPlane.recommendation.prompt, controlPlane.recommendation.implementationPrompt);
+  assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt);
+});
