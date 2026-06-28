@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { readControlPlane } from '../scripts/server.mjs';
 
-async function writeControlPlaneFixture({ withJudgment = true } = {}) {
+async function writeControlPlaneFixture({ withJudgment = true, ready = false, invalidJudgment = false } = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'shadow-control-plane-'));
   await mkdir(join(dir, '.ai', 'prompts'), { recursive: true });
   const files = {
@@ -26,8 +26,11 @@ async function writeControlPlaneFixture({ withJudgment = true } = {}) {
   };
   for (const [file, content] of Object.entries(files)) await writeFile(join(dir, '.ai', file), content);
   if (withJudgment) {
-    await writeFile(join(dir, '.ai', 'repository-judgment-history.json'), JSON.stringify([{ timestamp: '2026-06-28T00:00:00.000Z', productionRecommendation: 'Production Recommendation Title', shadowRecommendation: 'Shadow Recommendation Title', winner: 'Shadow', readinessScore: 80 }], null, 2));
-    await writeFile(join(dir, '.ai', 'repository-judgment.json'), JSON.stringify({
+    const history = ready
+      ? [1, 2, 3].map((index) => ({ timestamp: `2026-06-28T00:00:0${index}.000Z`, productionRecommendation: 'Production Recommendation Title', shadowRecommendation: 'Shadow Recommendation Title', winner: 'Shadow', readinessScore: 90 }))
+      : [{ timestamp: '2026-06-28T00:00:00.000Z', productionRecommendation: 'Production Recommendation Title', shadowRecommendation: 'Shadow Recommendation Title', winner: 'Shadow', readinessScore: 80 }];
+    await writeFile(join(dir, '.ai', 'repository-judgment-history.json'), JSON.stringify(history, null, 2));
+    const judgment = JSON.stringify({
       mode: 'shadow',
       generatedAt: '1970-01-01T00:00:00.000Z',
       selectionPolicy: 'Shadow Mode only.',
@@ -40,16 +43,19 @@ async function writeControlPlaneFixture({ withJudgment = true } = {}) {
         whyItMatters: 'It evaluates future ranking readiness.',
         evidence: [{ sourceFile: '.ai/backlog.md', sourceSection: 'Prioritized Backlog', text: 'Improve shadow recommendation visibility.' }],
       }],
-    }, null, 2));
+    }, null, 2);
+    await writeFile(join(dir, '.ai', 'repository-judgment.json'), invalidJudgment ? '{ invalid json' : judgment);
     await writeFile(join(dir, '.ai', 'repository-judgment.md'), '# Repository Judgment (Shadow Mode)\n\nRaw markdown artifact.\n');
   }
   return dir;
 }
 
-test('Control Plane reads Repository Judgment JSON and markdown without changing production recommendation', async () => {
+test('Not Ready uses Legacy while reading Repository Judgment JSON and markdown', async () => {
   const dir = await writeControlPlaneFixture();
   const controlPlane = await readControlPlane(dir);
+  assert.equal(controlPlane.activeRecommendationSource, 'Legacy');
   assert.equal(controlPlane.recommendation.title, 'Production Recommendation Title');
+  assert.equal(controlPlane.legacyRecommendation.title, 'Production Recommendation Title');
   assert.equal(controlPlane.repositoryJudgment.candidates[0].title, 'Shadow Recommendation Title');
   assert.match(controlPlane.repositoryJudgment.markdown, /Repository Judgment \(Shadow Mode\)/);
 });
@@ -57,15 +63,39 @@ test('Control Plane reads Repository Judgment JSON and markdown without changing
 test('missing Repository Judgment artifacts do not break Control Plane reads', async () => {
   const dir = await writeControlPlaneFixture({ withJudgment: false });
   const controlPlane = await readControlPlane(dir);
+  assert.equal(controlPlane.activeRecommendationSource, 'Legacy');
   assert.equal(controlPlane.recommendation.title, 'Production Recommendation Title');
   assert.equal(controlPlane.repositoryJudgment, null);
 });
 
-test('Work Queue renders shadow recommendation comparison and shadow-mode label', async () => {
+
+
+test('Ready for Promotion uses Repository Judgment recommendation and implementation prompt', async () => {
+  const dir = await writeControlPlaneFixture({ ready: true });
+  const controlPlane = await readControlPlane(dir);
+  assert.equal(controlPlane.repositoryJudgmentReadiness.promotionStatus, 'Ready for Promotion');
+  assert.equal(controlPlane.activeRecommendationSource, 'Repository Judgment');
+  assert.equal(controlPlane.recommendation.title, 'Shadow Recommendation Title');
+  assert.equal(controlPlane.legacyRecommendation.title, 'Production Recommendation Title');
+  assert.equal(controlPlane.packages.builder, controlPlane.recommendation.prompt);
+  assert.match(controlPlane.recommendation.prompt, /Selected Repository Judgment Candidate/);
+  assert.match(controlPlane.recommendation.prompt, /Shadow Recommendation Title/);
+});
+
+test('invalid Repository Judgment artifact falls back to Legacy', async () => {
+  const dir = await writeControlPlaneFixture({ ready: true, invalidJudgment: true });
+  const controlPlane = await readControlPlane(dir);
+  assert.equal(controlPlane.activeRecommendationSource, 'Legacy');
+  assert.equal(controlPlane.recommendation.title, 'Production Recommendation Title');
+  assert.equal(controlPlane.repositoryJudgment, null);
+});
+
+test('Work Queue renders active recommendation source and legacy comparison', async () => {
   const source = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../src/App.tsx', import.meta.url), 'utf8'));
   for (const expected of [
     'Shadow Recommendation',
-    'Shadow Mode — not currently driving the Work Queue',
+    'Recommendation Source:',
+    'Advanced legacy recommendation comparison',
     'Production Recommendation:',
     'Shadow Recommendation:',
     'Use this to evaluate whether Repository Judgment is ready to become the primary recommendation engine.',

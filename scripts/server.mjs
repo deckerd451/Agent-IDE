@@ -377,6 +377,34 @@ function handoffPackages(docs) {
   };
 }
 
+function parseJsonArtifact(value, fallback) {
+  try {
+    return value?.trim() ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function repositoryJudgmentPrompt(candidate) {
+  const evidence = candidate.evidence?.length
+    ? candidate.evidence.map((item) => `- ${item.sourceFile}${item.sourceSection ? ` (${item.sourceSection})` : ''}: ${item.text}`).join('\n')
+    : '- No evidence summary available.';
+  return `# ${candidate.title}\n\n## Implementation Instructions\nImplement this Repository Judgment recommendation exactly as written.\nUse the cited repository evidence to identify the root cause before making changes.\nKeep the implementation narrowly scoped.\nDo not change Repository Judgment scoring or promotion thresholds.\nPreserve deterministic, local-first behavior.\nPreserve legacy recommendation artifacts for comparison.\n\n## Selected Repository Judgment Candidate\n- ID: ${candidate.id}\n- Category: ${candidate.category}\n- Confidence: ${candidate.confidence}\n- Total score: ${candidate.totalScore}\n\n## Current Evidence\n${evidence}\n\n## Goal\n${candidate.title}\n\n## Why This Helps\n${candidate.whyItMatters}\n\n## Acceptance Criteria\n- The implementation addresses the selected Repository Judgment candidate.\n- The final diff is small, deterministic, and reviewable.\n- Legacy recommendation details remain available for comparison.\n\n## Testing Commands\n- npm test\n- npm run build\n`;
+}
+
+function recommendationFromRepositoryJudgment(candidate) {
+  const prompt = repositoryJudgmentPrompt(candidate);
+  return {
+    title: candidate.title,
+    actionability: candidate.confidence >= 0.75 ? 'High' : 'Medium',
+    packageType: 'implementation',
+    explanation: `Repository Judgment candidate: ${candidate.category} (${candidate.totalScore} total score).`,
+    whyItMatters: candidate.whyItMatters,
+    evidenceSource: '.ai/repository-judgment.json',
+    prompt,
+  };
+}
+
 async function readControlPlane(repositoryPath) {
   const docs = Object.fromEntries(await Promise.all(controlFiles.map(async (file) => [file, await readAiText(repositoryPath, file)])));
   const aiDir = join(repositoryPath, '.ai');
@@ -386,11 +414,11 @@ async function readControlPlane(repositoryPath) {
   const verification = await verifyIntelligence(repositoryPath, { displayedContents: docs, persist: false });
   const qualityHistory = JSON.parse(await readFile(join(aiDir, 'intelligence-history.json'), 'utf8').catch(() => '[]'));
   const explanations = await readIntelligenceExplanations(repositoryPath);
-  const decisionRanking = JSON.parse(await readFile(join(aiDir, 'decision-ranking.json'), 'utf8').catch(() => 'null'));
-  const evidenceLineage = JSON.parse(await readFile(join(aiDir, 'evidence-lineage.json'), 'utf8').catch(() => 'null'));
-  const repositoryJudgment = JSON.parse(await readFile(join(aiDir, 'repository-judgment.json'), 'utf8').catch(() => 'null'));
+  const decisionRanking = parseJsonArtifact(await readFile(join(aiDir, 'decision-ranking.json'), 'utf8').catch(() => ''), null);
+  const evidenceLineage = parseJsonArtifact(await readFile(join(aiDir, 'evidence-lineage.json'), 'utf8').catch(() => ''), null);
+  const repositoryJudgment = parseJsonArtifact(await readFile(join(aiDir, 'repository-judgment.json'), 'utf8').catch(() => ''), null);
   if (repositoryJudgment && docs['repository-judgment.md']?.trim()) repositoryJudgment.markdown = docs['repository-judgment.md'];
-  const repositoryJudgmentHistory = JSON.parse(await readFile(join(aiDir, 'repository-judgment-history.json'), 'utf8').catch(() => '[]'));
+  const repositoryJudgmentHistory = parseJsonArtifact(await readFile(join(aiDir, 'repository-judgment-history.json'), 'utf8').catch(() => ''), []);
   const latestRepositoryJudgmentEvaluation = repositoryJudgmentHistory.at(-1) ?? null;
   const repositoryJudgmentReadiness = latestRepositoryJudgmentEvaluation ? {
     score: latestRepositoryJudgmentEvaluation.readinessScore,
@@ -398,12 +426,17 @@ async function readControlPlane(repositoryPath) {
     promotionStatus: latestRepositoryJudgmentEvaluation.readinessScore >= 85 && ([...repositoryJudgmentHistory].reverse().findIndex((entry) => entry.winner !== 'Shadow') === -1 ? repositoryJudgmentHistory.length : [...repositoryJudgmentHistory].reverse().findIndex((entry) => entry.winner !== 'Shadow')) >= 3 ? 'Ready for Promotion' : latestRepositoryJudgmentEvaluation.readinessScore >= 45 ? 'Evaluating' : 'Not Ready',
     evaluationArtifact: docs['repository-judgment-evaluation.md'] ?? '',
   } : null;
-  const timeline = JSON.parse(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => '[]'));
-  const aiHandoffValidation = JSON.parse(await readFile(join(aiDir, 'ai-handoff-validation.json'), 'utf8').catch(() => 'null'));
-  const recommendation = docs['next-improvement-prompt.md']?.trim()
+  const timeline = parseJsonArtifact(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => ''), []);
+  const aiHandoffValidation = parseJsonArtifact(await readFile(join(aiDir, 'ai-handoff-validation.json'), 'utf8').catch(() => ''), null);
+  const legacyRecommendation = docs['next-improvement-prompt.md']?.trim()
     ? { title: firstLine(docs['next-improvement-prompt.md'].replace(/^#\s*/, ''), snapshot.recommendedNextStep), actionability: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Actionability', 'Not classified.'), packageType: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Package Type', 'implementation'), explanation: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Source risk/recommendation', 'See generated prompt.'), whyItMatters: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Reason', 'Generated from Control Plane intelligence.'), evidenceSource: '.ai/next-improvement-prompt.md', prompt: docs['next-improvement-prompt.md'] }
     : recommendationDetails(docs);
-  return { status: snapshot, aiHandoffValidation, decisionRanking, evidenceLineage, repositoryJudgment, repositoryJudgmentReadiness, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages: handoffPackages(docs), timeline };
+  const topJudgmentCandidate = Array.isArray(repositoryJudgment?.candidates) ? repositoryJudgment.candidates[0] : null;
+  const activeRecommendationSource = repositoryJudgmentReadiness?.promotionStatus === 'Ready for Promotion' && topJudgmentCandidate ? 'Repository Judgment' : 'Legacy';
+  const recommendation = activeRecommendationSource === 'Repository Judgment' ? recommendationFromRepositoryJudgment(topJudgmentCandidate) : legacyRecommendation;
+  const packages = handoffPackages(docs);
+  if (activeRecommendationSource === 'Repository Judgment') packages.builder = recommendation.prompt;
+  return { status: snapshot, aiHandoffValidation, decisionRanking, evidenceLineage, repositoryJudgment, repositoryJudgmentReadiness, activeRecommendationSource, legacyRecommendation, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages, timeline };
 }
 
 async function persistControlPlane(repositoryPath, previousSnapshot, refreshStartedAt = new Date(), options = {}) {
