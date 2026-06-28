@@ -43,14 +43,23 @@ type StepState = {
 
 type IntelligenceState = string;
 
+type EngineeringTask = { status: 'compiled' | 'preserved' | 'blocked' | string; title: string; rootCause?: string; implementationTarget?: string; clarification?: string; originalRecommendation?: { title?: string } };
+
 type ControlPlaneRecommendation = {
   title: string;
+  originalRecommendationTitle?: string;
+  displayTitle?: string;
+  displaySummary?: string;
   explanation: string;
   whyItMatters: string;
   actionability?: string;
-  packageType?: 'implementation' | 'product-decision' | 'validation-experiment';
+  packageType?: 'implementation' | 'product-decision' | 'validation-experiment' | 'task-clarification';
   evidenceSource: string;
   prompt: string;
+  implementationPrompt?: string;
+  engineeringTask?: EngineeringTask;
+  clarification?: string;
+  blockingState?: { state: string; reason: string };
   id?: string;
   promptHash?: string;
   previousOutcomeWarning?: string;
@@ -78,7 +87,7 @@ type QualitySnapshot = {
   recommendedAction: string;
 };
 
-type DecisionCandidate = { rank: number; id: string; title: string; category: string; severity: string; actionability: string; priorityScore: number; expectedImprovement: { total: number; repositoryHealth: number; canonicalCompleteness: number; quality: number; verification: number; handoffReadiness: number }; reason: string; evidence: string; selected: boolean; ownerAction?: string; expectedCompletionTarget?: string; dependency?: string; source?: string };
+type DecisionCandidate = { rank: number; id: string; title: string; engineeringTask?: EngineeringTask; category: string; severity: string; actionability: string; priorityScore: number; expectedImprovement: { total: number; repositoryHealth: number; canonicalCompleteness: number; quality: number; verification: number; handoffReadiness: number }; reason: string; evidence: string; selected: boolean; ownerAction?: string; expectedCompletionTarget?: string; dependency?: string; source?: string };
 
 type AIHandoffValidation = { overallScore: number; status: string; recoverableInformation: string[]; hiddenInformation: string[]; contradictions: string[]; missingExplanations: string[]; suggestedImprovements: string[] };
 
@@ -567,13 +576,32 @@ function UpToDateCard({ repositoryName, confidence, recommendationSource }: { re
   );
 }
 
+
+function implementationPrompt(data: ControlPlane, documents: Record<string, DocumentState>) {
+  const prompt = data.recommendation.implementationPrompt || data.packages.builder || documents['prompts/builder.md']?.content || data.recommendation.prompt;
+  if (prompt?.trim()) return prompt;
+  if (data.recommendation.engineeringTask) return data.recommendation.engineeringTask.status === 'blocked' ? 'Recommendation requires task clarification' : `# ${data.recommendation.engineeringTask.title}
+
+Implementation target: ${data.recommendation.engineeringTask.implementationTarget ?? data.recommendation.displaySummary ?? data.recommendation.whyItMatters}`;
+  return 'Recommendation requires task clarification';
+}
+
+function recommendationDisplayTitle(data: ControlPlane, task?: DecisionCandidate | null) {
+  return task?.engineeringTask?.title || data.recommendation.engineeringTask?.title || data.recommendation.displayTitle || humanTaskTitle(task, data.recommendation.title);
+}
+
+function recommendationDisplaySummary(data: ControlPlane, task?: DecisionCandidate | null) {
+  const engineeringTask = task?.engineeringTask || data.recommendation.engineeringTask;
+  return engineeringTask?.rootCause || engineeringTask?.implementationTarget || data.recommendation.displaySummary || task?.reason || data.recommendation.whyItMatters;
+}
+
 function TaskArtifact({ artifactType, data, documents, repositoryPath }: { artifactType: UserTask['artifactType']; data: ControlPlane; documents: Record<string, DocumentState>; repositoryPath?: string }) {
   const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
   const validationPrompt = buildValidationPrompt(contextPackage);
   if (artifactType === 'context-package' && contextPackage) return <pre className="artifactText">{contextPackage}</pre>;
   if (artifactType === 'validation-prompt' && validationPrompt) return <pre className="artifactText">{validationPrompt}</pre>;
   if (artifactType === 'implementation-prompt') {
-    const prompt = data.packages.builder || documents['prompts/builder.md']?.content || data.recommendation.prompt;
+    const prompt = data.packages.builder ? implementationPrompt(data, documents) : implementationPrompt(data, documents);
     return prompt ? <pre className="artifactText">{prompt}</pre> : null;
   }
   if (artifactType === 'canonical-edit') {
@@ -661,7 +689,7 @@ function CompletionPanel({ data, repositoryPath, onSaved, onRefresh }: { data: C
 function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryAction, onRefresh, onOutcomeSaved }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOutcomeSaved: () => Promise<void> }) {
   const recommendationSource = data.activeRecommendationSource ?? 'Legacy';
   const task = recommendationSource === 'Repository Judgment' ? null : firstCandidate(data, 1);
-  const taskTitle = humanTaskTitle(task, data.recommendation.title);
+  const taskTitle = recommendationDisplayTitle(data, task);
   const resolvedRepositoryName = data.status.repositoryName || repositoryPath?.split(/[\\/]/).filter(Boolean).pop() || 'Connected repository';
   const confidence = data.status.currentConfidence || `${data.quality?.confidence.score ?? 0}%`;
 
@@ -681,7 +709,7 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
         <h2>{taskTitle}</h2>
         {data.recommendation.previousOutcomeWarning && <p className="summary warningCard">{data.recommendation.previousOutcomeWarning}</p>}
         {!data.recommendation.previousOutcomeWarning && data.recommendation.advancementReason && <p className="summary">{data.recommendation.advancementReason}</p>}
-        <p className="recommendationReason">{task?.reason ?? data.recommendation.whyItMatters}</p>
+        <p className="recommendationReason">{recommendationDisplaySummary(data, task)}</p>
         <ol className="simpleLoop" aria-label="Agent IDE loop">
           <li>Copy the implementation prompt.</li>
           <li>Paste it into Claude Code or Codex and implement.</li>
@@ -702,7 +730,8 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
 }
 
 function workflowInputForTask(recommendation: ControlPlaneRecommendation, candidate?: DecisionCandidate | null) {
-  return { packageType: recommendation.packageType, category: candidate?.category, title: candidate?.title, ownerAction: candidate?.ownerAction, recommendationTitle: recommendation.title };
+  const packageType = recommendation.packageType === 'task-clarification' ? 'implementation' : recommendation.packageType;
+  return { packageType, category: candidate?.category, title: candidate?.engineeringTask?.title ?? candidate?.title ?? recommendation.displayTitle, ownerAction: candidate?.ownerAction, recommendationTitle: recommendation.originalRecommendationTitle ?? recommendation.title };
 }
 
 function hasUsefulValue(value?: string | null) {
@@ -954,7 +983,7 @@ function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onPri
   const acceptance = [task?.expectedCompletionTarget, task?.ownerAction].filter((item): item is string => hasUsefulValue(item));
   const lineage = data.evidenceLineage?.sources ?? Object.values(data.evidenceLineage?.categories ?? {}).flat();
   const prompts = [
-    ['Builder Prompt', data.packages.builder || documents['prompts/builder.md']?.content || data.recommendation.prompt],
+    ['Builder Prompt', implementationPrompt(data, documents)],
     ['Reviewer Prompt', data.packages.reviewer || documents['prompts/reviewer.md']?.content || ''],
     ['Debugger Prompt', data.packages.debugger || documents['prompts/debugger.md']?.content || ''],
     ['Context Package', data.packages.context || documents['context-package.md']?.content || ''],
@@ -1227,7 +1256,8 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
       <details className="controlCard recommended disclosureCard"><summary>{recommendedPackage.heading} — uses Today's Work selection</summary><section aria-label={recommendedPackage.ariaLabel}>
         <small>{recommendedPackage.heading}</small>
         <p><b>Recommendation Source:</b> {data.activeRecommendationSource ?? 'Legacy'}</p>
-        <strong>{data.recommendation.title}</strong>
+        <strong>{data.recommendation.displayTitle ?? data.recommendation.title}</strong>
+        {data.recommendation.originalRecommendationTitle && data.recommendation.originalRecommendationTitle !== (data.recommendation.displayTitle ?? data.recommendation.title) && <p><b>Original recommendation:</b> {data.recommendation.originalRecommendationTitle}</p>}
         {data.recommendation.actionability && <p><b>Actionability:</b> {data.recommendation.actionability}</p>}
         {data.recommendation.packageType && <p><b>Package type:</b> {data.recommendation.packageType}</p>}
         <p><b>Why this is recommended:</b> {data.recommendation.explanation}</p>
@@ -1244,12 +1274,12 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
         )}
         {data.recommendation.packageType === 'product-decision' && <div className="canonicalEditNotice"><b>Repository Owner edits:</b><code>.ai/goals.md</code><span>Everything else will be regenerated.</span></div>}
         <div className="promptActions">
-          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">{recommendedPackage.copyLabel}</button>
-          <button onClick={() => void copyText(data.recommendation.prompt)} type="button">{recommendedPackage.generateLabel}</button>
+          <button onClick={() => void copyText(implementationPrompt(data, documents))} type="button">{recommendedPackage.copyLabel}</button>
+          <button onClick={() => void copyText(implementationPrompt(data, documents))} type="button">{recommendedPackage.generateLabel}</button>
         </div>
         <details>
           <summary>{recommendedPackage.viewLabel}</summary>
-          <pre>{data.recommendation.prompt}</pre>
+          <pre>{implementationPrompt(data, documents)}</pre>
         </details>
       </section></details>
 
@@ -1659,7 +1689,7 @@ export function App() {
       'copy-context-package': contextPackage,
       'copy-validation-prompt': validationPrompt,
       'copy-understanding-check': validationPrompt,
-      'copy-implementation-prompt': data.packages.builder || documents['prompts/builder.md']?.content || data.recommendation.prompt,
+      'copy-implementation-prompt': implementationPrompt(data, documents),
       'review-canonical-edit': data.recommendation.prompt,
       'inspect-evidence': task?.evidence ?? data.recommendation.evidenceSource,
     };

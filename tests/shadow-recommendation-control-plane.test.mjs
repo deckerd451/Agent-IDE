@@ -106,3 +106,65 @@ test('Work Queue renders active recommendation source and legacy comparison', as
     'Promotion status',
   ]) assert.match(source, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
+
+test('compiled engineering task appears in Control Plane response with implementation prompt', async () => {
+  const dir = await writeControlPlaneFixture({ withJudgment: false });
+  const engineeringTask = {
+    schemaVersion: 1,
+    status: 'compiled',
+    originalRecommendation: { id: 'readiness', title: 'Advance strategy: Control Plane reports repository handoff readiness as Ready.' },
+    title: 'Expand deterministic recommendation candidate extraction after handoff readiness is Ready',
+    rootCause: 'Repository handoff readiness is a state signal, not an implementation task.',
+    implementationTarget: 'Add deterministic Engineering Task Compilation behavior.',
+    likelyFiles: ['scripts/next-improvement.mjs', 'src/App.tsx'],
+    deterministicEvidence: ['Control Plane reports repository handoff readiness as Ready.'],
+    acceptanceCriteria: ['The Do Next card can display the compiled task title.'],
+    nonGoals: ['Do not change Repository Judgment promotion thresholds.'],
+    clarification: null,
+  };
+  await writeFile(join(dir, '.ai', 'next-improvement-prompt.md'), '');
+  await writeFile(join(dir, '.ai', 'decision-ranking.json'), JSON.stringify({
+    schemaVersion: 1,
+    engineeringTask,
+    originalSelectedRecommendation: engineeringTask.originalRecommendation,
+    candidates: [{ rank: 1, selected: true, id: 'readiness', kind: 'readiness', class: 'improvement', category: 'automation', severity: 'medium', actionability: 'code-fixable', packageType: 'implementation', title: engineeringTask.title, evidence: engineeringTask.deterministicEvidence[0], reason: engineeringTask.rootCause, recommendedAction: engineeringTask.implementationTarget, priorityScore: 98, expectedImprovement: { total: 1, repositoryHealth: 0, canonicalCompleteness: 0, quality: 1, verification: 0, handoffReadiness: 0 }, engineeringTask }],
+    selectedIssue: { id: 'readiness', title: engineeringTask.title, rank: 1, priorityScore: 98 },
+    selectionExplanation: 'Compiled task selected.',
+  }, null, 2));
+  const controlPlane = await readControlPlane(dir);
+  assert.equal(controlPlane.recommendation.originalRecommendationTitle, 'Advance strategy: Control Plane reports repository handoff readiness as Ready.');
+  assert.equal(controlPlane.recommendation.displayTitle, engineeringTask.title);
+  assert.equal(controlPlane.recommendation.engineeringTask.title, engineeringTask.title);
+  assert.match(controlPlane.recommendation.implementationPrompt, /^# Expand deterministic recommendation candidate extraction after handoff readiness is Ready/);
+  assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt);
+});
+
+test('blocked engineering task returns clarification prompt instead of empty implementation prompt', async () => {
+  const dir = await writeControlPlaneFixture({ withJudgment: false });
+  const engineeringTask = {
+    schemaVersion: 1,
+    status: 'blocked',
+    originalRecommendation: { id: 'vague', title: 'Things soon' },
+    title: 'Recommendation requires task clarification.',
+    rootCause: 'The recommendation is vague.',
+    implementationTarget: 'Clarify the task.',
+    likelyFiles: ['.ai/backlog.md'],
+    deterministicEvidence: ['Important improvement noted.'],
+    acceptanceCriteria: ['A concrete implementation target is identified before prompt generation.'],
+    nonGoals: ['Do not generate a vague implementation prompt.'],
+    clarification: 'Missing deterministic evidence: concrete action, implementation target, likely files, and acceptance criteria.',
+  };
+  await writeFile(join(dir, '.ai', 'next-improvement-prompt.md'), '');
+  await writeFile(join(dir, '.ai', 'decision-ranking.json'), JSON.stringify({
+    schemaVersion: 1,
+    engineeringTask,
+    originalSelectedRecommendation: engineeringTask.originalRecommendation,
+    candidates: [{ rank: 1, selected: true, id: 'vague', kind: 'vague', class: 'improvement', category: 'automation', severity: 'medium', actionability: 'manual', packageType: 'task-clarification', title: engineeringTask.title, evidence: engineeringTask.deterministicEvidence[0], reason: engineeringTask.rootCause, recommendedAction: engineeringTask.implementationTarget, priorityScore: 98, expectedImprovement: { total: 1, repositoryHealth: 0, canonicalCompleteness: 0, quality: 1, verification: 0, handoffReadiness: 0 }, engineeringTask }],
+    selectedIssue: { id: 'vague', title: engineeringTask.title, rank: 1, priorityScore: 98 },
+    selectionExplanation: 'Blocked task selected.',
+  }, null, 2));
+  const controlPlane = await readControlPlane(dir);
+  assert.equal(controlPlane.recommendation.blockingState.state, 'blocked');
+  assert.match(controlPlane.recommendation.implementationPrompt, /Recommendation requires task clarification/);
+  assert.match(controlPlane.recommendation.implementationPrompt, /Missing deterministic evidence/);
+});

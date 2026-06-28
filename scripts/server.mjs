@@ -6,7 +6,7 @@ import { persistQuality } from './intelligence-quality.mjs';
 import { validateAIHandoff } from './ai-handoff-validation.mjs';
 import { verifyIntelligence } from './intelligence-verification.mjs';
 import { evaluateCanonicalCompleteness } from './canonical-completeness.mjs';
-import { generateNextImprovement } from './next-improvement.mjs';
+import { generateNextImprovement, renderPrompt } from './next-improvement.mjs';
 import { generateRepositoryJudgment } from './repository-judgment.mjs';
 import { generateProductJudgment } from './product-judgment.mjs';
 import { generateJudgmentComparison } from './judgment-comparison.mjs';
@@ -412,6 +412,70 @@ function recommendationFromRepositoryJudgment(candidate) {
   };
 }
 
+function promptFromEngineeringTask(engineeringTask, fallbackTitle = 'Recommendation requires task clarification.') {
+  if (!engineeringTask) return '';
+  const title = engineeringTask.title || fallbackTitle;
+  const lines = [
+    `# ${title}`,
+    '',
+    engineeringTask.status === 'blocked' ? 'Recommendation requires task clarification.' : '## Implementation Instructions',
+    engineeringTask.status === 'blocked' ? '' : 'Implement the compiled engineering task below. Preserve deterministic, local-first behavior. Do not add LLM calls, cloud services, telemetry, or change promotion thresholds.',
+    '',
+    '## Engineering Task Compilation',
+    `- Status: ${engineeringTask.status}`,
+    `- Original selected recommendation: ${engineeringTask.originalRecommendation?.title ?? 'Unknown'}`,
+    `- Root cause: ${engineeringTask.rootCause ?? 'Not specified.'}`,
+    `- Implementation target: ${engineeringTask.implementationTarget ?? 'Not specified.'}`,
+    '- Likely files or artifact sources:',
+    ...(engineeringTask.likelyFiles?.length ? engineeringTask.likelyFiles : ['Repository-local evidence required.']).map((item) => `  - ${item}`),
+    '- Deterministic evidence:',
+    ...(engineeringTask.deterministicEvidence?.length ? engineeringTask.deterministicEvidence : ['No deterministic evidence available.']).map((item) => `  - ${item}`),
+    '- Acceptance criteria:',
+    ...(engineeringTask.acceptanceCriteria?.length ? engineeringTask.acceptanceCriteria : ['A concrete implementation target is available before implementation.']).map((item) => `  - ${item}`),
+  ];
+  if (engineeringTask.clarification) lines.push('', '## Missing Evidence', engineeringTask.clarification);
+  return lines.filter((line, index, arr) => line || arr[index - 1] !== '').join('\n');
+}
+
+function implementationPromptForRecommendation(recommendation, decisionRanking, fallbackPrompt = '') {
+  const engineeringTask = decisionRanking?.engineeringTask ?? decisionRanking?.candidates?.[0]?.engineeringTask ?? null;
+  const selected = decisionRanking?.candidates?.[0];
+  if (engineeringTask && engineeringTask.status !== 'preserved') {
+    if (selected) {
+      const rendered = renderPrompt({ selectedIssue: selected, decisionRanking });
+      if (rendered.trim()) return rendered;
+    }
+    return promptFromEngineeringTask(engineeringTask);
+  }
+  const existing = recommendation?.prompt?.trim() || fallbackPrompt?.trim();
+  if (existing) return existing;
+  if (selected) {
+    const rendered = renderPrompt({ selectedIssue: selected, decisionRanking });
+    if (rendered.trim()) return rendered;
+  }
+  if (engineeringTask) return promptFromEngineeringTask(engineeringTask);
+  return 'Recommendation requires task clarification';
+}
+
+function decorateRecommendationForControlPlane(recommendation, decisionRanking, fallbackPrompt = '') {
+  const engineeringTask = decisionRanking?.engineeringTask ?? decisionRanking?.candidates?.[0]?.engineeringTask ?? null;
+  const original = decisionRanking?.originalSelectedRecommendation ?? engineeringTask?.originalRecommendation ?? null;
+  const displayTitle = engineeringTask?.title ?? recommendation.title;
+  const displaySummary = engineeringTask ? (engineeringTask.rootCause || engineeringTask.implementationTarget || recommendation.whyItMatters) : recommendation.whyItMatters;
+  const implementationPrompt = implementationPromptForRecommendation(recommendation, decisionRanking, fallbackPrompt);
+  recommendation.originalRecommendationTitle = original?.title ?? recommendation.title;
+  recommendation.displayTitle = displayTitle;
+  recommendation.displaySummary = displaySummary;
+  recommendation.implementationPrompt = implementationPrompt;
+  recommendation.prompt = implementationPrompt;
+  if (engineeringTask) recommendation.engineeringTask = engineeringTask;
+  if (engineeringTask?.status === 'blocked') {
+    recommendation.clarification = engineeringTask.clarification ?? 'Recommendation requires task clarification';
+    recommendation.blockingState = { state: 'blocked', reason: recommendation.clarification };
+  }
+  return recommendation;
+}
+
 async function readControlPlane(repositoryPath) {
   const docs = Object.fromEntries(await Promise.all(controlFiles.map(async (file) => [file, await readAiText(repositoryPath, file)])));
   const aiDir = join(repositoryPath, '.ai');
@@ -444,7 +508,7 @@ async function readControlPlane(repositoryPath) {
     : recommendationDetails(docs);
   const topJudgmentCandidate = Array.isArray(repositoryJudgment?.candidates) ? repositoryJudgment.candidates[0] : null;
   const activeRecommendationSource = repositoryJudgmentReadiness?.promotionStatus === 'Ready for Promotion' && topJudgmentCandidate ? 'Repository Judgment' : 'Legacy';
-  const recommendation = activeRecommendationSource === 'Repository Judgment' ? recommendationFromRepositoryJudgment(topJudgmentCandidate) : legacyRecommendation;
+  const recommendation = decorateRecommendationForControlPlane(activeRecommendationSource === 'Repository Judgment' ? recommendationFromRepositoryJudgment(topJudgmentCandidate) : legacyRecommendation, decisionRanking, docs['next-improvement-prompt.md']);
   const implementedMatch = outcomeEvidence.entries.slice().reverse().find((entry) => entry.outcome === 'implemented' && entry.promptQuality === 'worked' && (entry.recommendationId === recommendationIdFor(recommendation, decisionRanking) || entry.recommendationTitle === recommendation.title));
   const advancementReason = decisionRanking?.selectedIssue?.advancement?.reason ?? decisionRanking?.advancement?.selected?.reason;
   if (implementedMatch) {
@@ -455,7 +519,7 @@ async function readControlPlane(repositoryPath) {
   recommendation.id = recommendationIdFor(recommendation, decisionRanking);
   recommendation.promptHash = hashPrompt(recommendation.prompt);
   const packages = handoffPackages(docs);
-  if (activeRecommendationSource === 'Repository Judgment') packages.builder = recommendation.prompt;
+  packages.builder = recommendation.implementationPrompt;
   return { status: snapshot, outcomeEvidence, aiHandoffValidation, decisionRanking, evidenceLineage, repositoryJudgment, repositoryJudgmentReadiness, activeRecommendationSource, legacyRecommendation, productJudgment, judgmentComparison, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages, timeline };
 }
 
@@ -469,7 +533,7 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   await writeFile(join(repositoryPath, '.ai', 'intelligence-diff.json'), JSON.stringify(data.diff, null, 2));
   await writeFile(timelinePath, JSON.stringify(timeline.slice(-100), null, 2));
   const nextImprovement = await generateNextImprovement(repositoryPath, { validationCompletions: options.validationCompletions ?? [], generatorFailures: options.generatorFailures ?? [] });
-  data.recommendation = {
+  data.recommendation = decorateRecommendationForControlPlane({
     title: nextImprovement.choice.title,
     actionability: nextImprovement.choice.actionability,
     packageType: nextImprovement.choice.packageType,
@@ -480,8 +544,8 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
     id: nextImprovement.choice.id,
     advancementReason: nextImprovement.choice.advancement?.reason,
     previousOutcomeWarning: nextImprovement.choice.retentionReason,
-  };
-  data.packages.builder = nextImprovement.prompt;
+  }, nextImprovement.decisionRanking, nextImprovement.prompt);
+  data.packages.builder = data.recommendation.implementationPrompt;
   await runStep({ id: 'context-package', label: 'Context Package', command: ['node', [join(appRoot, 'scripts/context-package.mjs')]] }, repositoryPath);
   data.packages.context = await readAiText(repositoryPath, 'context-package.md');
   data.productJudgment = await generateProductJudgment(repositoryPath).catch(() => null);
