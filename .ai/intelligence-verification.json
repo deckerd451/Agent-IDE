@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "verifiedAt": "2026-06-28T13:23:39.569Z",
-  "refreshStartedAt": "2026-06-28T13:23:23.097Z",
+  "verifiedAt": "2026-06-28T17:44:07.930Z",
+  "refreshStartedAt": "2026-06-28T17:43:52.227Z",
   "status": "Verified",
   "score": 100,
   "failureCount": 0,
@@ -11,7 +11,7 @@
   "artifacts": [
     {
       "artifact": "strategy.md",
-      "generatedAt": "2026-06-28T13:23:33.796Z",
+      "generatedAt": "2026-06-28T17:44:02.734Z",
       "generatedHash": "071a1a05d24f8c321b1f5531b6bff5627194e741fd64b90dff7aafc22981d2db",
       "displayedHash": "071a1a05d24f8c321b1f5531b6bff5627194e741fd64b90dff7aafc22981d2db",
       "status": "Verified",
@@ -19,55 +19,55 @@
     },
     {
       "artifact": "architecture.md",
-      "generatedAt": "2026-06-28T13:23:23.528Z",
-      "generatedHash": "0599ee6312c21b31ad0d43662b08b4905c89042d26cd8b1b6c9b4fd1482d4617",
-      "displayedHash": "0599ee6312c21b31ad0d43662b08b4905c89042d26cd8b1b6c9b4fd1482d4617",
+      "generatedAt": "2026-06-28T17:43:52.675Z",
+      "generatedHash": "e6c9d280a3dd5246e6f2c2e235c1d7b67a70dfab9da119c0623854bddb292bff",
+      "displayedHash": "e6c9d280a3dd5246e6f2c2e235c1d7b67a70dfab9da119c0623854bddb292bff",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "backlog.md",
-      "generatedAt": "2026-06-28T13:23:23.986Z",
-      "generatedHash": "7a38590d6dd7223d695b0e12b39d1080d1872a3ca903e47119ccf521290aeb17",
-      "displayedHash": "7a38590d6dd7223d695b0e12b39d1080d1872a3ca903e47119ccf521290aeb17",
+      "generatedAt": "2026-06-28T17:43:53.136Z",
+      "generatedHash": "c72778b36484f6fdd13cd23a945be32c18046f054c2cef3168e00fe95f213be4",
+      "displayedHash": "c72778b36484f6fdd13cd23a945be32c18046f054c2cef3168e00fe95f213be4",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "validation.md",
-      "generatedAt": "2026-06-28T13:23:32.940Z",
-      "generatedHash": "43f53b32fc95bb3141d9617fc2ed299f2a5c97a32c2a8f44c1a44720a644a24f",
-      "displayedHash": "43f53b32fc95bb3141d9617fc2ed299f2a5c97a32c2a8f44c1a44720a644a24f",
+      "generatedAt": "2026-06-28T17:44:01.880Z",
+      "generatedHash": "ddeb5faa6e46add7a5c4064dd902af1a876c63011383e97249bb57513a5586c4",
+      "displayedHash": "ddeb5faa6e46add7a5c4064dd902af1a876c63011383e97249bb57513a5586c4",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "decisions.md",
-      "generatedAt": "2026-06-28T13:23:33.348Z",
-      "generatedHash": "f48f9ed1ed0ed54a6544b1ddc0da547421f55c8f3670edf11015e2c45d2ee0b4",
-      "displayedHash": "f48f9ed1ed0ed54a6544b1ddc0da547421f55c8f3670edf11015e2c45d2ee0b4",
+      "generatedAt": "2026-06-28T17:44:02.319Z",
+      "generatedHash": "4962fc6c007492391125f390a8266fdadbe2646de977ae69a089e3e2cedc0ad9",
+      "displayedHash": "4962fc6c007492391125f390a8266fdadbe2646de977ae69a089e3e2cedc0ad9",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "repository-health.md",
-      "generatedAt": "2026-06-28T13:23:36.246Z",
-      "generatedHash": "1e2324723e0cd690b52096b5b513cdfa60555556669dbde0ce349e72d1317039",
-      "displayedHash": "1e2324723e0cd690b52096b5b513cdfa60555556669dbde0ce349e72d1317039",
+      "generatedAt": "2026-06-28T17:44:04.883Z",
+      "generatedHash": "08b2c8d870164759e84288be28d51ffffb9cadd4b13688f497cf4335a2750d11",
+      "displayedHash": "08b2c8d870164759e84288be28d51ffffb9cadd4b13688f497cf4335a2750d11",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "context-package.md",
-      "generatedAt": "2026-06-28T13:23:39.476Z",
-      "generatedHash": "acfc1207e35634d79d3d059f62bb1f254fa4cdc3f402b90f4dbc5e5f0cd16aad",
-      "displayedHash": "acfc1207e35634d79d3d059f62bb1f254fa4cdc3f402b90f4dbc5e5f0cd16aad",
+      "generatedAt": "2026-06-28T17:44:07.850Z",
+      "generatedHash": "072939101c01b036f2144a7ec57685fae89ad1f6c4fc8f4bba7e264ad4b8cc73",
+      "displayedHash": "072939101c01b036f2144a7ec57685fae89ad1f6c4fc8f4bba7e264ad4b8cc73",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "next-improvement-prompt.md",
-      "generatedAt": "2026-06-28T13:23:39.016Z",
+      "generatedAt": "2026-06-28T17:44:07.450Z",
       "generatedHash": "3e4a18585846378fbc2465c0c276e8ccd50e599abe5bb6d082df6b8cf5d94945",
       "displayedHash": "3e4a18585846378fbc2465c0c276e8ccd50e599abe5bb6d082df6b8cf5d94945",
       "status": "Verified",
@@ -75,31 +75,31 @@
     },
     {
       "artifact": "intelligence-quality.json",
-      "generatedAt": "2026-06-28T13:23:39.552Z",
-      "generatedHash": "71ab1d7fd5d2c2e11c6b88dcca370327e2ff0584c33602c3b659ad1a76c5cfa3",
-      "displayedHash": "71ab1d7fd5d2c2e11c6b88dcca370327e2ff0584c33602c3b659ad1a76c5cfa3",
+      "generatedAt": "2026-06-28T17:44:07.912Z",
+      "generatedHash": "7875361a84eccdd6322adef2178e29d3183ca5b6692d9f0c9c653d06ba33ffbb",
+      "displayedHash": "7875361a84eccdd6322adef2178e29d3183ca5b6692d9f0c9c653d06ba33ffbb",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "intelligence-history.json",
-      "generatedAt": "2026-06-28T13:23:39.553Z",
-      "generatedHash": "31d7b7858897d47c67e080e942aab614924a011088b8c3659aa0ae7b2ada4efb",
-      "displayedHash": "31d7b7858897d47c67e080e942aab614924a011088b8c3659aa0ae7b2ada4efb",
+      "generatedAt": "2026-06-28T17:44:07.912Z",
+      "generatedHash": "9bcd481915ef01b80b6e6c27bc26620eaa9900801cdbb5820fb6e25032c93b6e",
+      "displayedHash": "9bcd481915ef01b80b6e6c27bc26620eaa9900801cdbb5820fb6e25032c93b6e",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "intelligence-snapshot.json",
-      "generatedAt": "2026-06-28T13:23:38.987Z",
-      "generatedHash": "6e16ee347ed342586fc39d7cf43ebc450dcbf408fd9b04feb6f084418b7ea745",
-      "displayedHash": "6e16ee347ed342586fc39d7cf43ebc450dcbf408fd9b04feb6f084418b7ea745",
+      "generatedAt": "2026-06-28T17:44:07.425Z",
+      "generatedHash": "ec2747a3fe0e1a22c50e3a34ddd328d456701d69ec152f34f66521380a769a72",
+      "displayedHash": "ec2747a3fe0e1a22c50e3a34ddd328d456701d69ec152f34f66521380a769a72",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "intelligence-diff.json",
-      "generatedAt": "2026-06-28T13:23:38.988Z",
+      "generatedAt": "2026-06-28T17:44:07.425Z",
       "generatedHash": "3e3db7fbe5e6bd4b0349410a6f01f978a170adcea701f04cc667792f50276ecc",
       "displayedHash": "3e3db7fbe5e6bd4b0349410a6f01f978a170adcea701f04cc667792f50276ecc",
       "status": "Verified",
@@ -107,57 +107,57 @@
     },
     {
       "artifact": "intelligence-timeline.json",
-      "generatedAt": "2026-06-28T13:23:38.988Z",
-      "generatedHash": "95471606fbfac8bae4b761c415bc7a0230885fa152b7228e6b7247f9a8361a77",
-      "displayedHash": "95471606fbfac8bae4b761c415bc7a0230885fa152b7228e6b7247f9a8361a77",
+      "generatedAt": "2026-06-28T17:44:07.426Z",
+      "generatedHash": "791da7fb09a16c8f6d44d20cc2a98d8426252634f36c5fb80876785633030185",
+      "displayedHash": "791da7fb09a16c8f6d44d20cc2a98d8426252634f36c5fb80876785633030185",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "intelligence-explanations.json",
-      "generatedAt": "2026-06-28T13:23:39.570Z",
-      "generatedHash": "799b7e35ad18dcbc2654b2f72a2b192ff808beb09363dbf3df4b4a1ab74869f0",
-      "displayedHash": "799b7e35ad18dcbc2654b2f72a2b192ff808beb09363dbf3df4b4a1ab74869f0",
+      "generatedAt": "2026-06-28T17:44:07.931Z",
+      "generatedHash": "f9fdc01a4deb08431e2905878488114721d1cb51d133bbb45080001939d7d743",
+      "displayedHash": "f9fdc01a4deb08431e2905878488114721d1cb51d133bbb45080001939d7d743",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "ai-handoff-validation.json",
-      "generatedAt": "2026-06-28T13:23:39.551Z",
-      "generatedHash": "45ad7f417884fae252068301ccf39ef25c366c8a73f6fed7aec870afe275a27e",
-      "displayedHash": "45ad7f417884fae252068301ccf39ef25c366c8a73f6fed7aec870afe275a27e",
+      "generatedAt": "2026-06-28T17:44:07.910Z",
+      "generatedHash": "e1d58042a97eb582e333ea74458158ab1eb916c72e1b45139f28b518709627f6",
+      "displayedHash": "e1d58042a97eb582e333ea74458158ab1eb916c72e1b45139f28b518709627f6",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "prompts/architect.md",
-      "generatedAt": "2026-06-28T13:23:34.247Z",
-      "generatedHash": "4bbd2992773a73fb2ddc6735b932345d01d11cfa0a7c342b56c24a87ff0a9f91",
-      "displayedHash": "4bbd2992773a73fb2ddc6735b932345d01d11cfa0a7c342b56c24a87ff0a9f91",
+      "generatedAt": "2026-06-28T17:44:03.172Z",
+      "generatedHash": "5688456af5bfd1a85033cbca92f5f143c2004adfaa3b21145ff89ae9b880d2ea",
+      "displayedHash": "5688456af5bfd1a85033cbca92f5f143c2004adfaa3b21145ff89ae9b880d2ea",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "prompts/builder.md",
-      "generatedAt": "2026-06-28T13:23:34.723Z",
-      "generatedHash": "32512b0ef3ecc27de37c3033acaf7536cb88495fc0f92f22603b5e799bc3d554",
-      "displayedHash": "32512b0ef3ecc27de37c3033acaf7536cb88495fc0f92f22603b5e799bc3d554",
+      "generatedAt": "2026-06-28T17:44:03.597Z",
+      "generatedHash": "a9f8b1998ca832a802f95b8a4b2d90787e2f1b8b4ff8739a78eb525c6630be86",
+      "displayedHash": "a9f8b1998ca832a802f95b8a4b2d90787e2f1b8b4ff8739a78eb525c6630be86",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "prompts/reviewer.md",
-      "generatedAt": "2026-06-28T13:23:35.207Z",
-      "generatedHash": "59d845204014813bf1cfb7aa79ecd348d37331655d76beea5907c7d9c9a1f40a",
-      "displayedHash": "59d845204014813bf1cfb7aa79ecd348d37331655d76beea5907c7d9c9a1f40a",
+      "generatedAt": "2026-06-28T17:44:04.002Z",
+      "generatedHash": "cc23dd9bd85f391ffc1a9fcc5c1e2e85ea431123461885abe9d1aa5ca24e4ce4",
+      "displayedHash": "cc23dd9bd85f391ffc1a9fcc5c1e2e85ea431123461885abe9d1aa5ca24e4ce4",
       "status": "Verified",
       "failures": []
     },
     {
       "artifact": "prompts/debugger.md",
-      "generatedAt": "2026-06-28T13:23:35.677Z",
-      "generatedHash": "b47b4adb168c0261f7072689b1a4cc5ba69725c3f4f08ed5a01e1ade35899f3f",
-      "displayedHash": "b47b4adb168c0261f7072689b1a4cc5ba69725c3f4f08ed5a01e1ade35899f3f",
+      "generatedAt": "2026-06-28T17:44:04.421Z",
+      "generatedHash": "2e6c25efd7e15528f06ce2836cc004e6ea217c4489b63fb0bac8238be8a869fc",
+      "displayedHash": "2e6c25efd7e15528f06ce2836cc004e6ea217c4489b63fb0bac8238be8a869fc",
       "status": "Verified",
       "failures": []
     }
