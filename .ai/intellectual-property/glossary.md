@@ -23,7 +23,7 @@ this document.
 
 ## Status
 
-`ACTIVE — v1.0 — 2026-06-28`
+`ACTIVE — v1.1 — 2026-06-28`
 
 ## Dependencies
 
@@ -38,6 +38,7 @@ This glossary has no term-level dependencies. It is the root vocabulary document
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-06-28 | Agent IDE Architect | Initial glossary — all terms introduced in this version |
+| 1.1 | 2026-06-28 | Agent IDE Architect | Architectural patch: added Inventive Date, Priority Date, Filing Date; reconciled Innovation Lifecycle to reference Filing Status as canonical state machine; added state diagram and transition table to Filing Status |
 
 ---
 
@@ -164,33 +165,54 @@ determinations.
 ### Innovation Lifecycle
 
 **Canonical Definition**
-The sequence of stages through which a technical idea progresses from initial observation
-to mature, managed IP. Within Agent IDE the lifecycle stages are:
+The complete progression of an invention from first signal through final disposition.
+The canonical state machine for this lifecycle is **Filing Status** (defined in Section 3).
+All lifecycle tracking, tooling, and document fields must use Filing Status values as the
+authoritative state identifiers.
 
-1. **Signal** — A Repository Intelligence Signal suggests potential novelty
-2. **Disclosed** — An Invention Disclosure is created and linked to evidence
-3. **Reviewed** — Engineers and counsel confirm the disclosure is enabling
-4. **Filed** — A patent application, defensive publication, or trade-secret record is created
-5. **Prosecuted** — For patents: office actions responded to, claims refined
-6. **Resolved** — Granted, published, abandoned, or maintained as trade secret
-7. **Maintained** — Active management: continuations, licensing, standards contributions
-8. **Expired / Archived** — Term ended or strategic decision to abandon
+The lifecycle has two phases:
+
+**Pre-disclosure phase** — Before a Filing Status is assigned. An invention exists only
+as a Repository Intelligence Signal. No Filing Status value applies yet. IP Readiness
+Level IRL-1 covers this phase.
+
+**Disclosure-through-disposition phase** — From the moment an Invention Disclosure is
+created (Filing Status: `DRAFT`) through all states to a terminal state. The canonical
+Filing Status state machine governs this phase entirely.
+
+The human-readable stage labels below are summaries only. They are not canonical state
+identifiers. Tooling, templates, and status fields must use the Filing Status values in
+the right column, not the stage labels.
+
+| Human-Readable Stage | Canonical Filing Status Value(s) |
+|---|---|
+| Signal | *(pre-disclosure — no Filing Status)* |
+| Drafting | `DRAFT` |
+| Under Review | `REVIEW` |
+| Approved | `APPROVED` |
+| Filed | `FILED` |
+| In Prosecution | `PROSECUTION` |
+| Resolved — Granted | `GRANTED` |
+| Resolved — Published | `PUBLISHED` |
+| Resolved — Abandoned | `ABANDONED` |
+| Resolved — Trade Secret | `TRADE_SECRET` |
+| Archived | `ARCHIVED` |
 
 **Why It Exists**
-Defining the lifecycle creates deterministic stage transitions that AI systems and
-engineers can validate against. A disclosure that has been in `DISCLOSED` state for
-more than 90 days without a review is a process failure that can be surfaced automatically.
+The Innovation Lifecycle term names the overall progression concept and provides a
+human-readable orientation for readers unfamiliar with the Filing Status state machine.
+It does not define competing states. All operational use relies on Filing Status directly.
 
 **Related Terms**
-Invention Disclosure, Filing Status, IP Readiness Level, Continuation
+Filing Status, Repository Intelligence Signal, IP Readiness Level, Continuation
 
 **Example Usage**
-"INV-2026-0001 is currently at the Reviewed stage of the Innovation Lifecycle; the next
-action is a filing decision by end of Q3."
+"INV-2026-0001 is in the `APPROVED` stage of the Innovation Lifecycle (Filing Status:
+`APPROVED`); the next required action is a filing decision."
 
 **Future Evolution**
-Lifecycle stages may acquire SLA thresholds and automated escalation signals as the
-subsystem matures.
+SLA thresholds per Filing Status state (e.g., maximum days in `REVIEW` before escalation)
+will be defined in a future process document and enforced by Agent IDE automation.
 
 ---
 
@@ -424,6 +446,143 @@ unstructured Markdown comments, enabling audit trails and SLA tracking.
 
 ---
 
+### Inventive Date
+
+**Canonical Definition**
+The earliest date on which the inventive concept was documented in a verifiable,
+timestamped artifact — a commit, a design document with a file-system or version-control
+timestamp, a dated notebook entry, or a dated internal communication — that is sufficient
+to establish that the inventor had conceived of the invention at that moment. Inventive
+Date is an engineering record, not a legal determination. It is the date the inventor can
+point to and say: "this is when I first captured this idea in a form that can be
+independently verified."
+
+Every Invention Disclosure must record an Inventive Date estimate and link at least one
+artifact that supports it.
+
+**Why It Exists**
+In disputes over who invented something first, or in establishing that an invention
+predates a piece of Prior Art, the Inventive Date is the primary evidence. Capturing it
+at disclosure time — while the artifacts are fresh and locatable — is significantly more
+reliable than reconstructing it later.
+
+**Relationship to Priority Date and Filing Date**
+- **Inventive Date** is the engineering record of when the idea was first captured.
+  It precedes both other dates.
+- **Priority Date** is the legally recognized date from which a patent application's
+  novelty is assessed. It is established by the filing system, not by engineering records.
+  It may equal or postdate the Inventive Date.
+- **Filing Date** is the calendar date on which a patent application was submitted to
+  a patent office. It is an administrative record. It is always at or after the Inventive
+  Date and typically equals the Priority Date for a first filing.
+
+The three dates are always in this order: Inventive Date ≤ Priority Date ≤ Filing Date.
+
+**Example Usage**
+"The Inventive Date for INV-2026-0001 is 2026-04-01, established by commit `d2a9f11`
+which contains the first documented design of the continuous evidence correlation method."
+
+**Non-Examples**
+- The date an engineer *thought* of an idea without writing it down is not an Inventive
+  Date — it is unverifiable.
+- The date a pull request was merged is not necessarily the Inventive Date; the Inventive
+  Date may be an earlier commit, design note, or meeting record.
+
+**Related Terms**
+Priority Date, Filing Date, Evidence Bundle, Reduction to Practice, Invention Disclosure
+
+**Future Evolution**
+Agent IDE may automatically propose Inventive Date candidates by scanning commit history
+for the earliest evidence artifacts linked to each Invention Disclosure.
+
+---
+
+### Priority Date
+
+**Canonical Definition**
+The legally recognized date from which a patent application's novelty and non-obviousness
+are assessed by a patent office. For a first filing with no prior application, the
+Priority Date equals the Filing Date. When a continuation, divisional, or international
+application claims priority to an earlier application, the Priority Date may be the
+earlier application's Filing Date. Priority Date is determined by the patent system, not
+by engineering records.
+
+Every filing record must capture the Priority Date claimed, the basis for that claim
+(e.g., a specific prior application), and the jurisdiction.
+
+**Why It Exists**
+Prior Art published after the Priority Date cannot be used to reject the application.
+Prior Art published before the Priority Date can. Knowing the Priority Date precisely
+determines which Prior Art references are material and which are not.
+
+**Relationship to Inventive Date and Filing Date**
+- **Inventive Date** is the engineering record; earlier than or equal to Priority Date.
+- **Priority Date** is the legal anchor; established by the filing system.
+- **Filing Date** is the administrative record of submission; equal to Priority Date for
+  a first filing, later than Priority Date when claiming priority to an earlier application.
+
+**Example Usage**
+"FAM-2026-0001's parent application was filed on 2026-09-01 (Filing Date = Priority Date).
+The continuation filed in 2027 claims priority to 2026-09-01, so its Priority Date
+is 2026-09-01 even though its Filing Date is 2027-03-15."
+
+**Non-Examples**
+- The Inventive Date is not the Priority Date. Establishing an early Inventive Date does
+  not automatically establish an early Priority Date; only a filed application does that.
+
+**Related Terms**
+Inventive Date, Filing Date, Filing Status, Prior Art, Continuation
+
+**Future Evolution**
+When international filings (PCT) are tracked, the Priority Date management will need
+to account for national-phase entry deadlines and their effect on jurisdiction-specific
+priority claims.
+
+---
+
+### Filing Date
+
+**Canonical Definition**
+The calendar date on which a patent application, provisional application, or defensive
+publication was formally submitted to a patent office or publication venue, as recorded
+by that office or venue. Filing Date is an administrative fact; it is determined by the
+receiving institution, not by the applicant's internal records.
+
+Every filing record must capture the Filing Date, the receiving office or venue, and the
+application or publication reference number assigned at filing.
+
+**Why It Exists**
+Filing Date is the definitive administrative record of when an application entered the
+patent system. It anchors the Priority Date for first filings, establishes deadlines for
+responses and continuations, and is the date used in all prosecution correspondence.
+
+**Relationship to Inventive Date and Priority Date**
+- **Inventive Date** — when the invention was first captured in a verifiable artifact.
+  Precedes Filing Date.
+- **Priority Date** — the legally recognized novelty anchor date. Equals Filing Date for
+  a first filing; may be earlier when claiming priority to a prior application.
+- **Filing Date** — when the application was received by the patent office. Always at or
+  after Inventive Date; at or after Priority Date.
+
+**Example Usage**
+"The Filing Date for FAM-2026-0001's parent application is 2026-09-01. The Inventive
+Date was 2026-04-01. The 5-month gap between them is within normal range; no prior art
+published in that window was found to be material."
+
+**Non-Examples**
+- The date an attorney received a disclosure is not the Filing Date.
+- The date a provisional application was filed is not the Filing Date of the resulting
+  non-provisional application; each application has its own Filing Date.
+
+**Related Terms**
+Priority Date, Inventive Date, Filing Status, Prosecution History
+
+**Future Evolution**
+When PCT applications are tracked, Filing Date will need to distinguish between the
+international filing date and national-phase entry dates per jurisdiction.
+
+---
+
 ## Section 3 — Patent Families
 
 ---
@@ -572,28 +731,76 @@ narrow scope if broad claims face prior-art rejection."
 ### Filing Status
 
 **Canonical Definition**
-The current stage of an Invention Disclosure or Patent Family application within the
-Innovation Lifecycle. Valid Filing Status values are:
+The authoritative state of an Invention Disclosure or Patent Family application.
+Filing Status is the canonical state machine for the Innovation Lifecycle. All
+lifecycle tracking, all status fields in templates, and all tooling must use these
+values as the single source of truth.
+
+**States**
 
 | Status | Meaning |
 |---|---|
 | `DRAFT` | Disclosure is being written; not yet ready for review |
 | `REVIEW` | Disclosure is complete and awaiting Human Review |
-| `APPROVED` | Disclosure approved; filing decision pending |
+| `APPROVED` | Human Review passed; filing-path decision pending |
 | `FILED` | Application submitted to a patent office or published defensively |
-| `PROSECUTION` | Patent application under examination |
+| `PROSECUTION` | Patent application under examination by a patent office |
 | `GRANTED` | Claims allowed and patent issued |
 | `PUBLISHED` | Defensive publication completed |
-| `ABANDONED` | Filing decision: not to pursue |
-| `TRADE_SECRET` | Maintained as trade secret; not to be disclosed publicly |
-| `ARCHIVED` | Term expired or superseded |
+| `ABANDONED` | Deliberate decision not to pursue; recorded with rationale |
+| `TRADE_SECRET` | Maintained as trade secret; must not be publicly disclosed |
+| `ARCHIVED` | Patent term expired, or superseded by a continuation |
+
+**Terminal States**
+`GRANTED`, `PUBLISHED`, `ABANDONED`, `TRADE_SECRET`, and `ARCHIVED` are terminal.
+No further Filing Status transitions are expected from a terminal state, except that
+`GRANTED` may spawn a new invention record for a `CONTINUATION` or `DIVISIONAL`
+(which begins its own lifecycle at `DRAFT`).
+
+**Valid Transitions and Required Evidence**
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT : Invention Disclosure created
+    DRAFT --> REVIEW : Disclosure complete; evidence link added
+    REVIEW --> DRAFT : Human Review — Revise
+    REVIEW --> APPROVED : Human Review — Approve
+    APPROVED --> FILED : Filing decision made; application submitted
+    APPROVED --> PUBLISHED : Filing decision — Defensive Publication
+    APPROVED --> ABANDONED : Filing decision — Abandon
+    APPROVED --> TRADE_SECRET : Filing decision — Trade Secret
+    FILED --> PROSECUTION : Patent office begins examination
+    PROSECUTION --> GRANTED : All claims allowed
+    PROSECUTION --> ABANDONED : Claims rejected; strategic decision
+    GRANTED --> ARCHIVED : Patent term expired
+    GRANTED --> [*] : Spawns CONTINUATION or DIVISIONAL at DRAFT
+    PUBLISHED --> ARCHIVED : Superseded or record closed
+    ABANDONED --> ARCHIVED : Record closed
+    TRADE_SECRET --> ARCHIVED : Protection period ended or decision reversed
+```
+
+| Transition | Required Evidence Before Transition |
+|---|---|
+| `DRAFT` → `REVIEW` | All required disclosure fields complete; at least one Evidence artifact linked |
+| `REVIEW` → `APPROVED` | Human Review sign-off recorded with date and reviewer |
+| `REVIEW` → `DRAFT` | Human Review feedback recorded with specific revision requests |
+| `APPROVED` → `FILED` | Filing date recorded; application reference number captured |
+| `APPROVED` → `PUBLISHED` | Publication venue and date recorded |
+| `APPROVED` → `ABANDONED` | Rationale for abandonment recorded |
+| `APPROVED` → `TRADE_SECRET` | Trade secret designation reviewed by counsel; protection measures documented |
+| `FILED` → `PROSECUTION` | Office action received; docket date recorded |
+| `PROSECUTION` → `GRANTED` | Notice of allowance received; grant date recorded |
+| `PROSECUTION` → `ABANDONED` | Response deadline passed or strategic abandonment decision recorded |
+| `GRANTED` → `ARCHIVED` | Expiry date reached; maintenance fee lapsed |
 
 **Why It Exists**
-Filing Status provides a deterministic state that AI systems and engineers can query
-to understand the current disposition of every invention.
+Filing Status is the single canonical state machine for all invention lifecycle tracking.
+Defining it as the authoritative model eliminates ambiguity between competing lifecycle
+representations and enables deterministic querying by both engineers and AI systems.
 
 **Related Terms**
-Innovation Lifecycle, Invention Disclosure, Patent Family, Human Review
+Innovation Lifecycle, Invention Disclosure, Patent Family, Human Review,
+Continuation, Divisional
 
 ---
 
@@ -1274,16 +1481,19 @@ Repository Intelligence, Traceability, Engineering Artifact
 
 ## Consistency Audit
 
-The following checks were performed on this glossary at time of initial publication:
+The following checks were performed after v1.1 patch:
 
 | Check | Result |
 |---|---|
-| Duplicate concepts | None detected |
-| Conflicting definitions | None detected |
-| Undefined cross-references | None detected |
+| Duplicate lifecycle representations | Resolved — Innovation Lifecycle now references Filing Status; no competing stage definitions remain |
+| Conflicting state names | Resolved — Filing Status is the single canonical state machine |
+| Undefined cross-references: Inventive Date | Resolved — term added in v1.1 |
+| Undefined cross-references: Priority Date | Resolved — term added in v1.1 |
+| Undefined cross-references: Filing Date | Resolved — term added in v1.1 |
 | Circular definitions | None detected |
-| Terms used in README.md without definition | None detected |
-| Terms defined here not yet used elsewhere | Several (by design — pre-defining for future documents) |
+| Terms used in README.md without definition | README state diagram uses stage labels (RESEARCH, DISCLOSED, etc.) not Filing Status values — this is a known inconsistency in README.md, logged as remaining architectural debt below; the glossary itself is internally consistent |
+| Duplicate concepts | None detected |
+| Terms defined here not yet used elsewhere | Several (by design — pre-defining for future template documents) |
 
 ---
 
