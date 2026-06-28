@@ -137,6 +137,25 @@ type ControlPlane = {
   evidence: Array<{ file: string; section: string; line: number; evidence: string; confidence: string }>;
   packages: Record<string, string>;
   timeline: Array<{ timestamp: string; repositoryHealth: string; strategyQuality: string; confidence: string; recommendation: string }>;
+  productJudgment?: {
+    shadowMode: boolean;
+    generatedAt: string;
+    activeRepositoryJudgmentTitle: string;
+    candidateCount: number;
+    candidates: Array<{
+      rank: number;
+      id: string;
+      title: string;
+      category: string;
+      compositeScore: number;
+      scores: { productValue: number; strategic: number; userImpact: number; leverage: number; cost: number };
+      confidence: string;
+      evidence: string;
+      sourceFiles: string[];
+      whyItMatters: string;
+      whyOutranks: string;
+    }>;
+  } | null;
 };
 
 type CanonicalEditProposal = { filePath: string; section: string; fieldLabel: string; markdownBlock: string; supportingEvidence: string[]; ownerNotes?: string };
@@ -881,6 +900,33 @@ function ControlPlaneDashboard({ data, progressSummary, workflow, documents, dia
   return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} documents={documents} diagnostics={diagnostics} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onOpenWorkItem={onOpenWorkItem} onViewStrategy={onViewStrategy} />;
 }
 
+function ProductJudgmentShadowCard({ data }: { data: ControlPlane }) {
+  const pj = data.productJudgment;
+  if (!pj || !pj.candidates?.length) return null;
+  const top = pj.candidates[0];
+  const isDifferent = top.title !== data.recommendation.title;
+  return (
+    <section className="controlCard productJudgmentCard" aria-label="Product Judgment Shadow Recommendation">
+      <p className="kicker">Shadow Mode · Product Judgment</p>
+      <h2>{top.title}</h2>
+      <div className="workMetaGrid compact">
+        <div><small>Product Value</small><strong>{top.scores.productValue}/100</strong></div>
+        <div><small>Composite Score</small><strong>{top.compositeScore}/100</strong></div>
+        <div><small>Confidence</small><strong>{top.confidence}</strong></div>
+        <div><small>Category</small><strong>{top.category}</strong></div>
+      </div>
+      <p className="recommendationReason">{top.whyItMatters}</p>
+      <div className="shadowEvidenceSummary"><small>Evidence: {top.evidence}</small></div>
+      {isDifferent && (
+        <div className="shadowComparison">
+          <small>Active Repository Judgment: <em>{data.recommendation.title}</em></small>
+          <small>Product Judgment (shadow): <em>{top.title}</em></small>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function primaryHomepageAction(workflow?: Workflow | null) {
   if (!workflow) return 'Refresh Repository Intelligence';
   return outcomeWorkflowText(workflow.currentPrimaryAction);
@@ -938,6 +984,7 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
       <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} />
       <ShadowRecommendationCard data={data} />
       <RepositoryJudgmentReadinessCard data={data} />
+      <ProductJudgmentShadowCard data={data} />
       <WorkflowDiagnosticsDisclosure workflow={workflow} diagnostics={diagnostics} />
 
       <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced</summary>
@@ -1190,6 +1237,32 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
       <details className="controlCard disclosureCard"><summary>Validation</summary><p>Open Validation in the sidebar for deterministic validation guidance.</p></details>
       <details className="controlCard disclosureCard"><summary>Backlog</summary><p>Open Backlog in the sidebar for generated next work.</p></details>
       <details className="controlCard disclosureCard"><summary>Generated Artifacts</summary><p>Open Prompt Center or Context Package in the sidebar for generated artifacts.</p></details>
+
+      {data.productJudgment && (
+        <details className="controlCard disclosureCard productJudgmentRaw" aria-label="Product Judgment Shadow Raw">
+          <summary>Product Judgment (Shadow) — {data.productJudgment.candidateCount} candidates</summary>
+          <p><small>Shadow mode — does not affect active Work Queue recommendation.</small></p>
+          <div className="workMetaGrid compact">
+            <div><small>Candidates</small><strong>{data.productJudgment.candidateCount}</strong></div>
+            <div><small>Active Repository Judgment</small><strong>{data.productJudgment.activeRepositoryJudgmentTitle}</strong></div>
+          </div>
+          <table>
+            <thead><tr><th>Rank</th><th>Title</th><th>Composite</th><th>PV</th><th>Strategic</th><th>Confidence</th></tr></thead>
+            <tbody>
+              {data.productJudgment.candidates.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.rank}</td>
+                  <td>{c.title}</td>
+                  <td>{c.compositeScore}</td>
+                  <td>{c.scores.productValue}</td>
+                  <td>{c.scores.strategic}</td>
+                  <td>{c.confidence}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      )}
       </details>
     </div>
   );

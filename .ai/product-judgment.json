@@ -1,0 +1,486 @@
+{
+  "schemaVersion": 1,
+  "shadowMode": true,
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "activeRepositoryJudgmentTitle": "Resolve Architectural Risk: Client persists 4 distinct state write(s) to localStorage. Browse",
+  "scoringWeights": {
+    "productValue": 0.3,
+    "strategic": 0.25,
+    "userImpact": 0.2,
+    "leverage": 0.15,
+    "cost": 0.1
+  },
+  "candidateCount": 24,
+  "candidates": [
+    {
+      "rank": 1,
+      "id": "pj-improvement-loop",
+      "title": "Implement Focused Improvement Loop UX",
+      "category": "product-experience",
+      "compositeScore": 88,
+      "scores": {
+        "productValue": 95,
+        "strategic": 92,
+        "userImpact": 90,
+        "leverage": 88,
+        "cost": 55
+      },
+      "confidence": "High",
+      "evidence": "docs/repository-improvement-product-redesign.md — explicit product vision: \"Open Agent IDE → see the next best improvement → generate one prompt → implement → validate → refresh → repeat\"",
+      "sourceFiles": [
+        "src/App.tsx",
+        "src/workflow.ts",
+        "scripts/next-improvement.mjs"
+      ],
+      "whyItMatters": "Transforms Agent IDE from a repository-intelligence browser into a focused improvement operating system. Every user visit answers one question: what is the single highest-impact improvement and what happens next?",
+      "whyOutranks": "Addresses the primary user journey end-to-end. All other product opportunities are components or downstream effects of this loop."
+    },
+    {
+      "rank": 2,
+      "id": "pj-auto-compose-prompt",
+      "title": "Auto-compose Single Implementation Prompt from All Intelligence",
+      "category": "product-experience",
+      "compositeScore": 83,
+      "scores": {
+        "productValue": 85,
+        "strategic": 88,
+        "userImpact": 82,
+        "leverage": 85,
+        "cost": 65
+      },
+      "confidence": "High",
+      "evidence": "docs/repository-improvement-product-redesign.md — \"Agent IDE composes one complete implementation prompt from all internal intelligence.\"",
+      "sourceFiles": [
+        "scripts/next-improvement.mjs",
+        "scripts/context-package.mjs",
+        "src/App.tsx"
+      ],
+      "whyItMatters": "Users never need to know what a context package, builder prompt, or architect prompt is. One complete prompt encapsulates all intelligence needed to execute the improvement.",
+      "whyOutranks": "Directly reduces the cognitive burden of the improvement loop. Lower-ranked candidates improve subsystems rather than the central user interaction."
+    },
+    {
+      "rank": 3,
+      "id": "pj-simplify-navigation",
+      "title": "Collapse Primary Navigation to Improvement Loop Only",
+      "category": "information-architecture",
+      "compositeScore": 79,
+      "scores": {
+        "productValue": 80,
+        "strategic": 85,
+        "userImpact": 78,
+        "leverage": 75,
+        "cost": 68
+      },
+      "confidence": "High",
+      "evidence": "docs/repository-improvement-product-redesign.md — \"Screens that should be removed from normal usage\" and \"UI elements that should become Advanced\"",
+      "sourceFiles": [
+        "src/App.tsx"
+      ],
+      "whyItMatters": "Eliminates decision fatigue. The owner sees one recommendation, one rationale, one button. Repository Health, Context Package, Validation, Verification, and Prompt Center move to Advanced.",
+      "whyOutranks": "Reducing navigation complexity has higher product leverage than adding features to existing surfaces."
+    },
+    {
+      "rank": 4,
+      "id": "pj-automate-post-implementation",
+      "title": "Automate Post-Implementation Validation and Refresh",
+      "category": "product-experience",
+      "compositeScore": 76,
+      "scores": {
+        "productValue": 78,
+        "strategic": 80,
+        "userImpact": 75,
+        "leverage": 80,
+        "cost": 60
+      },
+      "confidence": "Medium",
+      "evidence": "docs/repository-improvement-product-redesign.md — \"Validation & Refresh — automatically handle the post-implementation loop\"",
+      "sourceFiles": [
+        "scripts/server.mjs",
+        "src/App.tsx",
+        "src/workflow.ts"
+      ],
+      "whyItMatters": "After implementation, the owner clicks one button. Validation, refresh, and next-improvement selection happen automatically. The loop closes without manual steps.",
+      "whyOutranks": "Automates the most repetitive part of the improvement loop. Backlog-only items below this threshold do not change the core loop."
+    },
+    {
+      "rank": 5,
+      "id": "pj-backlog-17",
+      "title": "Improve Markdown Rendering",
+      "category": "backlog",
+      "compositeScore": 61,
+      "scores": {
+        "productValue": 58,
+        "strategic": 60,
+        "userImpact": 56,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Improve Markdown Rendering. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 6,
+      "id": "pj-backlog-19",
+      "title": "Reason: Repository documentation identifies actionable follow-up work from: Improve markdown rendering.",
+      "category": "backlog",
+      "compositeScore": 61,
+      "scores": {
+        "productValue": 58,
+        "strategic": 60,
+        "userImpact": 56,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Reason: Repository documentation identifies actionable follow-up work from: Improve markdown rendering.. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 7,
+      "id": "pj-backlog-20",
+      "title": "Suggested Next Step: Define the smallest local, deterministic change needed to improve markdown rendering.",
+      "category": "backlog",
+      "compositeScore": 61,
+      "scores": {
+        "productValue": 58,
+        "strategic": 60,
+        "userImpact": 56,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Suggested Next Step: Define the smallest local, deterministic change needed to improve markdown rendering.. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 8,
+      "id": "pj-backlog-13",
+      "title": "Add Richer Validation Detection",
+      "category": "backlog",
+      "compositeScore": 59,
+      "scores": {
+        "productValue": 56,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Add Richer Validation Detection. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 9,
+      "id": "pj-backlog-15",
+      "title": "Reason: Repository documentation identifies actionable follow-up work from: Add richer validation detection for additional ecosystems.",
+      "category": "backlog",
+      "compositeScore": 59,
+      "scores": {
+        "productValue": 56,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Reason: Repository documentation identifies actionable follow-up work from: Add richer validation detection for additional ecosystems.. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 10,
+      "id": "pj-backlog-16",
+      "title": "Suggested Next Step: Define the smallest local, deterministic change needed to add richer validation detection for additional ecosystems.",
+      "category": "backlog",
+      "compositeScore": 59,
+      "scores": {
+        "productValue": 56,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Suggested Next Step: Define the smallest local, deterministic change needed to add richer validation detection for additional ecosystems.. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 11,
+      "id": "pj-backlog-1",
+      "title": "Add Backlog Quality Filtering",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Add Backlog Quality Filtering. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 12,
+      "id": "pj-backlog-10",
+      "title": "Source: README.md:296",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Source: README.md:296. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 13,
+      "id": "pj-backlog-11",
+      "title": "Reason: Repository documentation identifies actionable follow-up work from: Expand repository health checks as more intelligence artifacts are added.",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Reason: Repository documentation identifies actionable follow-up work from: Expand repository health checks as more intelligence artifacts are added.. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 14,
+      "id": "pj-backlog-12",
+      "title": "Suggested Next Step: Define the smallest local, deterministic change needed to add expand repository health checks as more intelligence artifacts are added.",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Suggested Next Step: Define the smallest local, deterministic change needed to add expand repository health checks as more intelligence artifacts are added.. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 15,
+      "id": "pj-backlog-14",
+      "title": "Source: README.md:293",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Source: README.md:293. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 16,
+      "id": "pj-backlog-18",
+      "title": "Source: README.md:294",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Source: README.md:294. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 17,
+      "id": "pj-backlog-2",
+      "title": "Source: README.md:292",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Source: README.md:292. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 18,
+      "id": "pj-backlog-3",
+      "title": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering.",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering.. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 19,
+      "id": "pj-backlog-4",
+      "title": "Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering.",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering.. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 20,
+      "id": "pj-backlog-5",
+      "title": "Add Cross-links Between .ai Documents",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Add Cross-links Between .ai Documents. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 21,
+      "id": "pj-backlog-6",
+      "title": "Source: README.md:295",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Source: README.md:295. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 22,
+      "id": "pj-backlog-7",
+      "title": "Reason: Repository documentation identifies actionable follow-up work from: Add cross-links between `.ai` documents.",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Reason: Repository documentation identifies actionable follow-up work from: Add cross-links between `.ai` documents.. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 23,
+      "id": "pj-backlog-8",
+      "title": "Suggested Next Step: Define the smallest local, deterministic change needed to add cross-links between `.ai` documents.",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Suggested Next Step: Define the smallest local, deterministic change needed to add cross-links between `.ai` documents.. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    },
+    {
+      "rank": 24,
+      "id": "pj-backlog-9",
+      "title": "Add Expand Repository Health Checks",
+      "category": "backlog",
+      "compositeScore": 58,
+      "scores": {
+        "productValue": 52,
+        "strategic": 60,
+        "userImpact": 48,
+        "leverage": 62,
+        "cost": 82
+      },
+      "confidence": "Medium",
+      "evidence": ".ai/backlog.md — medium priority backlog item",
+      "sourceFiles": [],
+      "whyItMatters": "Addresses a known repository owner priority: Add Expand Repository Health Checks. Listed as medium priority in .ai/backlog.md.",
+      "whyOutranks": "Outranks lower-priority backlog items by priority tier. All backlog candidates rank below product experience and information architecture opportunities."
+    }
+  ]
+}

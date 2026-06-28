@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-28T00:39:44.778Z",
-  "overallScore": 96,
+  "generatedAt": "2026-06-28T03:31:54.861Z",
+  "overallScore": 88,
   "status": "Ready",
   "categories": {
     "repositoryExplanation": {
@@ -81,6 +81,12 @@
   ],
   "hiddenInformation": [],
   "contradictions": [],
-  "missingExplanations": [],
-  "suggestedImprovements": []
+  "missingExplanations": [
+    "Decision ranking rationale",
+    "Recommendation rationale"
+  ],
+  "suggestedImprovements": [
+    "Add decision ranking rationale to generated explanations.",
+    "Add recommendation rationale to generated explanations."
+  ]
 }

@@ -8,6 +8,7 @@ import { verifyIntelligence } from './intelligence-verification.mjs';
 import { evaluateCanonicalCompleteness } from './canonical-completeness.mjs';
 import { generateNextImprovement } from './next-improvement.mjs';
 import { generateRepositoryJudgment } from './repository-judgment.mjs';
+import { generateProductJudgment } from './product-judgment.mjs';
 import { explainCompleteness, explainQuality, explainCompletenessSynchronization, explainEvidenceSynthesis, persistIntelligenceExplanations, readIntelligenceExplanations } from './intelligence-explanations.mjs';
 import { fileURLToPath } from 'node:url';
 
@@ -15,7 +16,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
-const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'execution-model.md', 'recommendation-trace.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'intelligence-explanations.json', 'ai-handoff-validation.json', 'evidence-lineage.json', 'decision-ranking.json', 'repository-judgment.json', 'repository-judgment.md', 'repository-judgment-evaluation.md', 'repository-judgment-history.json', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'execution-model.md', 'recommendation-trace.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'intelligence-explanations.json', 'ai-handoff-validation.json', 'evidence-lineage.json', 'decision-ranking.json', 'repository-judgment.json', 'repository-judgment.md', 'repository-judgment-evaluation.md', 'repository-judgment-history.json', 'product-judgment.json', 'product-judgment.md', 'product-judgment-evaluation.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
 
 const baselineFiles = {
   'goals.md': `# Goals
@@ -428,6 +429,7 @@ async function readControlPlane(repositoryPath) {
   } : null;
   const timeline = parseJsonArtifact(await readFile(join(aiDir, 'intelligence-timeline.json'), 'utf8').catch(() => ''), []);
   const aiHandoffValidation = parseJsonArtifact(await readFile(join(aiDir, 'ai-handoff-validation.json'), 'utf8').catch(() => ''), null);
+  const productJudgment = parseJsonArtifact(await readFile(join(aiDir, 'product-judgment.json'), 'utf8').catch(() => ''), null);
   const legacyRecommendation = docs['next-improvement-prompt.md']?.trim()
     ? { title: firstLine(docs['next-improvement-prompt.md'].replace(/^#\s*/, ''), snapshot.recommendedNextStep), actionability: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Actionability', 'Not classified.'), packageType: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Package Type', 'implementation'), explanation: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Source risk/recommendation', 'See generated prompt.'), whyItMatters: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Reason', 'Generated from Control Plane intelligence.'), evidenceSource: '.ai/next-improvement-prompt.md', prompt: docs['next-improvement-prompt.md'] }
     : recommendationDetails(docs);
@@ -436,7 +438,7 @@ async function readControlPlane(repositoryPath) {
   const recommendation = activeRecommendationSource === 'Repository Judgment' ? recommendationFromRepositoryJudgment(topJudgmentCandidate) : legacyRecommendation;
   const packages = handoffPackages(docs);
   if (activeRecommendationSource === 'Repository Judgment') packages.builder = recommendation.prompt;
-  return { status: snapshot, aiHandoffValidation, decisionRanking, evidenceLineage, repositoryJudgment, repositoryJudgmentReadiness, activeRecommendationSource, legacyRecommendation, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages, timeline };
+  return { status: snapshot, aiHandoffValidation, decisionRanking, evidenceLineage, repositoryJudgment, repositoryJudgmentReadiness, activeRecommendationSource, legacyRecommendation, productJudgment, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages, timeline };
 }
 
 async function persistControlPlane(repositoryPath, previousSnapshot, refreshStartedAt = new Date(), options = {}) {
@@ -461,6 +463,7 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   data.packages.builder = nextImprovement.prompt;
   await runStep({ id: 'context-package', label: 'Context Package', command: ['node', [join(appRoot, 'scripts/context-package.mjs')]] }, repositoryPath);
   data.packages.context = await readAiText(repositoryPath, 'context-package.md');
+  data.productJudgment = await generateProductJudgment(repositoryPath).catch(() => null);
   data.aiHandoffValidation = await validateAIHandoff(repositoryPath);
   await persistQuality(repositoryPath);
   data.verification = await verifyIntelligence(repositoryPath, { refreshStartedAt });
