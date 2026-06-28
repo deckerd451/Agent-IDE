@@ -230,3 +230,133 @@ test('all product judgment candidates have required fields', async () => {
     await cleanup();
   }
 });
+
+// ---------------------------------------------------------------------------
+// Product signal extraction — generalizes to product/app repositories
+// ---------------------------------------------------------------------------
+
+test('repository with Current Focus produces at least one product-focus candidate', async () => {
+  const { dir, cleanup } = await makeRepo({
+    'goals.md': '# Goals\n\n## Product Thesis\nHelp users find nearby friends.\n\n## Current Focus\nImproving the friend discovery onboarding flow to reduce drop-off at step 2.\n\n## North Star Metric\nWeekly active social connections per user.\n\n## Success Criteria\n- 60% of new users complete friend discovery in first session\n',
+    'strategy.md': '# Strategy\n\n## Current Product Bet\nSimplifying onboarding will double 7-day retention.\n',
+    'backlog.md': '# Backlog\n\n## High Priority\n- None detected\n\n## Medium Priority\n- None detected\n',
+    'decisions.md': '',
+    'execution-model.md': '',
+    'repository-health.md': '',
+    'decision-ranking.json': '{"schemaVersion":1,"candidates":[]}',
+  });
+  try {
+    const result = await generateProductJudgment(dir);
+    assert.ok(result.candidates.length >= 1, 'must produce at least one candidate from product signals');
+    const focusCandidates = result.candidates.filter((c) => c.category === 'product-focus');
+    assert.ok(focusCandidates.length >= 1, 'must produce at least one product-focus candidate from Current Focus');
+    assert.ok(focusCandidates[0].evidence.includes('Current Focus'), 'evidence must reference Current Focus');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('repository with Current Product Bet produces at least one product-validation candidate', async () => {
+  const { dir, cleanup } = await makeRepo({
+    'goals.md': '# Goals\n\n## Product Thesis\nHelp users find nearby events.\n\n## North Star Metric\nEvents attended per active user per month.\n',
+    'strategy.md': '# Strategy\n\n## Current Product Bet\nShowing proximity-ranked events increases attendance by 40%.\n\n## Current Experiment\nRunning A/B test on proximity sort vs. chronological sort in event feed.\n',
+    'backlog.md': '# Backlog\n\n## High Priority\n- None detected\n\n## Medium Priority\n- None detected\n',
+    'decisions.md': '',
+    'execution-model.md': '',
+    'repository-health.md': '',
+    'decision-ranking.json': '{"schemaVersion":1,"candidates":[]}',
+  });
+  try {
+    const result = await generateProductJudgment(dir);
+    assert.ok(result.candidates.length >= 1, 'must produce candidates from product signals');
+    const betCandidates = result.candidates.filter((c) => c.category === 'product-validation');
+    assert.ok(betCandidates.length >= 1, 'must produce at least one product-validation candidate from Current Product Bet or Current Experiment');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('repository with backlog items in non-standard section names produces backlog candidates', async () => {
+  const { dir, cleanup } = await makeRepo({
+    'goals.md': '# Goals\n',
+    'strategy.md': '# Strategy\n',
+    'backlog.md': '# Backlog\n\n## Features\n- Add push notifications for nearby activity\n- Improve map clustering performance\n',
+    'decisions.md': '',
+    'execution-model.md': '',
+    'repository-health.md': '',
+    'decision-ranking.json': '{"schemaVersion":1,"candidates":[]}',
+  });
+  try {
+    const result = await generateProductJudgment(dir);
+    const backlogCandidates = result.candidates.filter((c) => c.category === 'backlog');
+    assert.ok(backlogCandidates.length >= 1, 'must produce backlog candidates from non-standard section headings');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('repository without any product signals produces zero product-signal candidates but may produce strategic-gap candidates', async () => {
+  const { dir, cleanup } = await makeRepo({
+    'goals.md': '# Goals\n',
+    'strategy.md': '# Strategy\n',
+    'backlog.md': '# Backlog\n\n## High Priority\n- None detected\n\n## Medium Priority\n- None detected\n',
+    'decisions.md': '',
+    'execution-model.md': '',
+    'repository-health.md': '',
+    'decision-ranking.json': '{"schemaVersion":1,"candidates":[]}',
+  });
+  try {
+    const result = await generateProductJudgment(dir);
+    const productSignalCategories = ['product-focus', 'product-validation', 'product-measurement', 'backlog'];
+    const signalCandidates = result.candidates.filter((c) => productSignalCategories.includes(c.category));
+    assert.equal(signalCandidates.length, 0, 'empty signals must produce zero product-signal candidates');
+    // Strategic gap candidates are expected when signals are absent
+    const gapCandidates = result.candidates.filter((c) => c.category === 'strategic-clarity');
+    assert.ok(gapCandidates.length >= 1, 'missing product bet should still produce strategic-gap candidate');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('candidate IDs are deterministic: same input produces same IDs across multiple calls', async () => {
+  const { dir, cleanup } = await makeRepo({
+    'goals.md': '# Goals\n\n## Current Focus\nImproving onboarding completion rate.\n\n## North Star Metric\nWeekly retained users.\n',
+    'strategy.md': '# Strategy\n\n## Current Product Bet\nSimplified onboarding doubles retention.\n',
+    'backlog.md': '# Backlog\n\n## High Priority\n- Add social login support\n',
+    'decisions.md': '',
+    'execution-model.md': '',
+    'repository-health.md': '',
+    'decision-ranking.json': '{"schemaVersion":1,"candidates":[]}',
+  });
+  try {
+    const first = await generateProductJudgment(dir);
+    const second = await generateProductJudgment(dir);
+    const firstIds = first.candidates.map((c) => c.id).sort();
+    const secondIds = second.candidates.map((c) => c.id).sort();
+    assert.deepEqual(firstIds, secondIds, 'candidate IDs must be identical across repeated calls with same input');
+  } finally {
+    await cleanup();
+  }
+});
+
+test('product-judgment.md includes diagnostics with source files and detected signals', async () => {
+  const { dir, cleanup } = await makeRepo({
+    'goals.md': '# Goals\n\n## Current Focus\nUser retention.\n',
+    'strategy.md': '# Strategy\n\n## Current Product Bet\nRetention feature drives growth.\n',
+    'backlog.md': '# Backlog\n',
+    'decisions.md': '',
+    'execution-model.md': '',
+    'repository-health.md': '',
+    'decision-ranking.json': '{"schemaVersion":1,"candidates":[]}',
+  });
+  try {
+    await generateProductJudgment(dir);
+    const md = await readFile(join(dir, '.ai', 'product-judgment.md'), 'utf8');
+    assert.ok(md.includes('Source Files Read'), 'diagnostics must list source files read');
+    assert.ok(md.includes('Product Signals Detected'), 'diagnostics must list detected signals');
+    assert.ok(md.includes('currentFocus'), 'diagnostics must include currentFocus signal');
+    assert.ok(md.includes('productBet'), 'diagnostics must include productBet signal');
+  } finally {
+    await cleanup();
+  }
+});

@@ -39,8 +39,35 @@ function sectionText(markdown, heading) {
   return match?.[1]?.trim() ?? '';
 }
 
+// Also try subheadings (###) for files that use deeper nesting
+function subSectionText(markdown, heading) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = markdown.match(new RegExp(`^###?\\s+${escaped}\\s*$([\\s\\S]*?)(?=^##|(?![\\s\\S]))`, 'im'));
+  return match?.[1]?.trim() ?? '';
+}
+
 function bullets(text) {
   return text.split('\n').map((l) => l.trim()).filter((l) => /^[-*]\s+/.test(l)).map((l) => l.replace(/^[-*]\s+/, '').replace(/\s*\(.*?\)\s*$/, '').trim());
+}
+
+// Extract all bullets from a markdown doc regardless of section
+function allBullets(text) {
+  return text.split('\n').map((l) => l.trim()).filter((l) => /^[-*]\s+\S/.test(l)).map((l) => l.replace(/^[-*]\s+/, '').replace(/\s*\(.*?\)\s*$/, '').trim());
+}
+
+function firstSentence(text) {
+  const line = text.split('\n').map((l) => l.trim()).find((l) => l.length > 3 && !/^[#-*]/.test(l)) ?? text.split('\n')[0] ?? '';
+  const sentence = line.split(/[.!?]/)[0].trim();
+  return sentence.length > 80 ? `${sentence.slice(0, 77)}...` : sentence;
+}
+
+function slugId(prefix, title) {
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 44);
+  return `${prefix}-${slug}`;
+}
+
+function isBlank(text) {
+  return !text || /^\s*$/.test(text) || /^[-*]\s*(none|missing|n\/a|not defined|tbd)/i.test(text.trim());
 }
 
 // ---------------------------------------------------------------------------
@@ -94,29 +121,176 @@ const REDESIGN_CANDIDATES = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Product-signal candidate extraction (generalizes to any product repository)
+// ---------------------------------------------------------------------------
+
+function candidatesFromCurrentFocus(goals) {
+  const focus = sectionText(goals, 'Current Focus') || subSectionText(goals, 'Current Focus');
+  if (isBlank(focus)) return [];
+  const focusText = firstSentence(focus);
+  if (!focusText || focusText.length < 4) return [];
+  return [{
+    id: slugId('pj-focus', focusText),
+    category: 'product-focus',
+    title: `Instrument and Validate Current Focus: ${focusText}`,
+    scores: { productValue: 78, strategic: 90, userImpact: 72, leverage: 80, cost: 78 },
+    confidence: 'High',
+    evidence: `.ai/goals.md — Current Focus: "${focusText}"`,
+    sourceFiles: ['.ai/goals.md', '.ai/strategy.md'],
+    whyItMatters: `The declared Current Focus is "${focusText}". Ensuring this focus is instrumented and measurable against the North Star Metric maximizes product signal per development cycle.`,
+    whyOutranks: 'Current Focus alignment has higher strategic score than backlog items because it directly addresses the declared product priority.',
+  }];
+}
+
+function candidatesFromProductBet(strategy) {
+  const bet = sectionText(strategy, 'Current Product Bet') || subSectionText(strategy, 'Current Product Bet');
+  if (isBlank(bet)) return [];
+  const betText = firstSentence(bet);
+  if (!betText || betText.length < 4) return [];
+  return [{
+    id: slugId('pj-bet', betText),
+    category: 'product-validation',
+    title: `Validate Product Bet: ${betText.slice(0, 55)}`,
+    scores: { productValue: 82, strategic: 92, userImpact: 68, leverage: 85, cost: 72 },
+    confidence: 'High',
+    evidence: `.ai/strategy.md — Current Product Bet: "${betText}"`,
+    sourceFiles: ['.ai/strategy.md', '.ai/goals.md'],
+    whyItMatters: `The active product bet "${betText}" needs validation evidence. A focused experiment or instrumentation pass confirms or refutes the bet before further investment.`,
+    whyOutranks: 'Validating the active product bet has higher leverage than any individual feature — it gates the entire product direction.',
+  }];
+}
+
+function candidatesFromCurrentExperiment(strategy) {
+  const experiment = sectionText(strategy, 'Current Experiment') || subSectionText(strategy, 'Current Experiment');
+  if (isBlank(experiment)) return [];
+  const expText = firstSentence(experiment);
+  if (!expText || expText.length < 4) return [];
+  return [{
+    id: slugId('pj-experiment', expText),
+    category: 'product-validation',
+    title: `Complete and Evaluate Current Experiment: ${expText.slice(0, 50)}`,
+    scores: { productValue: 75, strategic: 88, userImpact: 65, leverage: 82, cost: 80 },
+    confidence: 'High',
+    evidence: `.ai/strategy.md — Current Experiment: "${expText}"`,
+    sourceFiles: ['.ai/strategy.md'],
+    whyItMatters: `An active experiment "${expText}" is underway. Reaching a clear go/no-go decision on this experiment unlocks the next product bet and prevents investment in the wrong direction.`,
+    whyOutranks: 'Active experiments have time-value — delayed evaluation reduces signal quality and wastes development cycles.',
+  }];
+}
+
+function candidatesFromProductThesis(goals, strategy) {
+  const thesis = sectionText(goals, 'Product Thesis') || sectionText(strategy, 'Product Thesis');
+  if (isBlank(thesis)) return [];
+  const thesisText = firstSentence(thesis);
+  if (!thesisText || thesisText.length < 8) return [];
+  // Only generate a thesis-alignment candidate if no Current Focus candidate was generated
+  // (focus is more specific and thus higher value)
+  return [{
+    id: slugId('pj-thesis', thesisText),
+    category: 'strategic-clarity',
+    title: `Align Backlog Priorities with Product Thesis: ${thesisText.slice(0, 50)}`,
+    scores: { productValue: 70, strategic: 88, userImpact: 60, leverage: 78, cost: 85 },
+    confidence: 'Medium',
+    evidence: `.ai/goals.md — Product Thesis: "${thesisText}"`,
+    sourceFiles: ['.ai/goals.md', '.ai/backlog.md'],
+    whyItMatters: `The product thesis "${thesisText}" should be the filter for all backlog prioritization. An explicit alignment pass removes low-thesis-value work from the queue.`,
+    whyOutranks: 'Thesis alignment improves the quality of all future recommendations by filtering the input signal.',
+  }];
+}
+
+function candidatesFromNorthStar(goals) {
+  const northStar = sectionText(goals, 'North Star Metric') || sectionText(goals, 'North Star') || subSectionText(goals, 'North Star Metric');
+  if (isBlank(northStar)) return [];
+  const metric = firstSentence(northStar);
+  if (!metric || metric.length < 4) return [];
+  return [{
+    id: slugId('pj-northstar', metric),
+    category: 'product-measurement',
+    title: `Instrument North Star Metric: ${metric.slice(0, 55)}`,
+    scores: { productValue: 76, strategic: 86, userImpact: 70, leverage: 84, cost: 82 },
+    confidence: 'High',
+    evidence: `.ai/goals.md — North Star Metric: "${metric}"`,
+    sourceFiles: ['.ai/goals.md'],
+    whyItMatters: `The declared North Star is "${metric}". Verifying this metric is instrumented and tracked in production ensures the product direction is data-driven.`,
+    whyOutranks: 'An uninstrumented North Star Metric means all product judgment is qualitative — instrumenting it enables quantitative prioritization.',
+  }];
+}
+
+function candidatesFromSuccessDefinition(goals) {
+  const success = sectionText(goals, 'Success Definition') || sectionText(goals, 'Success Criteria') || subSectionText(goals, 'Success Definition');
+  if (isBlank(success)) return [];
+  const successItems = bullets(success).filter((b) => !/none detected/i.test(b));
+  if (successItems.length === 0) return [];
+  const top = successItems[0];
+  return [{
+    id: slugId('pj-success', top),
+    category: 'product-measurement',
+    title: `Verify Success Criteria Are Measurable and Tracked`,
+    scores: { productValue: 72, strategic: 84, userImpact: 65, leverage: 76, cost: 86 },
+    confidence: 'Medium',
+    evidence: `.ai/goals.md — Success Criteria: "${top}"`,
+    sourceFiles: ['.ai/goals.md'],
+    whyItMatters: `${successItems.length} success criteria are defined. A verification pass confirms each is tracked, measurable, and tied to observable product behavior — not just intentions.`,
+    whyOutranks: 'Defined but untracked success criteria produce false confidence. Verification is low-cost with high strategic impact.',
+  }];
+}
+
+// ---------------------------------------------------------------------------
+// Backlog candidate extraction — generalizes across section name variants
+// ---------------------------------------------------------------------------
+
+const BACKLOG_SECTION_ALIASES = [
+  ['High Priority', 'high'],
+  ['High', 'high'],
+  ['Priority Items', 'high'],
+  ['Medium Priority', 'medium'],
+  ['Medium', 'medium'],
+  ['Low Priority', 'low'],
+  ['Low', 'low'],
+  ['Items', 'medium'],
+  ['Features', 'medium'],
+  ['Enhancements', 'medium'],
+  ['Backlog', 'medium'],
+];
+
 function candidatesFromBacklog(backlog) {
-  const highPrioritySection = sectionText(backlog, 'High Priority');
-  const mediumSection = sectionText(backlog, 'Medium Priority');
-  const highItems = bullets(highPrioritySection);
-  const mediumItems = bullets(mediumSection);
+  const seen = new Set();
+  const allItems = [];
 
-  const allItems = [
-    ...highItems.map((title) => ({ title, priority: 'high' })),
-    ...mediumItems.map((title) => ({ title, priority: 'medium' })),
-  ].filter((item) => !/none detected/i.test(item.title));
+  for (const [heading, priority] of BACKLOG_SECTION_ALIASES) {
+    const section = sectionText(backlog, heading) || subSectionText(backlog, heading);
+    for (const title of bullets(section)) {
+      if (!seen.has(title) && !/none detected/i.test(title)) {
+        seen.add(title);
+        allItems.push({ title, priority });
+      }
+    }
+  }
 
-  return allItems.map((item, i) => {
-    const isHighPriority = item.priority === 'high';
+  // Fallback: if no section-based extraction worked, try all bullets in the doc
+  if (allItems.length === 0) {
+    for (const title of allBullets(backlog)) {
+      if (!seen.has(title) && !/none detected/i.test(title) && title.length > 4) {
+        seen.add(title);
+        allItems.push({ title, priority: 'medium' });
+      }
+    }
+  }
+
+  return allItems.map((item) => {
+    const isHigh = item.priority === 'high';
+    const isMedium = item.priority === 'medium';
     const cleanTitle = item.title.replace(/^\*\*(.+)\*\*$/, '$1').replace(/^\*\*/, '').trim();
-    const id = `pj-backlog-${i + 1}`;
-    const baseProductValue = isHighPriority ? 65 : 52;
-    const baseStrategic = isHighPriority ? 68 : 60;
-    const baseUserImpact = isHighPriority ? 60 : 48;
-    const baseLeverage = isHighPriority ? 70 : 62;
-    const baseCost = isHighPriority ? 75 : 82;
+    const id = slugId('pj-backlog', cleanTitle);
+    const baseProductValue = isHigh ? 65 : isMedium ? 52 : 40;
+    const baseStrategic = isHigh ? 68 : isMedium ? 60 : 50;
+    const baseUserImpact = isHigh ? 60 : isMedium ? 48 : 38;
+    const baseLeverage = isHigh ? 70 : isMedium ? 62 : 52;
+    const baseCost = isHigh ? 75 : isMedium ? 82 : 88;
 
     const isValidation = /validation|test|verify/i.test(cleanTitle);
-    const isUX = /render|ui|display|visual|markdown/i.test(cleanTitle);
+    const isUX = /render|ui|display|visual|markdown|onboard|screen/i.test(cleanTitle);
     const pvBoost = isUX ? 6 : isValidation ? 4 : 0;
     const uiBoost = isUX ? 8 : 0;
 
@@ -142,11 +316,15 @@ function candidatesFromBacklog(backlog) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Strategic gap detection — fires when signals are ABSENT
+// ---------------------------------------------------------------------------
+
 function detectStrategicGaps(goals, strategy) {
   const candidates = [];
-  const hasProductBet = /Current Product Bet/i.test(strategy) && !/Missing/i.test(sectionText(strategy, 'Current Product Bet'));
-  const hasNorthStar = /North Star Metric/i.test(goals);
-  const hasSuccessCriteria = /Success Criteria/i.test(goals);
+  const hasProductBet = /Current Product Bet/i.test(strategy) && !isBlank(sectionText(strategy, 'Current Product Bet'));
+  const hasNorthStar = /North Star Metric|North Star/i.test(goals) && !isBlank(sectionText(goals, 'North Star Metric') || sectionText(goals, 'North Star'));
+  const hasSuccessCriteria = /Success Criteria|Success Definition/i.test(goals);
 
   if (!hasProductBet) {
     candidates.push({
@@ -192,7 +370,28 @@ function rankCandidates(candidates) {
     .map((c, i) => ({ ...c, rank: i + 1 }));
 }
 
-function renderMarkdown(ranked, repoJudgmentTitle) {
+// ---------------------------------------------------------------------------
+// Diagnostics helpers
+// ---------------------------------------------------------------------------
+
+function detectSignals(goals, strategy, backlog, architecture) {
+  return {
+    currentFocus: !isBlank(sectionText(goals, 'Current Focus') || subSectionText(goals, 'Current Focus')),
+    productBet: !isBlank(sectionText(strategy, 'Current Product Bet') || subSectionText(strategy, 'Current Product Bet')),
+    currentExperiment: !isBlank(sectionText(strategy, 'Current Experiment') || subSectionText(strategy, 'Current Experiment')),
+    productThesis: !isBlank(sectionText(goals, 'Product Thesis') || sectionText(strategy, 'Product Thesis')),
+    northStarMetric: !isBlank(sectionText(goals, 'North Star Metric') || sectionText(goals, 'North Star') || subSectionText(goals, 'North Star Metric')),
+    successDefinition: !isBlank(sectionText(goals, 'Success Definition') || sectionText(goals, 'Success Criteria')),
+    backlogItems: candidatesFromBacklog(backlog).length > 0,
+    architecture: Boolean(architecture.trim()),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------------------
+
+function renderMarkdown(ranked, repoJudgmentTitle, inputs, signals) {
   const lines = [];
   lines.push('# Product Judgment — Shadow Mode');
   lines.push('');
@@ -229,16 +428,54 @@ function renderMarkdown(ranked, repoJudgmentTitle) {
   }
   lines.push('## All Product Judgment Candidates');
   lines.push('');
-  lines.push('| Rank | Title | Composite | Product Value | Strategic | User Impact | Leverage | Cost | Confidence |');
-  lines.push('|---|---|---|---|---|---|---|---|---|');
-  for (const c of ranked) {
-    lines.push(`| ${c.rank} | ${c.title} | ${c.compositeScore} | ${c.scores.productValue} | ${c.scores.strategic} | ${c.scores.userImpact} | ${c.scores.leverage} | ${c.scores.cost} | ${c.confidence} |`);
+  if (ranked.length === 0) {
+    lines.push('No candidates generated. See Diagnostics below for details.');
+  } else {
+    lines.push('| Rank | Title | Composite | Product Value | Strategic | User Impact | Leverage | Cost | Confidence |');
+    lines.push('|---|---|---|---|---|---|---|---|---|');
+    for (const c of ranked) {
+      lines.push(`| ${c.rank} | ${c.title} | ${c.compositeScore} | ${c.scores.productValue} | ${c.scores.strategic} | ${c.scores.userImpact} | ${c.scores.leverage} | ${c.scores.cost} | ${c.confidence} |`);
+    }
+  }
+  lines.push('');
+  lines.push('## Diagnostics');
+  lines.push('');
+  lines.push('### Source Files Read');
+  lines.push('');
+  for (const [file, present] of Object.entries(inputs)) {
+    lines.push(`- ${file}: ${present ? 'Present' : 'Missing'}`);
+  }
+  lines.push('');
+  lines.push('### Product Signals Detected');
+  lines.push('');
+  for (const [signal, detected] of Object.entries(signals)) {
+    lines.push(`- ${signal}: ${detected ? 'Detected' : 'Not detected'}`);
+  }
+  lines.push('');
+  lines.push('### Candidate Generation Summary');
+  lines.push('');
+  if (ranked.length === 0) {
+    lines.push('Zero candidates were generated. This occurs when:');
+    lines.push('- No product signals were found in goals.md, strategy.md, or backlog.md');
+    lines.push('- All backlog bullets are marked "None detected"');
+    lines.push('- docs/repository-improvement-product-redesign.md is absent');
+    lines.push('- North Star Metric, Success Criteria, and Product Bet are all defined (no strategic gaps)');
+  } else {
+    lines.push(`${ranked.length} candidate(s) generated from: ${[
+      signals.currentFocus && 'Current Focus',
+      signals.productBet && 'Product Bet',
+      signals.currentExperiment && 'Current Experiment',
+      signals.productThesis && 'Product Thesis',
+      signals.northStarMetric && 'North Star Metric',
+      signals.successDefinition && 'Success Definition',
+      signals.backlogItems && 'Backlog Items',
+    ].filter(Boolean).join(', ') || 'Strategic Gaps (absence of signals)'}.`);
   }
   lines.push('');
   return lines.join('\n');
 }
 
-function renderEvaluation(ranked, inputs) {
+function renderEvaluation(ranked, inputs, signals) {
   const lines = [];
   lines.push('# Product Judgment Evaluation — Shadow Mode');
   lines.push('');
@@ -266,6 +503,12 @@ function renderEvaluation(ranked, inputs) {
     lines.push(`- ${file}: ${present ? 'Present' : 'Missing'}`);
   }
   lines.push('');
+  lines.push('## Product Signals Detected');
+  lines.push('');
+  for (const [signal, detected] of Object.entries(signals)) {
+    lines.push(`- ${signal}: ${detected ? 'Detected' : 'Not detected'}`);
+  }
+  lines.push('');
   lines.push('## Candidate Evaluations');
   lines.push('');
   for (const c of ranked) {
@@ -290,24 +533,28 @@ function renderEvaluation(ranked, inputs) {
 }
 
 export async function generateProductJudgment(repositoryPath) {
-  const [goals, strategy, backlog, decisions, executionModel, repositoryHealth, redesignDoc, decisionRankingRaw] = await Promise.all([
+  const [goals, strategy, backlog, decisions, executionModel, repositoryHealth, architecture, contextPackage, redesignDoc, decisionRankingRaw] = await Promise.all([
     readAiText(repositoryPath, 'goals.md'),
     readAiText(repositoryPath, 'strategy.md'),
     readAiText(repositoryPath, 'backlog.md'),
     readAiText(repositoryPath, 'decisions.md'),
     readAiText(repositoryPath, 'execution-model.md'),
     readAiText(repositoryPath, 'repository-health.md'),
+    readAiText(repositoryPath, 'architecture.md'),
+    readAiText(repositoryPath, 'context-package.md'),
     readDocsText(repositoryPath, 'repository-improvement-product-redesign.md'),
     readAiText(repositoryPath, 'decision-ranking.json'),
   ]);
 
-  const decisionRanking = decisionRankingRaw ? JSON.parse(decisionRankingRaw).catch?.(() => null) ?? (() => { try { return JSON.parse(decisionRankingRaw); } catch { return null; } })() : null;
+  const decisionRanking = (() => { try { return JSON.parse(decisionRankingRaw); } catch { return null; } })();
   const activeRepoJudgmentTitle = decisionRanking?.candidates?.[0]?.title ?? 'Not available';
 
   const inputs = {
     '.ai/goals.md': Boolean(goals.trim()),
     '.ai/strategy.md': Boolean(strategy.trim()),
     '.ai/backlog.md': Boolean(backlog.trim()),
+    '.ai/architecture.md': Boolean(architecture.trim()),
+    '.ai/context-package.md': Boolean(contextPackage.trim()),
     '.ai/decisions.md': Boolean(decisions.trim()),
     '.ai/execution-model.md': Boolean(executionModel.trim()),
     '.ai/repository-health.md': Boolean(repositoryHealth.trim()),
@@ -315,22 +562,44 @@ export async function generateProductJudgment(repositoryPath) {
     'docs/repository-improvement-product-redesign.md': Boolean(redesignDoc.trim()),
   };
 
-  // Collect candidates from all sources
+  const signals = detectSignals(goals, strategy, backlog, architecture);
+
+  // Collect candidates from all sources, in decreasing product-value order
   const candidates = [];
 
-  // From product redesign doc (highest product value)
+  // From product redesign doc (highest product value — Agent IDE only)
   if (redesignDoc.trim()) {
     candidates.push(...REDESIGN_CANDIDATES);
   }
 
-  // From strategic gaps
+  // From positive product signals present in the repository
+  candidates.push(...candidatesFromCurrentFocus(goals));
+  candidates.push(...candidatesFromProductBet(strategy));
+  candidates.push(...candidatesFromCurrentExperiment(strategy));
+  candidates.push(...candidatesFromNorthStar(goals));
+  candidates.push(...candidatesFromSuccessDefinition(goals));
+
+  // Product thesis only if no more specific signals found (avoid duplicate thesis coverage)
+  if (!signals.currentFocus && !signals.productBet) {
+    candidates.push(...candidatesFromProductThesis(goals, strategy));
+  }
+
+  // From strategic gaps (fires when signals are ABSENT)
   candidates.push(...detectStrategicGaps(goals, strategy));
 
   // From backlog (lower product value, maintenance-oriented)
   candidates.push(...candidatesFromBacklog(backlog));
 
+  // Deduplicate by id (first occurrence wins — higher value sources are pushed first)
+  const seen = new Set();
+  const unique = candidates.filter((c) => {
+    if (seen.has(c.id)) return false;
+    seen.add(c.id);
+    return true;
+  });
+
   // Rank all candidates by composite score
-  const ranked = rankCandidates(candidates);
+  const ranked = rankCandidates(unique);
 
   const generatedAt = '1970-01-01T00:00:00.000Z';
 
@@ -356,8 +625,8 @@ export async function generateProductJudgment(repositoryPath) {
     })),
   };
 
-  const md = renderMarkdown(ranked, activeRepoJudgmentTitle);
-  const evaluation = renderEvaluation(ranked, inputs);
+  const md = renderMarkdown(ranked, activeRepoJudgmentTitle, inputs, signals);
+  const evaluation = renderEvaluation(ranked, inputs, signals);
 
   await mkdir(join(repositoryPath, '.ai'), { recursive: true });
   await Promise.all([
