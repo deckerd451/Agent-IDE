@@ -4,6 +4,7 @@ import { explainDecisionRanking, explainRecommendation, renderExplanationMarkdow
 import { canonicalManualGoalsSuggestedUpdate, evaluateCanonicalStrategyCompleteness } from './canonical-completeness.mjs';
 import { renderSynthesisMarkdown } from './evidence-synthesis.mjs';
 import { analyzeImprovements, analyzeImprovementsWithTrace } from './improvement-analyzer.mjs';
+import { readOutcomeEvidence } from './outcomes.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md','architecture.md','decisions.md','execution-model.md'];
 
@@ -69,6 +70,52 @@ function healthRisks(health) { return bullets(mdSection(health, 'Risks')).filter
 function healthRecommendation(health) { return firstLine(mdSection(health, 'Recommended Next Step'), 'No repository-health recommendation detected.'); }
 function backlogCount(backlog) { return bullets(mdSection(backlog, 'Prioritized Backlog') || mdSection(backlog, 'Current Backlog') || mdSection(backlog, 'Manual Backlog') || backlog).length; }
 function score(value, fallback = 100) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
+
+
+function completedWorkedOutcomeFor(issue, outcomeEntries = []) {
+  return outcomeEntries.slice().reverse().find((entry) => entry?.outcome === 'implemented'
+    && entry?.promptQuality === 'worked'
+    && (entry.recommendationId === issue?.id || entry.recommendationTitle === issue?.title));
+}
+
+function deterministicRetentionEvidence(issue) {
+  const text = [issue?.evidence, issue?.source, issue?.reason, issue?.recommendedAction].filter(Boolean).join(' ');
+  const incompletePatterns = [
+    /\bmissing\b/i,
+    /\bincomplete\b/i,
+    /\bnot\s+(?:implemented|resolved|complete|present)\b/i,
+    /\bfailed?\b/i,
+    /\bfailing\b/i,
+    /\bcontradiction\b/i,
+    /\bduplicate\b/i,
+    /\blow confidence\b/i,
+    /\bweak\b/i,
+    /\brisk\b/i,
+    /\bgap\b/i,
+    /exceeding the .*threshold/i,
+  ];
+  const matched = incompletePatterns.find((pattern) => pattern.test(text));
+  if (!matched) return '';
+  return `deterministic repository evidence still reports incomplete work: ${issue.evidence || issue.source || issue.reason}`;
+}
+
+export function applyRecommendationAdvancement(candidates = [], outcomeEntries = []) {
+  const evaluated = candidates.map((candidate) => {
+    const outcome = completedWorkedOutcomeFor(candidate, outcomeEntries);
+    if (!outcome) return { ...candidate, advancement: { state: 'eligible', reason: 'No implemented + worked outcome matched this recommendation.' } };
+    const retentionEvidence = deterministicRetentionEvidence(candidate);
+    if (retentionEvidence) {
+      const reason = `Retained despite implemented outcome because ${retentionEvidence}.`;
+      return { ...candidate, advancement: { state: 'retained', reason, outcomeTimestamp: outcome.timestamp }, retentionReason: reason };
+    }
+    return { ...candidate, advancement: { state: 'satisfied', reason: `Satisfied by implemented + worked outcome recorded at ${outcome.timestamp ?? 'unknown time'}; no deterministic incomplete evidence remains.`, outcomeTimestamp: outcome.timestamp } };
+  });
+  const unsuppressed = evaluated.filter((candidate) => candidate.advancement?.state !== 'satisfied');
+  if (unsuppressed.length > 0) return unsuppressed.map((candidate) => ({ ...candidate, advancementSuppressedCandidates: evaluated.filter((item) => item.advancement?.state === 'satisfied').map((item) => ({ id: item.id, title: item.title, reason: item.advancement.reason })) }));
+  return evaluated.map((candidate, index) => index === 0
+    ? { ...candidate, advancement: { ...candidate.advancement, state: 'ambiguous', reason: `Ambiguous advancement: ${candidate.advancement.reason} No alternate eligible recommendation exists, so this recommendation remains selected.` } }
+    : candidate);
+}
 
 function packageTypeForActionability(actionability) {
   if (actionability === 'manual') return 'product-decision';
@@ -157,8 +204,9 @@ export function buildDecisionRanking(issues) {
     ],
     tieBreaking: ['priorityScore desc', 'expectedImprovement.total desc', 'actionability rank asc', 'severity rank asc', 'title asc', 'id asc'],
     candidates: enriched,
-    selectedIssue: selectedIssue ? { id: selectedIssue.id, title: selectedIssue.title, rank: selectedIssue.rank, priorityScore: selectedIssue.priorityScore } : null,
-    selectionExplanation: selectedIssue ? `${selectedIssue.title} is ranked #1 with priority ${selectedIssue.priorityScore} and total expected improvement +${selectedIssue.expectedImprovement.total}.` : 'No candidate issue generated.',
+    selectedIssue: selectedIssue ? { id: selectedIssue.id, title: selectedIssue.title, rank: selectedIssue.rank, priorityScore: selectedIssue.priorityScore, advancement: selectedIssue.advancement } : null,
+    advancement: { suppressedCandidates: enriched.flatMap((issue) => issue.advancementSuppressedCandidates ?? []), selected: selectedIssue?.advancement ?? null },
+    selectionExplanation: selectedIssue ? `${selectedIssue.title} is ranked #1 with priority ${selectedIssue.priorityScore} and total expected improvement +${selectedIssue.expectedImprovement.total}.${selectedIssue.advancement?.reason ? ` Advancement: ${selectedIssue.advancement.reason}` : ''}` : 'No candidate issue generated.',
   };
 }
 
@@ -224,7 +272,7 @@ export function chooseNextImprovement({ health = '', quality = null, audit = '',
   return chooseNextImprovementWithCandidates({ health, quality, audit, backlog, strategy, contextPackage, goals, architecture, decisions, executionModel }).selectedIssue;
 }
 
-export function chooseNextImprovementWithCandidates({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '', repositoryPath = '', validationCompletions = [], architecture = '', decisions = '', executionModel = '' }) {
+export function chooseNextImprovementWithCandidates({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '', repositoryPath = '', validationCompletions = [], outcomeEntries = [], architecture = '', decisions = '', executionModel = '' }) {
   // --- Repository Improvement Analysis ---
   // Improvements must dominate maintenance recommendations.
   const improvementCandidates = analyzeImprovements({ architecture, decisions, executionModel, backlog, strategy });
@@ -288,7 +336,7 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
   const maintenanceIssues = issues.length ? issues : (validationAlreadyCompleted
     ? [upToDateIssue(contextHash)]
     : [selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', actionability: 'validation-experiment', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' })]);
-  const candidates = [...improvementCandidates, ...maintenanceIssues];
+  const candidates = applyRecommendationAdvancement([...improvementCandidates, ...maintenanceIssues], outcomeEntries);
   const decisionRanking = buildDecisionRanking(candidates);
   console.error('[refresh:diagnostic] selected recommendation:', decisionRanking.candidates[0]?.id, '|', decisionRanking.candidates[0]?.title);
   return { selectedIssue: decisionRanking.candidates[0], candidates: decisionRanking.candidates, decisionRanking };
@@ -532,6 +580,12 @@ function renderRecommendationTrace({ stages, improvementCandidates, maintenanceI
     lines.push(`| ${c.rank} | ${c.id} | ${c.class} | ${c.priorityScore} | +${c.expectedImprovement.total} | ${c.title} |`);
   }
   lines.push('');
+  if (decisionRanking.advancement?.suppressedCandidates?.length) {
+    lines.push('## Recommendation Advancement');
+    lines.push('');
+    for (const item of decisionRanking.advancement.suppressedCandidates) lines.push(`- Suppressed **${item.title}** (${item.id}): ${item.reason}`);
+    lines.push('');
+  }
 
   // Winner
   const winner = decisionRanking.candidates[0];
@@ -545,6 +599,7 @@ function renderRecommendationTrace({ stages, improvementCandidates, maintenanceI
     lines.push(`- **Expected Improvement Total**: +${winner.expectedImprovement.total}`);
     lines.push(`- **Evidence**: ${winner.evidence}`);
     lines.push(`- **Reason**: ${winner.reason}`);
+    if (winner.advancement?.reason) lines.push(`- **Recommendation advancement**: ${winner.advancement.reason}`);
     lines.push('');
     lines.push('### Why This Recommendation Was Selected');
     lines.push('');
@@ -575,7 +630,8 @@ export async function generateNextImprovement(repositoryPath = process.cwd(), op
   // Run improvement analysis with per-stage trace diagnostics.
   const { candidates: improvementCandidates, stages } = analyzeImprovementsWithTrace({ architecture, decisions, executionModel, backlog, strategy });
 
-  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, repositoryPath: resolved, validationCompletions: options.validationCompletions ?? [] });
+  const outcomeEntries = options.outcomeEntries ?? (await readOutcomeEvidence(resolved)).entries;
+  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, repositoryPath: resolved, validationCompletions: options.validationCompletions ?? [], outcomeEntries });
   selectedIssue.explanation = explainRecommendation(selectedIssue, candidates);
   decisionRanking.explanation = explainDecisionRanking(decisionRanking);
   const prompt = renderPrompt({ selectedIssue, decisionRanking });

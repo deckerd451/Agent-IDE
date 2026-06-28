@@ -1,5 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { readOutcomeEvidence } from './outcomes.mjs';
+import { applyRecommendationAdvancement } from './next-improvement.mjs';
 
 export const repositoryJudgmentInputs = [
   '.ai/goals.md',
@@ -335,13 +337,27 @@ function renderRepositoryJudgmentMarkdown(judgment) {
     '',
     '## Selection Status',
     '',
+    '- Completed implemented + worked recommendations are suppressed when another eligible Repository Judgment candidate exists.',
+    '- Retained recommendations include deterministic retention evidence; ambiguous recommendations explain missing alternate evidence.',
     '- No candidate in this artifact is selected by the current product.',
     '- Current recommendation ranking remains owned by `.ai/decision-ranking.json` and `.ai/next-improvement-prompt.md`.',
     '- This artifact exists to make future value-ranking candidates auditable before they become authoritative.',
     '',
-    '## Shadow Candidates',
-    '',
   ];
+
+  if (judgment.advancement?.suppressedCandidates?.length) {
+    lines.push('## Recommendation Advancement');
+    lines.push('');
+    for (const item of judgment.advancement.suppressedCandidates) lines.push(`- Suppressed **${item.title}** (${item.id}): ${item.reason}`);
+    lines.push('');
+    lines.push('## Shadow Candidates');
+    lines.push('');
+  }
+
+  if (!judgment.advancement?.suppressedCandidates?.length) {
+    lines.push('## Shadow Candidates');
+    lines.push('');
+  }
 
   if (!judgment.candidates.length) {
     lines.push('- No evidence-backed product-improvement candidates were generated from the configured inputs.');
@@ -361,6 +377,7 @@ function renderRepositoryJudgmentMarkdown(judgment) {
     lines.push(`- Source files: ${candidate.sourceFiles.join(', ')}`);
     lines.push(`- Why it matters: ${candidate.whyItMatters}`);
     lines.push(`- Why it is not yet selected: ${candidate.whyItIsNotYetSelected}`);
+    if (candidate.advancement?.reason) lines.push(`- Advancement: ${candidate.advancement.reason}`);
     lines.push('- Evidence:');
     for (const item of candidate.evidence) lines.push(`  - ${item.sourceFile}${item.sourceSection ? ` (${item.sourceSection})` : ''}: ${item.text}`);
     lines.push('');
@@ -372,13 +389,16 @@ function renderRepositoryJudgmentMarkdown(judgment) {
 export async function generateRepositoryJudgment(repositoryPath = process.cwd()) {
   const resolved = resolve(repositoryPath);
   const docs = Object.fromEntries(await Promise.all(repositoryJudgmentInputs.map(async (input) => [input, await readText(resolved, input)])));
-  const candidates = buildCandidates(docs);
+  const rawCandidates = buildCandidates(docs);
+  const outcomeEntries = (await readOutcomeEvidence(resolved)).entries;
+  const candidates = applyRecommendationAdvancement(rawCandidates, outcomeEntries);
   const judgment = {
     schemaVersion: 1,
     mode: 'shadow',
     generatedAt: new Date(0).toISOString(),
     inputs: repositoryJudgmentInputs,
     candidates,
+    advancement: { suppressedCandidates: candidates.flatMap((candidate) => candidate.advancementSuppressedCandidates ?? []), selected: candidates[0]?.advancement ?? null },
     selectedCandidate: null,
     selectionPolicy: 'Shadow Mode only. Current Work Queue, next-improvement ranking, and implementation package generation remain unchanged.',
   };
