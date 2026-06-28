@@ -1,7 +1,7 @@
 # Validation
 
 ## Last Validation
-- 2026-06-28T00:07:46.993Z
+- 2026-06-28T00:39:22.642Z
 
 ## Confidence
 - Medium
@@ -16,7 +16,7 @@
 ### npm run build
 - Status: PASS
 - Exit code: 0
-- Duration: 5.0s
+- Duration: 5.1s
 - Output summary:
 ```text
   npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
@@ -35,11 +35,11 @@
 ### npm run test
 - Status: PASS
 - Exit code: 0
-- Duration: 8.2s
+- Duration: 8.0s
 - Output summary:
 ```text
     ---
-    duration_ms: 0.541843
+    duration_ms: 0.471788
     ...
   1..189
   # tests 189
@@ -49,7 +49,7 @@
   # cancelled 0
   # skipped 0
   # todo 0
-  # duration_ms 7704.204593
+  # duration_ms 7541.845241
 ```
 
 ## Xcode Project Validation

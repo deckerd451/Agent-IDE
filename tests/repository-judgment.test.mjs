@@ -102,6 +102,8 @@ test('repository judgment writes deterministic evaluation and rolling history ar
   assert.match(evaluation, /Overall Winner/);
   assert.match(evaluation, /Readiness score: \d+\/100/);
   assert.match(evaluation, /Shadow wins at least 3 consecutive refreshes/);
+  assert.match(evaluation, /Readiness score is at least 85\/100/);
+  assert.match(evaluation, /No regression in existing recommendation quality across the latest 10 refreshes/);
   assert.equal(history.length, 1);
   assert.ok(['Production', 'Shadow', 'Tie'].includes(history[0].winner));
   assert.equal(typeof history[0].readinessScore, 'number');
