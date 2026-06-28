@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "1970-01-01T00:00:00.000Z",
+  "deterministic": true,
+  "inputs": {
+    ".ai/repository-judgment.json": true,
+    ".ai/repository-judgment.md": true,
+    ".ai/product-judgment.json": true,
+    ".ai/product-judgment.md": true,
+    ".ai/product-judgment-evaluation.md": true,
+    ".ai/repository-judgment-evaluation.md": true,
+    ".ai/goals.md": true,
+    ".ai/strategy.md": true,
+    ".ai/backlog.md": true,
+    ".ai/architecture.md": true,
+    ".ai/decisions.md": true,
+    ".ai/context-package.md": true,
+    ".ai/repository-health.md": true,
+    ".ai/execution-model.md": true
+  },
+  "engines": {
+    "repositoryJudgment": {
+      "engine": "Repository Judgment",
+      "available": true,
+      "recommendation": "**Add Backlog Quality Filtering**",
+      "category": "product-capability",
+      "confidence": 67,
+      "scores": {
+        "total": 78,
+        "productValue": 99,
+        "repositoryValue": 78,
+        "strategicAlignment": 78,
+        "userImpact": 99,
+        "implementationCost": 50,
+        "leverage": 71
+      },
+      "evidence": [
+        ".ai/backlog.md#Backlog: **Add Backlog Quality Filtering**"
+      ],
+      "repositoryFilesUsed": [
+        ".ai/backlog.md",
+        ".ai/backlog.md#Backlog"
+      ],
+      "reasoning": "Backlog evidence names focused future work that can create repository value once the shadow judgment engine becomes authoritative.",
+      "expectedProductValue": 99
+    },
+    "productJudgment": {
+      "engine": "Product Judgment",
+      "available": true,
+      "recommendation": "Implement Focused Improvement Loop UX",
+      "category": "product-experience",
+      "confidence": 85,
+      "scores": {
+        "total": 88,
+        "productValue": 95,
+        "repositoryValue": 72,
+        "strategicAlignment": 92,
+        "userImpact": 90,
+        "implementationCost": 55,
+        "leverage": 88
+      },
+      "evidence": [
+        "docs/repository-improvement-product-redesign.md — explicit product vision: \"Open Agent IDE → see the next best improvement → generate one prompt → implement → validate → refresh → repeat\""
+      ],
+      "repositoryFilesUsed": [
+        "docs/repository-improvement-product-redesign.md",
+        "scripts/next-improvement.mjs",
+        "src/App.tsx",
+        "src/workflow.ts"
+      ],
+      "reasoning": "Transforms Agent IDE from a repository-intelligence browser into a focused improvement operating system. Every user visit answers one question: what is the single highest-impact improvement and what happens next? Addresses the primary user journey end-to-end. All other product opportunities are components or downstream effects of this loop.",
+      "expectedProductValue": 95
+    }
+  },
+  "metrics": {
+    "agreementScore": 0,
+    "evidenceOverlap": 0,
+    "evidenceDifference": {
+      "uniqueRepositoryEvidenceCount": 1,
+      "uniqueProductEvidenceCount": 1
+    },
+    "recommendationDivergenceScore": 100,
+    "productValueDifference": -4,
+    "repositoryValueDifference": -6,
+    "strategicAlignmentDifference": 14,
+    "userImpactDifference": -9,
+    "implementationCostDifference": 5,
+    "leverageDifference": 17,
+    "confidenceDifference": 18
+  },
+  "evidence": {
+    "sharedEvidence": [],
+    "sharedRepositoryFiles": [],
+    "uniqueRepositoryJudgmentEvidence": [
+      ".ai/backlog.md#Backlog: **Add Backlog Quality Filtering**"
+    ],
+    "uniqueProductJudgmentEvidence": [
+      "docs/repository-improvement-product-redesign.md — explicit product vision: \"Open Agent IDE → see the next best improvement → generate one prompt → implement → validate → refresh → repeat\""
+    ],
+    "ignoredEvidence": [
+      ".ai/architecture.md",
+      ".ai/context-package.md",
+      ".ai/decisions.md",
+      ".ai/execution-model.md",
+      ".ai/goals.md",
+      ".ai/product-judgment-evaluation.md",
+      ".ai/product-judgment.json",
+      ".ai/product-judgment.md",
+      ".ai/repository-health.md",
+      ".ai/repository-judgment-evaluation.md",
+      ".ai/repository-judgment.json",
+      ".ai/repository-judgment.md",
+      ".ai/strategy.md"
+    ]
+  },
+  "explanation": {
+    "whyRepositoryJudgmentSelected": "Backlog evidence names focused future work that can create repository value once the shadow judgment engine becomes authoritative.",
+    "whyProductJudgmentSelected": "Transforms Agent IDE from a repository-intelligence browser into a focused improvement operating system. Every user visit answers one question: what is the single highest-impact improvement and what happens next? Addresses the primary user journey end-to-end. All other product opportunities are components or downstream effects of this loop.",
+    "mostInfluentialEvidence": [
+      "docs/repository-improvement-product-redesign.md — explicit product vision: \"Open Agent IDE → see the next best improvement → generate one prompt → implement → validate → refresh → repeat\"",
+      ".ai/backlog.md#Backlog: **Add Backlog Quality Filtering**"
+    ],
+    "whyEnginesDisagreed": "The engines optimized different deterministic signals: Repository Judgment selected product-capability; Product Judgment selected product-experience.",
+    "disagreementIndicates": "strategic optimization",
+    "recommendationAppearsStronger": "Repository Judgment"
+  },
+  "shadowEvaluation": {
+    "repositoryJudgmentCurrentlyAppears": "stronger",
+    "winner": "Repository Judgment",
+    "reason": "Repository Judgment has the stronger deterministic product-value signal (99/100).",
+    "repositoryJudgmentRemainsAuthoritative": true,
+    "productJudgmentRemainsShadowOnly": true
+  },
+  "summary": "**Add Backlog Quality Filtering** vs Implement Focused Improvement Loop UX. Agreement 0/100; divergence 100/100. Winner: Repository Judgment."
+}
