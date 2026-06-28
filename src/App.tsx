@@ -260,8 +260,8 @@ function buildCanonicalEditProposal(data: ControlPlane): CanonicalEditProposal |
 }
 
 const sidebarGroups: Array<{ label: string; items: Section['id'][] }> = [
-  { label: 'Work', items: ['Control Plane'] },
-  { label: 'Advanced', items: ['Goals', 'Architecture', 'Strategy', 'Backlog', 'Decisions', 'Validation', 'Repository Health', 'Prompt Center', 'Context Package', 'Agents', 'Code'] },
+  { label: 'Start', items: ['Control Plane'] },
+  { label: 'Library', items: ['Context Package', 'Prompt Center', 'Strategy', 'Backlog', 'Architecture', 'Goals', 'Decisions', 'Validation', 'Repository Health', 'Agents', 'Code'] },
 ];
 
 function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section: Section) => void }) {
@@ -272,13 +272,13 @@ function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section
         <span className="brandMark">AI</span>
         <div>
           <strong>Agent IDE</strong>
-          <small>Repository work queue</small>
+          <small>Copy prompt. Ship. Refresh.</small>
         </div>
       </div>
 
       <nav className="sectionNav">
         {sidebarGroups.map((group) => (
-          <details className="navGroup" key={group.label} open={group.label === 'Work' || group.items.includes(selected.id)}>
+          <details className="navGroup" key={group.label} open={group.label === 'Start' || group.items.includes(selected.id)}>
             <summary>{group.label}</summary>
             {group.items.map((id) => {
               const section = sectionsById.get(id);
@@ -290,8 +290,8 @@ function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section
                   onClick={() => onSelect(section)}
                   type="button"
                 >
-                  <span>{section.id === 'Control Plane' ? 'Work Queue' : section.id}</span>
-                  <small>{section.eyebrow}</small>
+                  <span>{section.id === 'Control Plane' ? 'Do Next' : section.id}</span>
+                  <small>{section.id === 'Control Plane' ? 'One prompt workflow' : section.eyebrow}</small>
                 </button>
               );
             })}
@@ -439,14 +439,14 @@ function PromptCenter({ connectedPath, documents, loadFile }: { connectedPath: s
 
 
 function WelcomeDashboard() {
-  const steps = ['Connect your repository', 'Get your next task', 'Complete the task', 'Repository improves'];
+  const steps = ['1. Paste repository path', '2. Copy one prompt', '3. Implement in Claude Code or Codex', '4. Refresh and repeat'];
   return (
     <div className="controlPlane welcomeDashboard">
       <section className="heroCard" aria-label="Agent IDE workflow welcome">
         <div>
           <p className="kicker">Welcome to Agent IDE</p>
-          <h2>Know exactly what to improve next</h2>
-          <p>Connect a local repository and get one clear, deterministic recommendation for the next improvement. No cloud, no LLM, no guessing.</p>
+          <h2>One prompt to the next improvement</h2>
+          <p>Paste a repository path. Agent IDE picks the safest next improvement, gives you one implementation prompt for Claude Code or Codex, then refreshes after you ship.</p>
         </div>
         <div className="trustGrid" aria-label="Local-first guarantees">
           {['Local-only', 'Deterministic', 'No LLM', 'No Cloud'].map((item) => <span key={item}>{item}</span>)}
@@ -546,7 +546,7 @@ function UpToDateCard({ repositoryName, confidence, recommendationSource }: { re
   return (
     <section className="todayWorkCard singleRecommendationCard upToDateCard" aria-label="Repository Up To Date">
       <div>
-        <p className="kicker">Work Queue</p>
+        <p className="kicker">Do Next</p>
         <div className="repositoryIdentity">
           <span>{repositoryName}</span>
           <span>Repository up to date</span>
@@ -576,7 +576,7 @@ function TaskArtifact({ artifactType, data, documents, repositoryPath }: { artif
   return null;
 }
 
-function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryAction }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; onPrimaryAction: () => void }) {
+function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryAction, onRefresh }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void }) {
   const recommendationSource = data.activeRecommendationSource ?? 'Legacy';
   const task = recommendationSource === 'Repository Judgment' ? null : firstCandidate(data, 1);
   const taskTitle = humanTaskTitle(task, data.recommendation.title);
@@ -590,18 +590,28 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
   return (
     <section className="todayWorkCard singleRecommendationCard currentTaskCard" aria-label="Next Repository Improvement">
       <div>
-        <p className="kicker">Work Queue</p>
+        <p className="kicker">Do Next</p>
         <div className="repositoryIdentity">
           <span>{resolvedRepositoryName}</span>
           <span>Repository improving</span>
           <span>{confidence} confidence</span>
         </div>
-        <p><b>Recommendation Source:</b> {recommendationSource}</p>
-        <h2>{userTask?.instruction ?? taskTitle}</h2>
-        <p className="recommendationReason">{userTask?.why ?? task?.reason ?? data.recommendation.whyItMatters}</p>
-        {userTask && <TaskArtifact artifactType={userTask.artifactType} data={data} documents={documents} repositoryPath={repositoryPath} />}
+        <h2>{taskTitle}</h2>
+        <p className="recommendationReason">{task?.reason ?? data.recommendation.whyItMatters}</p>
+        <ol className="simpleLoop" aria-label="Agent IDE loop">
+          <li>Copy the implementation prompt.</li>
+          <li>Paste it into Claude Code or Codex and implement.</li>
+          <li>Refresh repository intelligence.</li>
+        </ol>
+        <details className="inlineArtifact">
+          <summary>Preview prompt</summary>
+          <TaskArtifact artifactType={userTask?.artifactType ?? 'implementation-prompt'} data={data} documents={documents} repositoryPath={repositoryPath} />
+        </details>
       </div>
-      {workflow ? <WorkflowPrimaryButton workflow={workflow} onPrimaryAction={onPrimaryAction} /> : <button className="primaryCta" onClick={onPrimaryAction} type="button">Refresh Repository Intelligence</button>}
+      <div className="heroActions">
+        {workflow ? <WorkflowPrimaryButton workflow={workflow} onPrimaryAction={onPrimaryAction} /> : <button className="primaryCta" onClick={onRefresh} type="button">Refresh Repository Intelligence</button>}
+        {workflow && <button className="secondaryCta" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Repository Intelligence</button>}
+      </div>
     </section>
   );
 }
@@ -904,9 +914,9 @@ function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onPri
   );
 }
 
-function ControlPlaneDashboard({ data, progressSummary, workflow, documents, diagnostics, onPrimaryAction, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; repositoryPath?: string; onPrimaryAction: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
+function ControlPlaneDashboard({ data, progressSummary, workflow, documents, diagnostics, onPrimaryAction, onRefresh, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
   if (!data) return <WelcomeDashboard />;
-  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} documents={documents} diagnostics={diagnostics} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onOpenWorkItem={onOpenWorkItem} onViewStrategy={onViewStrategy} />;
+  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} documents={documents} diagnostics={diagnostics} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOpenWorkItem={onOpenWorkItem} onViewStrategy={onViewStrategy} />;
 }
 
 function ProductJudgmentShadowCard({ data }: { data: ControlPlane }) {
@@ -941,7 +951,7 @@ function primaryHomepageAction(workflow?: Workflow | null) {
   return outcomeWorkflowText(workflow.currentPrimaryAction);
 }
 
-function ControlPlaneDashboardContent({ data, progressSummary, workflow, documents, diagnostics, onPrimaryAction, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; repositoryPath?: string; onPrimaryAction: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
+function ControlPlaneDashboardContent({ data, progressSummary, workflow, documents, diagnostics, onPrimaryAction, onRefresh, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
       return {
@@ -990,13 +1000,13 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
 
   return (
     <div className="controlPlane compactDashboard">
-      <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} />
-      <ShadowRecommendationCard data={data} />
-      <RepositoryJudgmentReadinessCard data={data} />
-      <ProductJudgmentShadowCard data={data} />
+      <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} />
       <WorkflowDiagnosticsDisclosure workflow={workflow} diagnostics={diagnostics} />
 
       <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced</summary>
+      <ShadowRecommendationCard data={data} />
+      <RepositoryJudgmentReadinessCard data={data} />
+      <ProductJudgmentShadowCard data={data} />
       {data.repositoryJudgment && (
         <details className="controlCard disclosureCard" aria-label="Repository Judgment Raw Artifact Details"><summary>Repository Judgment raw artifact details</summary>
           <p><b>Mode:</b> {data.repositoryJudgment.mode}</p>
@@ -1610,10 +1620,10 @@ export function App() {
       <main className="mainPanel">
         <header className="topBar">
           <div>
-            <p className="kicker">Repository improvement system</p>
-            <h1>{selected.id}</h1>
+            <p className="kicker">Agent IDE</p>
+            <h1>{selected.id === 'Control Plane' ? 'Do the next thing' : selected.id}</h1>
           </div>
-          <span className="statusPill">Local Node server · No LLM · No cloud</span>
+          <span className="statusPill">Local-first repository intelligence</span>
         </header>
 
         <section className="repositoryCard" aria-label="Repository connection">
@@ -1631,7 +1641,7 @@ export function App() {
             </button>
           </div>
           <p>
-            Agent IDE refreshes repository intelligence and turns the top deterministic recommendation into executable workflow steps. Advanced generated artifacts remain available after refresh.
+            Paste a local repo, copy the prompt, implement in Claude Code or Codex, then refresh. Advanced intelligence stays available in the Library.
           </p>
           {connectedPath && <small>Connected: {connectedPath}</small>}
           {error && <div className="summary failure">{error}</div>}
@@ -1639,7 +1649,7 @@ export function App() {
           {finishNotice && <div className="summary success">{finishNotice}</div>}
           {connectedPath && summary && (
             <div className="nextActions">
-              <strong>Helpful shortcuts</strong>
+              <strong>Optional shortcuts</strong>
             <div className="repositoryShortcuts">
               <button onClick={() => setSelectedId('Strategy')} type="button">View Strategy</button>
               <button onClick={() => { const pkg = documents['context-package.md']; if (pkg?.exists) void copyText(pkg.content); }} type="button">Copy Context Package</button>
@@ -1665,7 +1675,7 @@ export function App() {
         </section>}
 
         {selected.id === 'Control Plane' && isWorkItemOpen && controlPlane && currentWorkflow && <WorkItemPage data={controlPlane} repositoryPath={connectedPath || repositoryPath} documents={documents} workflow={currentWorkflow} onBack={() => setIsWorkItemOpen(false)} onPrimaryAction={() => void handleWorkflowPrimaryAction()} />}
-        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} documents={documents} diagnostics={workflowDiagnostics} repositoryPath={connectedPath || repositoryPath} onPrimaryAction={() => void handleWorkflowPrimaryAction()} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onViewStrategy={() => setSelectedId('Strategy')} />}
+        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} documents={documents} diagnostics={workflowDiagnostics} repositoryPath={connectedPath || repositoryPath} onPrimaryAction={() => void handleWorkflowPrimaryAction()} onRefresh={() => void refreshIntelligence()} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onViewStrategy={() => setSelectedId('Strategy')} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}
