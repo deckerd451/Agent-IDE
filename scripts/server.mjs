@@ -463,12 +463,14 @@ function implementationPromptForRecommendation(recommendation, decisionRanking, 
     }
     return promptFromEngineeringTask(engineeringTask);
   }
-  const existing = recommendation?.prompt?.trim() || fallbackPrompt?.trim();
-  if (existing) return existing;
+  const repositoryJudgmentPrompt = recommendation?.prompt?.trim() && /## Selected Repository Judgment Candidate/.test(recommendation.prompt) ? recommendation.prompt.trim() : '';
+  if (repositoryJudgmentPrompt) return repositoryJudgmentPrompt;
   if (selected) {
     const rendered = renderPrompt({ selectedIssue: selected, decisionRanking });
     if (rendered.trim()) return rendered;
   }
+  const existing = recommendation?.implementationPrompt?.trim() || fallbackPrompt?.trim();
+  if (existing) return existing;
   if (engineeringTask) return promptFromEngineeringTask(engineeringTask);
   return 'Recommendation requires task clarification';
 }

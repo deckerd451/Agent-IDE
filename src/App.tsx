@@ -578,15 +578,17 @@ function UpToDateCard({ repositoryName, confidence, recommendationSource }: { re
 
 
 function implementationPrompt(data: ControlPlane, documents: Record<string, DocumentState>) {
-  const prompt = data.recommendation.implementationPrompt || data.packages.builder || documents['prompts/builder.md']?.content || data.recommendation.prompt;
-  if (prompt?.trim()) {
-    const displayTitle = recommendationDisplayTitle(data);
-    if (displayTitle && data.recommendation.displayTitle && /^#\s+.+/m.test(prompt)) return prompt.replace(/^#\s+.+/m, `# ${displayTitle}`);
-    return prompt;
-  }
-  if (data.recommendation.engineeringTask) return data.recommendation.engineeringTask.status === 'blocked' ? 'Recommendation requires task clarification' : `# ${data.recommendation.engineeringTask.title}
-
-Implementation target: ${data.recommendation.engineeringTask.implementationTarget ?? data.recommendation.displaySummary ?? data.recommendation.whyItMatters}`;
+  // Runtime prompt-body path investigation (2026-06-28): Preview Prompt renders
+  // through CurrentTaskCard -> TaskArtifact -> implementationPrompt(), while Copy
+  // Implementation Prompt and Open Codex route through performWorkflowStepAction().
+  // All three now read the same control-plane field only:
+  // data.recommendation.implementationPrompt. Do not fall back to packages.builder,
+  // loaded prompt documents, legacy generated markdown, or recommendation.prompt
+  // when implementationPrompt is present, because those stale sources can contain
+  // the raw Repository Judgment title in the Goal section.
+  void documents;
+  const prompt = data.recommendation.implementationPrompt;
+  if (prompt?.trim()) return prompt;
   return 'Recommendation requires task clarification';
 }
 
@@ -605,7 +607,8 @@ function TaskArtifact({ artifactType, data, documents, repositoryPath }: { artif
   if (artifactType === 'context-package' && contextPackage) return <pre className="artifactText">{contextPackage}</pre>;
   if (artifactType === 'validation-prompt' && validationPrompt) return <pre className="artifactText">{validationPrompt}</pre>;
   if (artifactType === 'implementation-prompt') {
-    const prompt = data.packages.builder ? implementationPrompt(data, documents) : implementationPrompt(data, documents);
+    // Regression guard: this branch intentionally does not render data.packages.builder.
+    const prompt = implementationPrompt(data, documents);
     return prompt ? <pre className="artifactText">{prompt}</pre> : null;
   }
   if (artifactType === 'canonical-edit') {
@@ -1694,6 +1697,7 @@ export function App() {
       'copy-validation-prompt': validationPrompt,
       'copy-understanding-check': validationPrompt,
       'copy-implementation-prompt': implementationPrompt(data, documents),
+      'open-codex': implementationPrompt(data, documents),
       'review-canonical-edit': data.recommendation.prompt,
       'inspect-evidence': task?.evidence ?? data.recommendation.evidenceSource,
     };
