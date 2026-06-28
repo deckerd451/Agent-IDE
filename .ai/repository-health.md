@@ -1,6 +1,6 @@
 # Repository Health
 
-Last Audit: 2026-06-27T23:08:40.229Z
+Last Audit: 2026-06-28T00:07:48.098Z
 Overall Health: Healthy
 Confidence: High
 
@@ -88,7 +88,7 @@ Confidence: High
 - No repository health findings require explanation.
 
 ## AI Handoff Validation
-- Overall score: 88/100 (Ready)
+- Overall score: 96/100 (Ready)
 
 ### Recoverable Information
 - Repository explanation
@@ -111,12 +111,10 @@ Confidence: High
 - None detected.
 
 ### Missing Explanations
-- Decision ranking rationale
-- Recommendation rationale
+- None detected.
 
 ### Suggested Improvements
-- Add decision ranking rationale to generated explanations.
-- Add recommendation rationale to generated explanations.
+- None detected.
 
 ## Recommended Next Step
 Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.

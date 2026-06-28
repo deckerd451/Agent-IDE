@@ -88,6 +88,8 @@ type RepositoryJudgmentCandidate = {
   evidence: Array<{ sourceFile: string; sourceSection?: string; text: string }>;
 };
 
+type RepositoryJudgmentReadiness = { score: number; consecutiveShadowWins: number; promotionStatus: 'Not Ready' | 'Evaluating' | 'Ready for Promotion' | string; evaluationArtifact?: string };
+
 type RepositoryJudgment = {
   mode: 'shadow' | string;
   generatedAt?: string;
@@ -116,6 +118,7 @@ type ControlPlane = {
   evidenceLineage?: { categories?: Record<string, Array<{ file: string; group: string; category: string; ancestry?: string }>>; sources?: Array<{ file: string; group: string; category: string; ancestry?: string }> };
   aiHandoffValidation?: AIHandoffValidation | null;
   repositoryJudgment?: RepositoryJudgment;
+  repositoryJudgmentReadiness?: RepositoryJudgmentReadiness | null;
   decisionRanking?: { selectionExplanation: string; selectedIssue?: { id: string; title: string; rank: number; priorityScore: number }; candidates: DecisionCandidate[] } | null;
   diff: Record<string, string | string[]>;
   quality: QualitySnapshot | null;
@@ -681,6 +684,24 @@ function evidenceSummary(candidate: RepositoryJudgmentCandidate) {
     : 'No evidence summary available.';
 }
 
+
+function RepositoryJudgmentReadinessCard({ data }: { data: ControlPlane }) {
+  const readiness = data.repositoryJudgmentReadiness;
+  if (!readiness) return null;
+  return (
+    <section className="controlCard repositoryJudgmentReadinessCard" aria-label="Repository Judgment Readiness">
+      <p className="kicker">Repository Judgment Readiness</p>
+      <h2>{readiness.score}/100</h2>
+      <div className="workMetaGrid compact">
+        <div><small>Current readiness score</small><strong>{readiness.score}</strong></div>
+        <div><small>Consecutive shadow wins</small><strong>{readiness.consecutiveShadowWins}</strong></div>
+        <div><small>Promotion status</small><strong>{readiness.promotionStatus}</strong></div>
+      </div>
+      <p>Repository Judgment remains shadow-only until the deterministic promotion gates pass.</p>
+    </section>
+  );
+}
+
 function ShadowRecommendationCard({ data }: { data: ControlPlane }) {
   const shadow = topRepositoryJudgmentCandidate(data);
   if (!shadow) return null;
@@ -910,6 +931,7 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
     <div className="controlPlane compactDashboard">
       <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} />
       <ShadowRecommendationCard data={data} />
+      <RepositoryJudgmentReadinessCard data={data} />
       <WorkflowDiagnosticsDisclosure workflow={workflow} diagnostics={diagnostics} />
 
       <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced</summary>

@@ -89,7 +89,7 @@ High
 
 # Architecture
 
-Last Audit: 2026-06-27T23:08:25.837Z
+Last Audit: 2026-06-28T00:07:33.458Z
 Confidence: 95%
 
 ## Product Thesis
@@ -171,7 +171,7 @@ Current Focus Evidence:
 
 # Backlog
 
-Last Audit: 2026-06-27T23:08:26.131Z
+Last Audit: 2026-06-28T00:07:33.695Z
 Confidence: 95%
 
 ## High Priority
@@ -209,7 +209,7 @@ Confidence: 95%
 # Validation
 
 ## Last Validation
-- 2026-06-27T23:08:39.119Z
+- 2026-06-28T00:07:46.993Z
 
 ## Confidence
 - Medium
@@ -236,28 +236,28 @@ Confidence: 95%
   computing gzip size...
   dist/index.html                   0.39 kB │ gzip:  0.26 kB
   dist/assets/index-o4m7tovk.css   16.49 kB │ gzip:  3.81 kB
-  dist/assets/index-DSaPgd1F.js   263.60 kB │ gzip: 76.37 kB
-  ✓ built in 302ms
+  dist/assets/index-B6IAqu8G.js   267.02 kB │ gzip: 76.96 kB
+  ✓ built in 310ms
 ```
 
 ### npm run test
 - Status: PASS
 - Exit code: 0
-- Duration: 7.8s
+- Duration: 8.2s
 - Output summary:
 ```text
     ---
-    duration_ms: 0.567458
+    duration_ms: 0.541843
     ...
-  1..180
-  # tests 180
+  1..189
+  # tests 189
   # suites 0
-  # pass 180
+  # pass 189
   # fail 0
   # cancelled 0
   # skipped 0
   # todo 0
-  # duration_ms 7282.404287
+  # duration_ms 7704.204593
 ```
 
 ## Xcode Project Validation
@@ -276,8 +276,8 @@ Confidence: 95%
 
 # Repository Health
 
-Last Audit: 2026-06-27T21:13:18.148Z
-Overall Health: Needs Attention
+Last Audit: 2026-06-27T23:08:40.229Z
+Overall Health: Healthy
 Confidence: High
 
 ## Intelligence Completeness
@@ -331,7 +331,7 @@ Confidence: High
 - Evidence lines present
 - Backlog noise not detected
 - Validation commands detected
-- Validation confidence Low
+- Validation confidence Medium
 - Xcode validation metadata not detected
 - Canonical editing target .ai/goals.md
 - Manual sections preserved in canonical goals
@@ -342,7 +342,7 @@ Confidence: High
 - Generated artifacts are regenerated, not manually edited.
 
 ## Risks
-- Validation has low confidence
+- No repository health risks detected.
 
 ## Repository Intelligence Explanation
 ### Evidence Synthesis: Current Product Bet
@@ -361,12 +361,7 @@ Confidence: High
 - Suggested Canonical Wording: Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 - Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
 
-### Finding: Validation has low confidence
-- Rule: Repository health risk detector matched deterministic local evidence.
-- Computed: Risk present
-- Threshold: Risk absent for Healthy state.
-- Result: Needs Attention
-- Evidence: Validation has low confidence
+- No repository health findings require explanation.
 
 ## AI Handoff Validation
 - Overall score: 88/100 (Ready)
@@ -400,7 +395,7 @@ Confidence: High
 - Add recommendation rationale to generated explanations.
 
 ## Recommended Next Step
-Strengthen validation coverage with additional deterministic scripts, then refresh validation and repository health.
+Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
 
 ## Manual Health Notes
 
@@ -413,7 +408,7 @@ Strengthen validation coverage with additional deterministic scripts, then refre
 
 # Decisions
 
-Last Audit: 2026-06-27T23:08:39.262Z
+Last Audit: 2026-06-28T00:07:47.138Z
 Confidence: 95%
 
 ## Active Decisions
@@ -545,7 +540,7 @@ Do not build broad automation before repository understanding is consistently re
 ```markdown
 # Architecture
 
-Last Audit: 2026-06-27T23:08:25.837Z
+Last Audit: 2026-06-28T00:07:33.458Z
 Confidence: 95%
 
 ## Product Thesis
@@ -676,7 +671,7 @@ High
 ```markdown
 # Backlog
 
-Last Audit: 2026-06-27T23:08:26.131Z
+Last Audit: 2026-06-28T00:07:33.695Z
 Confidence: 95%
 
 ## High Priority
@@ -715,7 +710,7 @@ Confidence: 95%
 ```markdown
 # Decisions
 
-Last Audit: 2026-06-27T23:08:39.262Z
+Last Audit: 2026-06-28T00:07:47.138Z
 Confidence: 95%
 
 ## Active Decisions
@@ -795,7 +790,7 @@ Generated decision records should include context, reason, and consequences, and
 # Validation
 
 ## Last Validation
-- 2026-06-27T23:08:39.119Z
+- 2026-06-28T00:07:46.993Z
 
 ## Confidence
 - Medium
@@ -822,28 +817,28 @@ Generated decision records should include context, reason, and consequences, and
   computing gzip size...
   dist/index.html                   0.39 kB │ gzip:  0.26 kB
   dist/assets/index-o4m7tovk.css   16.49 kB │ gzip:  3.81 kB
-  dist/assets/index-DSaPgd1F.js   263.60 kB │ gzip: 76.37 kB
-  ✓ built in 302ms
+  dist/assets/index-B6IAqu8G.js   267.02 kB │ gzip: 76.96 kB
+  ✓ built in 310ms
 ```
 
 ### npm run test
 - Status: PASS
 - Exit code: 0
-- Duration: 7.8s
+- Duration: 8.2s
 - Output summary:
 ```text
     ---
-    duration_ms: 0.567458
+    duration_ms: 0.541843
     ...
-  1..180
-  # tests 180
+  1..189
+  # tests 189
   # suites 0
-  # pass 180
+  # pass 189
   # fail 0
   # cancelled 0
   # skipped 0
   # todo 0
-  # duration_ms 7282.404287
+  # duration_ms 7704.204593
 ```
 
 ## Xcode Project Validation
@@ -892,8 +887,8 @@ Generated decision records should include context, reason, and consequences, and
 ```markdown
 # Repository Health
 
-Last Audit: 2026-06-27T21:13:18.148Z
-Overall Health: Needs Attention
+Last Audit: 2026-06-27T23:08:40.229Z
+Overall Health: Healthy
 Confidence: High
 
 ## Intelligence Completeness
@@ -947,7 +942,7 @@ Confidence: High
 - Evidence lines present
 - Backlog noise not detected
 - Validation commands detected
-- Validation confidence Low
+- Validation confidence Medium
 - Xcode validation metadata not detected
 - Canonical editing target .ai/goals.md
 - Manual sections preserved in canonical goals
@@ -958,7 +953,7 @@ Confidence: High
 - Generated artifacts are regenerated, not manually edited.
 
 ## Risks
-- Validation has low confidence
+- No repository health risks detected.
 
 ## Repository Intelligence Explanation
 ### Evidence Synthesis: Current Product Bet
@@ -977,12 +972,7 @@ Confidence: High
 - Suggested Canonical Wording: Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 - Selection rule: Selected the most frequent exact normalized wording across repository-local sources; ties sort by wording. Confidence is None from 0 independent evidence groups. Generated confirmations do not increase confidence.
 
-### Finding: Validation has low confidence
-- Rule: Repository health risk detector matched deterministic local evidence.
-- Computed: Risk present
-- Threshold: Risk absent for Healthy state.
-- Result: Needs Attention
-- Evidence: Validation has low confidence
+- No repository health findings require explanation.
 
 ## AI Handoff Validation
 - Overall score: 88/100 (Ready)
@@ -1016,7 +1006,7 @@ Confidence: High
 - Add recommendation rationale to generated explanations.
 
 ## Recommended Next Step
-Strengthen validation coverage with additional deterministic scripts, then refresh validation and repository health.
+Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
 
 ## Manual Health Notes
 ```

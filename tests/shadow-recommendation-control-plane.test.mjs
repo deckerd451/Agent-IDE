@@ -22,9 +22,11 @@ async function writeControlPlaneFixture({ withJudgment = true } = {}) {
     'prompts/builder.md': '# Builder\n',
     'prompts/reviewer.md': '# Reviewer\n',
     'prompts/debugger.md': '# Debugger\n',
+    'repository-judgment-evaluation.md': '# Repository Judgment Evaluation\n',
   };
   for (const [file, content] of Object.entries(files)) await writeFile(join(dir, '.ai', file), content);
   if (withJudgment) {
+    await writeFile(join(dir, '.ai', 'repository-judgment-history.json'), JSON.stringify([{ timestamp: '2026-06-28T00:00:00.000Z', productionRecommendation: 'Production Recommendation Title', shadowRecommendation: 'Shadow Recommendation Title', winner: 'Shadow', readinessScore: 80 }], null, 2));
     await writeFile(join(dir, '.ai', 'repository-judgment.json'), JSON.stringify({
       mode: 'shadow',
       generatedAt: '1970-01-01T00:00:00.000Z',
@@ -68,5 +70,9 @@ test('Work Queue renders shadow recommendation comparison and shadow-mode label'
     'Shadow Recommendation:',
     'Use this to evaluate whether Repository Judgment is ready to become the primary recommendation engine.',
     'Repository Judgment raw artifact details',
+    'Repository Judgment Readiness',
+    'Current readiness score',
+    'Consecutive shadow wins',
+    'Promotion status',
   ]) assert.match(source, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });

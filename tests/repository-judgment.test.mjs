@@ -89,3 +89,20 @@ test('repository judgment handles healthy repositories without falling back to v
   assert.match(markdown, /Repository Judgment \(Shadow Mode\)/);
   assert.match(markdown, /Shadow Candidates/);
 });
+
+
+test('repository judgment writes deterministic evaluation and rolling history artifacts', async () => {
+  const dir = await writeFixture();
+  await generateRepositoryJudgment(dir);
+  const evaluation = await readFile(join(dir, '.ai', 'repository-judgment-evaluation.md'), 'utf8');
+  const history = JSON.parse(await readFile(join(dir, '.ai', 'repository-judgment-history.json'), 'utf8'));
+  assert.match(evaluation, /Repository Judgment Evaluation/);
+  assert.match(evaluation, /Production recommendation/);
+  assert.match(evaluation, /Shadow recommendation/);
+  assert.match(evaluation, /Overall Winner/);
+  assert.match(evaluation, /Readiness score: \d+\/100/);
+  assert.match(evaluation, /Shadow wins at least 3 consecutive refreshes/);
+  assert.equal(history.length, 1);
+  assert.ok(['Production', 'Shadow', 'Tie'].includes(history[0].winner));
+  assert.equal(typeof history[0].readinessScore, 'number');
+});
