@@ -1238,3 +1238,144 @@ h1 {
   color: #7f8ca3;
   text-decoration: line-through;
 }
+
+/* Minimal vibecoder surface: one obvious loop, advanced capability behind disclosure. */
+.shell {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.sidebar {
+  padding: 20px 14px;
+}
+
+.mainPanel {
+  padding: 28px clamp(18px, 4vw, 56px);
+}
+
+.topBar {
+  margin-bottom: 18px;
+}
+
+.repositoryCard,
+.sectionIntro,
+.controlPlane,
+.markdownPanel,
+.promptCenter {
+  max-width: 1040px;
+}
+
+.sectionIntro {
+  display: none;
+}
+
+.repositoryCard {
+  padding: 16px 18px;
+}
+
+.repositoryCard p {
+  max-width: 78ch;
+}
+
+.todayWorkCard {
+  grid-template-columns: minmax(0, 1fr) 230px;
+  padding: clamp(22px, 4vw, 42px);
+}
+
+.todayWorkCard h2 {
+  max-width: 13ch;
+}
+
+.heroActions {
+  display: grid;
+  gap: 12px;
+  position: sticky;
+  top: 24px;
+}
+
+.heroActions .primaryCta,
+.heroActions .secondaryCta {
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.simpleLoop {
+  counter-reset: simple-loop;
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 22px 0 0;
+  max-width: 650px;
+  padding: 0;
+}
+
+.simpleLoop li {
+  align-items: center;
+  background: rgba(7, 11, 18, 0.45);
+  border: 1px solid #273246;
+  border-radius: 14px;
+  color: #dce3ee;
+  display: flex;
+  font-weight: 800;
+  gap: 12px;
+  padding: 13px 15px;
+}
+
+.simpleLoop li::before {
+  align-items: center;
+  background: #d7dde8;
+  border-radius: 999px;
+  color: #0b1018;
+  content: counter(simple-loop);
+  counter-increment: simple-loop;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  font-weight: 900;
+  height: 26px;
+  justify-content: center;
+  width: 26px;
+}
+
+.inlineArtifact {
+  margin-top: 18px;
+}
+
+.inlineArtifact summary {
+  color: #aeb8c9;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.inlineArtifact .artifactText {
+  background: #080d14;
+  border: 1px solid #273246;
+  border-radius: 12px;
+  color: #d7dde8;
+  max-height: 260px;
+  overflow: auto;
+  padding: 14px;
+  white-space: pre-wrap;
+}
+
+.advancedIntelligence > summary {
+  font-size: 0.95rem;
+}
+
+.advancedIntelligence:not([open]) {
+  background: transparent;
+  border-color: #273246;
+  box-shadow: none;
+  padding: 14px 16px;
+}
+
+@media (max-width: 900px) {
+  .shell,
+  .todayWorkCard {
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions {
+    position: static;
+  }
+}
