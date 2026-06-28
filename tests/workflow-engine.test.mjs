@@ -142,8 +142,9 @@ test('implementation prompt is visible at both copy-implementation-prompt and op
   assert.match(openCodexStep, /artifactType: 'implementation-prompt'/, 'open-codex must keep implementation-prompt artifact visible');
 });
 
-test('implementation prompt artifact renders builder package content', () => {
+test('implementation prompt artifact renders recommendation implementationPrompt instead of builder package fallback', () => {
   const artifactFn = appSource.match(/function TaskArtifact[\s\S]*?(?=\nfunction )/)?.[0] ?? '';
   assert.match(artifactFn, /artifactType === 'implementation-prompt'/, 'TaskArtifact must handle implementation-prompt');
-  assert.match(artifactFn, /data\.packages\.builder/, 'implementation-prompt must render data.packages.builder');
+  assert.match(artifactFn, /implementationPrompt\(data, documents\)/, 'Preview Prompt must render through the shared implementationPrompt helper');
+  assert.doesNotMatch(artifactFn.replace(/Regression guard:[^\n]+/, ''), /data\.packages\.builder/, 'Preview Prompt body must not use packages.builder as a fallback when recommendation.implementationPrompt is present');
 });
