@@ -526,7 +526,13 @@ async function readControlPlane(repositoryPath) {
     : recommendationDetails(docs);
   const topJudgmentCandidate = Array.isArray(repositoryJudgment?.candidates) ? repositoryJudgment.candidates[0] : null;
   const activeRecommendationSource = repositoryJudgmentReadiness?.promotionStatus === 'Ready for Promotion' && topJudgmentCandidate ? 'Repository Judgment' : 'Legacy';
-  const recommendation = decorateRecommendationForControlPlane(activeRecommendationSource === 'Repository Judgment' ? recommendationFromRepositoryJudgment(topJudgmentCandidate) : legacyRecommendation, decisionRanking, docs['next-improvement-prompt.md']);
+  // Use the recommendation persisted by persistControlPlane when available. This prevents
+  // readControlPlane from recomputing a different recommendation from repositoryJudgment.candidates[0]
+  // after a refresh that selected a different decorated candidate via generateNextImprovement.
+  const persistedRecommendation = parseJsonArtifact(await readFile(join(aiDir, 'active-recommendation.json'), 'utf8').catch(() => ''), null);
+  const recommendation = persistedRecommendation
+    ? { ...persistedRecommendation }
+    : decorateRecommendationForControlPlane(activeRecommendationSource === 'Repository Judgment' ? recommendationFromRepositoryJudgment(topJudgmentCandidate) : legacyRecommendation, decisionRanking, docs['next-improvement-prompt.md']);
   const implementedMatch = outcomeEvidence.entries.slice().reverse().find((entry) => entry.outcome === 'implemented' && entry.promptQuality === 'worked' && (entry.recommendationId === recommendationIdFor(recommendation, decisionRanking) || entry.recommendationTitle === recommendation.title));
   const advancementReason = decisionRanking?.selectedIssue?.advancement?.reason ?? decisionRanking?.advancement?.selected?.reason;
   if (implementedMatch) {
@@ -575,6 +581,9 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   data.quality = qualityResult.snapshot;
   data.qualityHistory = qualityResult.history;
   data.decisionRanking = nextImprovement.decisionRanking;
+  data.recommendation.id = recommendationIdFor(data.recommendation, data.decisionRanking);
+  data.recommendation.promptHash = hashPrompt(data.recommendation.prompt);
+  await writeFile(join(repositoryPath, '.ai', 'active-recommendation.json'), JSON.stringify(data.recommendation, null, 2));
   data.repositoryJudgment = await generateRepositoryJudgment(repositoryPath);
   data.judgmentComparison = await generateJudgmentComparison(repositoryPath).catch(() => null);
   const goalsMarkdown = await readAiText(repositoryPath, 'goals.md');

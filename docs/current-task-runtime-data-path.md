@@ -75,18 +75,28 @@ During refresh (`refreshIntelligence`):
 
 The `implementationPrompt` content is never read from `workflowState`. The persisted state cannot inject a stale prompt body.
 
+## Server-side recommendation persistence (the fix)
+
+`readControlPlane` must not recompute the active recommendation from `repositoryJudgment.candidates[0]` when a persisted decorated recommendation exists.
+
+`persistControlPlane` (called at the end of `POST /api/repository/refresh`) writes the fully-decorated recommendation to `.ai/active-recommendation.json` after `generateNextImprovement()` selects the correct candidate and `data.decisionRanking` is updated. `readControlPlane` reads this file first; if it exists, the persisted recommendation is used as-is and the `repositoryJudgment.candidates[0]` recomputation is skipped. If the file does not exist (first run before any refresh), `readControlPlane` falls back to the prior logic.
+
+This ensures `GET /api/repository/control-plane` returns the same recommendation object that was selected during `POST /api/repository/refresh`, regardless of which candidate ranks first in `repository-judgment.json`.
+
+The outcome-warning check and `id`/`promptHash` fields are still derived at read time so they stay current with `outcomeEvidence` and `decisionRanking`.
+
 ## Stale prompt diagnosis
 
-When Preview Prompt renders stale text after a browser refresh:
+If Preview Prompt renders stale text after a browser refresh:
 
-1. Check `GET /api/repository/control-plane` response body in DevTools — inspect `recommendation.implementationPrompt` directly. If it contains the old text, the bug is in the server `readControlPlane` function, not in client state.
+1. Check `GET /api/repository/control-plane` response body in DevTools — inspect `recommendation.implementationPrompt` directly. If it contains the old text, the bug is on the server.
 
-2. `readControlPlane` computes the recommendation from `repositoryJudgment.candidates[0]` when `activeRecommendationSource === 'Repository Judgment'`. If `decisionRanking.candidates[0].engineeringTask` is absent or `'preserved'`, `implementationPromptForRecommendation` falls back to `recommendation.prompt` (generated from the repository judgment candidate), which may differ from the `nextImprovement` choice written by `persistControlPlane`. This is the identified root cause of the mismatch.
+2. Verify `.ai/active-recommendation.json` exists in the repository's `.ai` directory. If it is missing, `readControlPlane` falls back to `repositoryJudgment.candidates[0]`, which may not match the `generateNextImprovement` selection. Run a full refresh (`POST /api/repository/refresh`) to write the file.
 
-3. Client localStorage cannot cause the wrong prompt body to appear — only the wrong workflow step or a missing artifact type (`'none'`) that hides the prompt entirely.
+3. Client `localStorage` cannot cause the wrong prompt body — only the wrong workflow step or a missing `artifactType: 'none'` that hides the preview entirely.
 
-## Root cause of the mismatch
+## Root cause of the original mismatch (fixed)
 
-`persistControlPlane` (run at the end of `POST /api/repository/refresh`) calls `generateNextImprovement()` which selects a recommendation via `decisionRanking` advancement logic, then regenerates `repository-judgment.json`. The subsequent `GET /api/repository/control-plane` call invokes `readControlPlane`, which reads `repositoryJudgment.candidates[0]` from the just-written file. If `generateRepositoryJudgment` ranks a different candidate at position 0 than what `generateNextImprovement` selected, and if `decisionRanking.candidates[0].engineeringTask` is absent or `'preserved'`, `readControlPlane` returns the old candidate's `implementationPrompt` even though the server logs reported the new selection during refresh.
+`persistControlPlane` called `generateNextImprovement()` which selected "Add backlog quality" via `decisionRanking`, but `readControlPlane` ignored that result and recomputed from `repositoryJudgment.candidates[0]` which still ranked "Advance strategy: Control Plane reports repository handoff readiness as Ready." first. Because `decisionRanking.candidates[0].engineeringTask` was absent, `implementationPromptForRecommendation` returned the raw Repository Judgment prompt containing `## Goal\nAdvance strategy: …` instead of the actionable candidate title.
 
-The client fix is complete: `implementationPrompt()` reads only `data.recommendation.implementationPrompt` and `workflowState` from localStorage cannot override it.
+The fix persists the `generateNextImprovement` selection to `.ai/active-recommendation.json` so `readControlPlane` can return it unchanged.
