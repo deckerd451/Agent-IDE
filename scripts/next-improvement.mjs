@@ -698,7 +698,13 @@ function renderAffectedFiles(selected) {
 
 
 function renderEngineeringTask(task) {
-  if (!task || task.status === 'preserved') return '';
+  if (!task) return '';
+  if (task.status === 'preserved') {
+    const originalTitle = task.originalRecommendation?.title;
+    if (!originalTitle || originalTitle === task.title) return '';
+    return `## Original Repository Judgment Recommendation
+- Title: ${originalTitle}`;
+  }
   return `## Engineering Task Compilation
 - Status: ${task.status}
 - Compiled task title: ${task.title}
