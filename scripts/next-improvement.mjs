@@ -207,6 +207,135 @@ export function expandRecommendationCandidates({ backlog = '', strategy = '', he
   ];
 }
 
+
+function recommendationText(issue = {}) {
+  return [issue.title, issue.evidence, issue.reason, issue.recommendedAction, issue.source, issue.category].filter(Boolean).join(' ');
+}
+
+function isStrategicOrVagueRecommendation(issue = {}) {
+  const text = recommendationText(issue);
+  return /\b(?:advance strategy|strategic observation|repository handoff readiness|handoff readiness is ready|reports .* ready|control plane reports|readiness signal|repository state|ready for promotion|promotion readiness|north star|product bet)\b/i.test(text)
+    || (/\bready\b/i.test(text) && /\b(?:handoff|control plane|repository|promotion)\b/i.test(text) && !/\b(?:add|build|fix|implement|update|expand|extract|surface|wire|test|document|resolve|remove|reduce|create)\b/i.test(issue.title ?? ''));
+}
+
+function hasConcreteEngineeringVerb(issue = {}) {
+  return /\b(?:add|build|fix|implement|update|expand|extract|surface|wire|test|document|resolve|remove|reduce|create|restore|simplify|validate|refactor|move|merge|establish|investigate|improve|remediate|address|complete|rank|filter|select|run)\b/i.test([issue.title, issue.recommendedAction].filter(Boolean).join(' '));
+}
+
+function listEvidence(issue = {}) {
+  return [issue.evidence, issue.reason, issue.source].filter(Boolean).map((text) => String(text).trim()).filter(Boolean);
+}
+
+function engineeringTaskDetails(task) {
+  return {
+    problem: task.rootCause,
+    requirements: [
+      `Implementation target: ${task.implementationTarget}`,
+      `Use likely files or artifact sources: ${task.likelyFiles.join(', ')}.`,
+      'Keep the change deterministic, local-first, and covered by tests.',
+      ...task.nonGoals.map((item) => `Non-goal: ${item}`),
+    ],
+    acceptance: task.acceptanceCriteria,
+  };
+}
+
+export function compileEngineeringTask(selected = {}) {
+  const evidence = listEvidence(selected);
+  const originalRecommendation = {
+    id: selected.id,
+    title: selected.title,
+    evidence: selected.evidence,
+    reason: selected.reason,
+    recommendedAction: selected.recommendedAction,
+    source: selected.source,
+  };
+  const makeTask = (status, fields) => ({ schemaVersion: 1, status, originalRecommendation, ...fields });
+
+  const exemptTypedTask = ['product-decision', 'validation-experiment'].includes(selected.packageType) || ['repository-up-to-date', 'missing-manual-goals', 'strategy-quality', 'ai-handoff-validation'].includes(selected.id);
+  if (exemptTypedTask) {
+    const title = selected.title ?? 'Implement selected recommendation';
+    return makeTask('preserved', {
+      title,
+      rootCause: selected.reason || selected.evidence || 'The selected recommendation is already assigned to a concrete non-implementation workflow.',
+      implementationTarget: selected.recommendedAction || title,
+      likelyFiles: selected.affectedFiles?.length ? selected.affectedFiles : ['repository files cited by Current Evidence'],
+      deterministicEvidence: evidence.length ? evidence : ['Selected recommendation includes typed workflow evidence.'],
+      acceptanceCriteria: selected.details?.acceptance?.length ? selected.details.acceptance : ['The typed recommendation is handled by its existing deterministic workflow.'],
+      nonGoals: ['Do not broaden scope beyond the selected recommendation.', 'Do not change Repository Judgment promotion thresholds.'],
+      clarification: null,
+    });
+  }
+
+  if (!isStrategicOrVagueRecommendation(selected) && hasConcreteEngineeringVerb(selected)) {
+    const title = selected.title ?? 'Implement selected recommendation';
+    return makeTask('preserved', {
+      title,
+      rootCause: selected.reason || selected.evidence || 'The selected recommendation is already concrete and implementation-ready.',
+      implementationTarget: selected.recommendedAction || title,
+      likelyFiles: selected.affectedFiles?.length ? selected.affectedFiles : ['repository files cited by Current Evidence'],
+      deterministicEvidence: evidence.length ? evidence : ['Selected recommendation includes a concrete engineering action.'],
+      acceptanceCriteria: selected.details?.acceptance?.length ? selected.details.acceptance : ['The concrete recommendation is implemented as selected.', 'The selected issue is resolved or downgraded after refresh.'],
+      nonGoals: ['Do not broaden scope beyond the selected recommendation.', 'Do not change Repository Judgment promotion thresholds.'],
+      clarification: null,
+    });
+  }
+
+  if (/\b(?:control plane reports repository handoff readiness as ready|handoff readiness is ready|repository handoff readiness.*ready)\b/i.test(recommendationText(selected))) {
+    return makeTask('compiled', {
+      title: 'Expand deterministic recommendation candidate extraction after handoff readiness is Ready',
+      rootCause: 'Repository handoff readiness is a state signal, not an implementation task; after readiness is Ready, the recommendation system needs deterministic extraction of buildable candidate work instead of passing the readiness observation through.',
+      implementationTarget: 'Add deterministic Engineering Task Compilation or candidate extraction behavior so readiness observations produce concrete implementation tasks or are blocked for clarification.',
+      likelyFiles: ['scripts/next-improvement.mjs', 'scripts/repository-judgment.mjs', 'src/App.tsx', 'tests/next-improvement.test.mjs', 'tests/recommendation-candidate-expansion.test.mjs'],
+      deterministicEvidence: evidence.length ? evidence : ['Selected recommendation reports repository handoff readiness as Ready.'],
+      acceptanceCriteria: ['Readiness observations are not passed directly into implementation prompts.', 'The generated prompt names a concrete engineering objective.', 'Generated artifacts preserve both the original recommendation and compiled engineering task.', 'The Do Next card can display the compiled task title.'],
+      nonGoals: ['Do not change Repository Judgment promotion thresholds.', 'Do not add LLM calls, cloud services, telemetry, or non-local dependencies.', 'Do not rewrite unrelated recommendation ranking rules.'],
+      clarification: null,
+    });
+  }
+
+  if (isStrategicOrVagueRecommendation(selected)) {
+    return makeTask('blocked', {
+      title: 'Recommendation requires task clarification.',
+      rootCause: 'The selected recommendation is a strategic observation, repository state, readiness signal, or vague intent rather than an implementation-ready task.',
+      implementationTarget: 'Clarify the missing repository-local evidence before generating an implementation prompt.',
+      likelyFiles: ['.ai/backlog.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/execution-model.md', '.ai/repository-health.md'],
+      deterministicEvidence: evidence,
+      acceptanceCriteria: ['A concrete implementation target is identified before prompt generation.', 'The prompt remains blocked until deterministic evidence names files, behavior, and acceptance criteria.'],
+      nonGoals: ['Do not generate a vague implementation prompt.', 'Do not infer hidden product intent without repository-local evidence.'],
+      clarification: 'Missing deterministic evidence: an actionable implementation target, likely files to change, root cause, and acceptance criteria tied to repository-local artifacts.',
+    });
+  }
+
+  return makeTask('blocked', {
+    title: 'Recommendation requires task clarification.',
+    rootCause: 'The recommendation does not contain a concrete engineering verb or enough deterministic evidence to derive a safe local task.',
+    implementationTarget: 'Provide repository-local evidence that names the behavior or artifact to change.',
+    likelyFiles: ['.ai/backlog.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/execution-model.md', '.ai/repository-health.md'],
+    deterministicEvidence: evidence,
+    acceptanceCriteria: ['A concrete engineering objective is available before implementation prompt generation.'],
+    nonGoals: ['Do not generate a vague implementation prompt.'],
+    clarification: 'Missing deterministic evidence: concrete action, implementation target, likely files, and acceptance criteria.',
+  });
+}
+
+function issueFromEngineeringTask(selected, engineeringTask) {
+  if (engineeringTask.status === 'preserved') return { ...selected, engineeringTask, originalSelectedRecommendation: engineeringTask.originalRecommendation };
+  return {
+    ...selected,
+    title: engineeringTask.title,
+    evidence: engineeringTask.deterministicEvidence.join(' '),
+    source: engineeringTask.deterministicEvidence[0] ?? selected.source,
+    reason: engineeringTask.rootCause,
+    recommendedAction: engineeringTask.implementationTarget,
+    packageType: engineeringTask.status === 'blocked' ? 'task-clarification' : 'implementation',
+    actionability: engineeringTask.status === 'blocked' ? 'manual' : 'code-fixable',
+    details: engineeringTaskDetails(engineeringTask),
+    affectedFiles: engineeringTask.likelyFiles,
+    engineeringTask,
+    originalSelectedRecommendation: engineeringTask.originalRecommendation,
+  };
+}
+
 function packageTypeForActionability(actionability) {
   if (actionability === 'manual') return 'product-decision';
   if (actionability === 'validation-experiment') return 'validation-experiment';
@@ -283,10 +412,15 @@ export function buildDecisionRanking(issues) {
     priority: issuePriority(issue),
     expectedImprovement: expectedRepositoryImprovement(issue),
   })).sort(compareCandidates).map((issue, index) => ({ ...issue, rank: index + 1, selected: index === 0 }));
-  const selectedIssue = enriched[0];
+  const rankedSelectedIssue = enriched[0];
+  const engineeringTask = rankedSelectedIssue ? compileEngineeringTask(rankedSelectedIssue) : null;
+  const selectedIssue = rankedSelectedIssue && engineeringTask ? issueFromEngineeringTask(rankedSelectedIssue, engineeringTask) : rankedSelectedIssue;
+  if (selectedIssue && enriched[0]) enriched[0] = { ...enriched[0], ...selectedIssue, rank: 1, selected: true };
   return {
     schemaVersion: 1,
     generatedAt: new Date(0).toISOString(),
+    engineeringTask,
+    originalSelectedRecommendation: engineeringTask?.originalRecommendation ?? null,
     scoringRules: [
       'Priority score = issue base priority + severity boost + actionability boost, capped at 100.',
       'Expected improvement is a deterministic repository-local lookup by issue type.',
@@ -296,7 +430,7 @@ export function buildDecisionRanking(issues) {
     candidates: enriched,
     selectedIssue: selectedIssue ? { id: selectedIssue.id, title: selectedIssue.title, rank: selectedIssue.rank, priorityScore: selectedIssue.priorityScore, advancement: selectedIssue.advancement } : null,
     advancement: { suppressedCandidates: enriched.flatMap((issue) => issue.advancementSuppressedCandidates ?? []), selected: selectedIssue?.advancement ?? null },
-    selectionExplanation: selectedIssue ? `${selectedIssue.title} is ranked #1 with priority ${selectedIssue.priorityScore} and total expected improvement +${selectedIssue.expectedImprovement.total}.${selectedIssue.advancement?.reason ? ` Advancement: ${selectedIssue.advancement.reason}` : ''}` : 'No candidate issue generated.',
+    selectionExplanation: selectedIssue ? `${selectedIssue.title} is ranked #1 with priority ${selectedIssue.priorityScore} and total expected improvement +${selectedIssue.expectedImprovement.total}.${engineeringTask?.status === 'compiled' ? ` Engineering task compiled from original recommendation: ${engineeringTask.originalRecommendation.title}.` : ''}${engineeringTask?.status === 'blocked' ? ' Recommendation requires task clarification before implementation.' : ''}${selectedIssue.advancement?.reason ? ` Advancement: ${selectedIssue.advancement.reason}` : ''}` : 'No candidate issue generated.',
   };
 }
 
@@ -562,10 +696,52 @@ function renderAffectedFiles(selected) {
   return `\n## Affected Files\n${selected.affectedFiles.map((f) => `- \`${f}\``).join('\n')}\n`;
 }
 
+
+function renderEngineeringTask(task) {
+  if (!task || task.status === 'preserved') return '';
+  return `## Engineering Task Compilation
+- Status: ${task.status}
+- Original selected recommendation: ${task.originalRecommendation?.title ?? 'Unknown'}
+- Compiled task title: ${task.title}
+- Root cause: ${task.rootCause}
+- Implementation target: ${task.implementationTarget}
+- Likely files or artifact sources:
+${task.likelyFiles.map((item) => `  - ${item}`).join('\n')}
+- Deterministic evidence:
+${(task.deterministicEvidence.length ? task.deterministicEvidence : ['No deterministic evidence available.']).map((item) => `  - ${item}`).join('\n')}
+- Concrete acceptance criteria:
+${task.acceptanceCriteria.map((item) => `  - ${item}`).join('\n')}
+- Explicit non-goals:
+${task.nonGoals.map((item) => `  - ${item}`).join('\n')}
+${task.clarification ? `- Clarification: ${task.clarification}\n` : ''}`;
+}
+
+function renderTaskClarificationPackage(selected, ranking) {
+  const task = selected.engineeringTask;
+  return `# Recommendation requires task clarification.
+
+The selected recommendation was not converted into an implementation prompt because it is not a concrete engineering task.
+
+${renderEngineeringTask(task)}
+
+## Selected Issue
+${renderSelectedIssue(selected)}
+
+${renderDecisionRanking(ranking)}## Missing Evidence
+${task?.clarification ?? 'Missing deterministic evidence for a concrete implementation target.'}
+
+## Required Before Implementation
+- Provide a concrete engineering objective.
+- Identify likely files or artifact sources.
+- Provide deterministic evidence and acceptance criteria.
+- Regenerate the next improvement package after clarification.
+`;
+}
+
 function renderImplementationPackage(selected, details, ranking) {
   const isArchitecturalImprovement = selected.class === 'improvement';
   const traceRef = isArchitecturalImprovement ? '\n\n> Trace: `.ai/recommendation-trace.md` — full reasoning pipeline for this recommendation.' : '';
-  return `# ${selected.title}\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written.\nUse the cited repository evidence to identify the root cause before making changes.\nKeep the implementation narrowly scoped.\nDo not broaden scope beyond the selected issue.\nPreserve deterministic, local-first behavior.\nPreserve manual intelligence sections.\nAvoid unrelated refactoring.\nUse only repository-local evidence.\nDo not make LLM calls, use cloud services, or add telemetry.\nEnsure execution and validation are fully reproducible.${traceRef}\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}## Motivation\nAgent IDE should close the loop from repository intelligence to one safe next builder task. This Implementation Package was generated deterministically from the selected issue above.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n${renderAffectedFiles(selected)}\n## Problem\n${details.problem}\n\n## Goal\n${selected.recommendedAction}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The final diff is small, deterministic, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## Expected Repository Improvement\n- Repository Health should improve.\n- Intelligence Quality should improve.\n- The selected issue should disappear or downgrade.\n- No new contradictions with \`.ai/goals.md\` should be introduced.\n\n## After Implementation\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected issue was resolved.\n- Summarize any newly discovered issues.\n- Generate the next Implementation Package.\n`;
+  return `# ${selected.title}\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written.\nUse the cited repository evidence to identify the root cause before making changes.\nKeep the implementation narrowly scoped.\nDo not broaden scope beyond the selected issue.\nPreserve deterministic, local-first behavior.\nPreserve manual intelligence sections.\nAvoid unrelated refactoring.\nUse only repository-local evidence.\nDo not make LLM calls, use cloud services, or add telemetry.\nEnsure execution and validation are fully reproducible.${traceRef}\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderEngineeringTask(selected.engineeringTask)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}## Motivation\nAgent IDE should close the loop from repository intelligence to one safe next builder task. This Implementation Package was generated deterministically from the selected issue above.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n${renderAffectedFiles(selected)}\n## Problem\n${details.problem}\n\n## Goal\n${selected.recommendedAction}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The final diff is small, deterministic, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## Expected Repository Improvement\n- Repository Health should improve.\n- Intelligence Quality should improve.\n- The selected issue should disappear or downgrade.\n- No new contradictions with \`.ai/goals.md\` should be introduced.\n\n## After Implementation\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected issue was resolved.\n- Summarize any newly discovered issues.\n- Generate the next Implementation Package.\n`;
 }
 
 function renderProductDecisionPackage(selected, details, ranking) {
@@ -583,6 +759,7 @@ export function renderPrompt(choice) {
   selected.packageType ??= packageTypeForActionability(selected.actionability);
   const details = selected.details ?? issueDetails[selected.id] ?? issueDetails[selected.kind] ?? issueDetails['missing-intelligence'];
   const ranking = choice.decisionRanking ?? selected.decisionRanking;
+  if (selected.packageType === 'task-clarification') return renderTaskClarificationPackage(selected, ranking);
   if (selected.packageType === 'product-decision') return renderProductDecisionPackage(selected, details, ranking);
   if (selected.packageType === 'validation-experiment') return renderValidationPackage(selected, details, ranking);
   return renderImplementationPackage(selected, details, ranking);
