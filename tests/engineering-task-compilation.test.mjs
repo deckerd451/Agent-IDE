@@ -88,3 +88,12 @@ test('implementation prompt uses compiled task details', () => {
   assert.match(prompt, /Implementation target: Add deterministic Engineering Task Compilation or candidate extraction behavior/);
   assert.doesNotMatch(prompt, /^# Advance strategy: Control Plane reports repository handoff readiness as Ready\./);
 });
+
+test('Do Next preview and copy paths use shared non-empty implementation prompt helper', async () => {
+  const source = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../src/App.tsx', import.meta.url), 'utf8'));
+  assert.match(source, /function implementationPrompt\(data: ControlPlane, documents: Record<string, DocumentState>\)/);
+  assert.match(source, /<TaskArtifact artifactType=\{userTask\?\.artifactType \?\? 'implementation-prompt'\}/);
+  assert.match(source, /'copy-implementation-prompt': implementationPrompt\(data, documents\)/);
+  assert.match(source, /\['Builder Prompt', implementationPrompt\(data, documents\)\]/);
+  assert.match(source, /Recommendation requires task clarification/);
+});
