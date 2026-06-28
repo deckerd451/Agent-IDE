@@ -84,6 +84,7 @@ export async function generateContextPackage(repositoryPath = process.cwd()) {
     await Promise.all(Object.entries(sourceFiles).map(async ([key, fileName]) => [key, await readAiFile(aiDir, fileName)])),
   );
   const ranking = await readAiJson(aiDir, 'decision-ranking.json');
+  const outcomes = await readAiFile(aiDir, 'outcomes.md');
 
   const content = [
     '# Context Package',
@@ -141,6 +142,9 @@ export async function generateContextPackage(repositoryPath = process.cwd()) {
       firstMatchingSection(docs.health, ['Risks']),
       firstMatchingSection(docs.health, ['Recommended Next Step']),
     ].join('\n\n'),
+    '',
+    '## Outcome Evidence',
+    outcomes,
     '',
     '## Confidence Explanation',
     'Confidence is derived from repository-local canonical, independent, and generated evidence lineage. See Repository Health Evidence Lineage and Intelligence Quality confidence fields for the deterministic calculation.',
