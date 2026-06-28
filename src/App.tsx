@@ -693,9 +693,14 @@ function CompletionPanel({ data, repositoryPath, onSaved, onRefresh }: { data: C
   );
 }
 
+
+function activeRecommendationTask(_data: ControlPlane): DecisionCandidate | null {
+  return null;
+}
+
 function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryAction, onRefresh, onOutcomeSaved }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOutcomeSaved: () => Promise<void> }) {
   const recommendationSource = data.activeRecommendationSource ?? 'Legacy';
-  const task = recommendationSource === 'Repository Judgment' ? null : firstCandidate(data, 1);
+  const task = activeRecommendationTask(data);
   const taskTitle = recommendationDisplayTitle(data, task);
   const resolvedRepositoryName = data.status.repositoryName || repositoryPath?.split(/[\\/]/).filter(Boolean).pop() || 'Connected repository';
   const confidence = data.status.currentConfidence || `${data.quality?.confidence.score ?? 0}%`;
@@ -1489,8 +1494,7 @@ export function App() {
 
   const currentWorkflow = useMemo(() => {
     if (!controlPlane) return null;
-    const task = firstCandidate(controlPlane, 1);
-    return createWorkflow(workflowInputForTask(controlPlane.recommendation, task), workflowState);
+    return createWorkflow(workflowInputForTask(controlPlane.recommendation, null), workflowState);
   }, [controlPlane, workflowState]);
 
   const selected = useMemo(
@@ -1584,7 +1588,6 @@ export function App() {
 
     try {
       const requestPayload = { repositoryPath };
-      console.log('[refresh:diagnostic] request payload:', JSON.stringify(requestPayload, null, 2));
       const response = await fetch(new URL('/api/repository/refresh', serverBaseUrl), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1662,8 +1665,7 @@ export function App() {
           setWorkflowState(null);
           setWorkflowDiagnostics((current) => ({ ...current, controlPlaneUpdated: true, workflowStateCleared: true, finalRecommendationTitle: refreshedTitle ?? '', suppressionApplied, sameRecommendationLoop, loopDiagnostic, refreshCompleted: true }));
         } else {
-          const refreshedTask = firstCandidate(refreshedControlPlane, 1);
-          const refreshedKey = workflowKey(workflowInputForTask(refreshedControlPlane.recommendation, refreshedTask));
+          const refreshedKey = workflowKey(workflowInputForTask(refreshedControlPlane.recommendation, null));
           setWorkflowState((current) => current?.workflowKey === refreshedKey ? current : null);
           setWorkflowDiagnostics((current) => ({ ...current, controlPlaneUpdated: true, finalRecommendationTitle: refreshedTitle ?? '', suppressionApplied, sameRecommendationLoop, loopDiagnostic }));
         }
@@ -1737,7 +1739,7 @@ export function App() {
       setWorkflowDiagnostics((current) => ({ ...current, performWorkflowStepActionRan: true, lastStepActionResult: `Failed: ${message}`, currentLocalStorageValue: window.localStorage.getItem(workflowStateStorageKey) ?? '' }));
       return;
     }
-    const task = firstCandidate(controlPlane, 1);
+    const task = activeRecommendationTask(controlPlane);
     const next = advanceWorkflow(workflowInputForTask(controlPlane.recommendation, task), workflowState);
     setWorkflowDiagnostics((current) => ({ ...current, advanceWorkflowRan: true }));
     try {

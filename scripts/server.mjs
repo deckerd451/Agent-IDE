@@ -743,9 +743,7 @@ async function ensureBaselineFiles(repositoryPath) {
 
 async function handleRefresh(request, response) {
   const { repositoryPath, validationCompletions = [] } = await readJson(request);
-  console.error('[refresh:diagnostic] server received validationCompletions:', JSON.stringify(validationCompletions, null, 2));
   const resolvedPath = await validateRepositoryPath(repositoryPath);
-  console.error('[refresh:diagnostic] resolvedPath:', resolvedPath);
   await mkdir(join(resolvedPath, '.ai'), { recursive: true });
   const previousSnapshot = JSON.parse(await readFile(join(resolvedPath, '.ai', 'intelligence-snapshot.json'), 'utf8').catch(() => 'null'));
 

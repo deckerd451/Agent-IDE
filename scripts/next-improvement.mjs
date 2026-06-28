@@ -550,13 +550,6 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
   const contextHash = stableContextPackageHash(contextPackage);
   const validationWorkflowKey = 'Validation:validation-experiment:Run AI Handoff Validation';
   const validationAlreadyCompleted = validationCompletions.some((record) => completedValidationMatches(record, { repositoryPath, workflowKey: validationWorkflowKey, selectedIssueId: 'ai-handoff-validation', contextPackageHash: contextHash }));
-  console.error('[refresh:diagnostic] suppression check — contextHash:', contextHash, '| validationCompletions count:', validationCompletions.length);
-  console.error('[refresh:diagnostic] completion hashes:', JSON.stringify(validationCompletions.map((r) => ({ repositoryPath: r.repositoryPath, workflowKey: r.workflowKey, selectedIssueId: r.selectedIssueId, contextPackageHash: r.contextPackageHash }))));
-  console.error('[refresh:diagnostic] validationAlreadyCompleted:', validationAlreadyCompleted);
-  if (!validationAlreadyCompleted && validationCompletions.length > 0) {
-    const mismatch = validationCompletions[0];
-    console.error('[refresh:diagnostic] suppression skipped — first record mismatch details:', JSON.stringify({ storedPath: mismatch.repositoryPath, resolvedPath: repositoryPath, pathMatch: mismatch.repositoryPath === repositoryPath, storedKey: mismatch.workflowKey, expectedKey: validationWorkflowKey, keyMatch: mismatch.workflowKey === validationWorkflowKey, storedIssueId: mismatch.selectedIssueId, issueMatch: mismatch.selectedIssueId === 'ai-handoff-validation', storedHash: mismatch.contextPackageHash, computedHash: contextHash, hashMatch: mismatch.contextPackageHash === contextHash }));
-  }
   // Merge: improvements always appear first (enforced by classRank comparator).
   // Maintenance fallback only when there are no improvements and health is stable.
   const includeMaintenanceFallback = issues.length > 0 || analyzerCandidates.length > 0 || improvementCandidates.length === 0;
@@ -565,7 +558,6 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
     : [selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', actionability: 'validation-experiment', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' })]));
   const candidates = applyRecommendationAdvancement([...improvementCandidates, ...maintenanceIssues], outcomeEntries);
   const decisionRanking = buildDecisionRanking(candidates);
-  console.error('[refresh:diagnostic] selected recommendation:', decisionRanking.candidates[0]?.id, '|', decisionRanking.candidates[0]?.title);
   return { selectedIssue: decisionRanking.candidates[0], candidates: decisionRanking.candidates, decisionRanking };
 }
 
