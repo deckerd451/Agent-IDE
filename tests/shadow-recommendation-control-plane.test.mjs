@@ -228,46 +228,55 @@ test('blocked engineering task returns clarification prompt instead of empty imp
   assert.match(controlPlane.recommendation.implementationPrompt, /Missing deterministic evidence/);
 });
 
-test('readControlPlane uses persisted active-recommendation.json over repositoryJudgment.candidates[0] after refresh', async () => {
-  const dir = await writeControlPlaneFixture({ ready: true }); // candidates[0] = 'Shadow Recommendation Title'
-
-  // Simulate persistControlPlane having selected a different, decorated recommendation via generateNextImprovement
-  const rawJudgmentTitle = 'Advance strategy: Control Plane reports repository handoff readiness as Ready.';
-  const backlogTitle = 'Add backlog quality';
-  const backlogPrompt = `# ${backlogTitle}\n\n## Implementation Instructions\nAdd a backlog quality metric.\n\n## Goal\n${backlogTitle}\n\n## Why This Helps\nBacklog quality is actionable.\n\n## Acceptance Criteria\n- Backlog quality metric is added.\n`;
-  const activeRecommendation = {
-    title: backlogTitle,
-    displayTitle: backlogTitle,
-    originalRecommendationTitle: rawJudgmentTitle,
-    displaySummary: 'Backlog quality is actionable.',
-    implementationPrompt: backlogPrompt,
-    prompt: backlogPrompt,
-    packageType: 'implementation',
-    whyItMatters: 'Backlog quality is actionable.',
-    evidenceSource: '.ai/next-improvement-prompt.md',
-    id: 'add-backlog-quality',
-    promptHash: 'abc123def456',
+test('Ready Repository Judgment uses selected actionable candidate for implementationPrompt', async () => {
+  const dir = await writeControlPlaneFixture({ ready: true });
+  const originalTitle = 'Advance strategy: Control Plane reports repository handoff readiness as Ready.';
+  const actionableTitle = 'Repository documentation identifies actionable follow-up work from: Add backlog quality';
+  const engineeringTask = {
+    schemaVersion: 1,
+    status: 'preserved',
+    originalRecommendation: { id: 'readiness', title: originalTitle },
+    title: actionableTitle,
+    rootCause: 'The selected recommendation is already concrete and implementation-ready.',
+    implementationTarget: 'Define the smallest local, deterministic change needed to add backlog quality.',
+    likelyFiles: ['.ai/backlog.md'],
+    deterministicEvidence: ['Repository documentation identifies actionable follow-up work from: Add backlog quality'],
+    acceptanceCriteria: ['The concrete recommendation is implemented as selected.'],
+    nonGoals: ['Do not broaden scope beyond the selected recommendation.'],
+    clarification: null,
   };
-  await writeFile(join(dir, '.ai', 'active-recommendation.json'), JSON.stringify(activeRecommendation, null, 2));
+  await writeFile(join(dir, '.ai', 'decision-ranking.json'), JSON.stringify({
+    schemaVersion: 1,
+    engineeringTask,
+    originalSelectedRecommendation: engineeringTask.originalRecommendation,
+    candidates: [{
+      rank: 1,
+      selected: true,
+      id: 'backlog-add-quality',
+      kind: 'backlog',
+      class: 'improvement',
+      category: 'backlog',
+      severity: 'high',
+      actionability: 'code-fixable',
+      packageType: 'implementation',
+      title: actionableTitle,
+      evidence: 'Repository documentation identifies actionable follow-up work from: Add backlog quality',
+      reason: 'Repository documentation identifies actionable follow-up work from: Add backlog quality',
+      recommendedAction: 'Define the smallest local, deterministic change needed to add backlog quality.',
+      priorityScore: 99,
+      expectedImprovement: { total: 24, repositoryHealth: 6, canonicalCompleteness: 0, quality: 8, verification: 4, handoffReadiness: 6 },
+      engineeringTask,
+    }],
+    selectedIssue: { id: 'backlog-add-quality', title: actionableTitle, rank: 1, priorityScore: 99 },
+    selectionExplanation: 'Actionable backlog candidate selected after Repository Judgment readiness.',
+  }, null, 2));
 
   const controlPlane = await readControlPlane(dir);
-
-  assert.equal(controlPlane.recommendation.title, backlogTitle, 'title must come from active-recommendation.json, not repositoryJudgment.candidates[0]');
-  assert.equal(controlPlane.recommendation.displayTitle, backlogTitle);
-  assert.match(controlPlane.recommendation.implementationPrompt, new RegExp(`^# ${backlogTitle}`), 'implementationPrompt must start with the selected actionable candidate title');
-  assert.doesNotMatch(controlPlane.recommendation.implementationPrompt, /## Goal\nAdvance strategy/, 'implementationPrompt must not contain the raw Repository Judgment goal heading');
-  assert.doesNotMatch(controlPlane.recommendation.implementationPrompt, new RegExp(rawJudgmentTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'raw Repository Judgment title must not appear in implementationPrompt');
-  assert.match(controlPlane.recommendation.implementationPrompt, new RegExp(`## Goal\n${backlogTitle}`), 'implementationPrompt must contain the actionable candidate title in the Goal section');
-  assert.equal(controlPlane.recommendation.prompt, controlPlane.recommendation.implementationPrompt, 'prompt and implementationPrompt must be the same');
-  assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt, 'packages.builder must match implementationPrompt');
-  // Shadow source metadata should still reflect Repository Judgment status
   assert.equal(controlPlane.activeRecommendationSource, 'Repository Judgment');
-});
-
-test('readControlPlane falls back to repositoryJudgment.candidates[0] when active-recommendation.json does not exist', async () => {
-  const dir = await writeControlPlaneFixture({ ready: true }); // no active-recommendation.json written
-  const controlPlane = await readControlPlane(dir);
-  assert.equal(controlPlane.activeRecommendationSource, 'Repository Judgment');
-  assert.equal(controlPlane.recommendation.title, 'Shadow Recommendation Title', 'without persisted recommendation, falls back to repositoryJudgment.candidates[0]');
-  assert.match(controlPlane.recommendation.implementationPrompt, /Selected Repository Judgment Candidate/);
+  assert.equal(controlPlane.recommendation.displayTitle, actionableTitle);
+  assert.match(controlPlane.recommendation.implementationPrompt, new RegExp(`^# ${actionableTitle}`));
+  assert.doesNotMatch(controlPlane.recommendation.implementationPrompt, /^# Advance strategy: Control Plane reports repository handoff readiness as Ready\./);
+  assert.match(controlPlane.recommendation.implementationPrompt, /## Original Repository Judgment Recommendation\n- Title: Advance strategy: Control Plane reports repository handoff readiness as Ready\./);
+  assert.equal(controlPlane.recommendation.prompt, controlPlane.recommendation.implementationPrompt);
+  assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt);
 });

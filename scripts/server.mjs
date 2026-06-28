@@ -463,12 +463,12 @@ function implementationPromptForRecommendation(recommendation, decisionRanking, 
     }
     return promptFromEngineeringTask(engineeringTask);
   }
-  const repositoryJudgmentPrompt = recommendation?.prompt?.trim() && /## Selected Repository Judgment Candidate/.test(recommendation.prompt) ? recommendation.prompt.trim() : '';
-  if (repositoryJudgmentPrompt) return repositoryJudgmentPrompt;
   if (selected) {
     const rendered = renderPrompt({ selectedIssue: selected, decisionRanking });
     if (rendered.trim()) return rendered;
   }
+  const repositoryJudgmentPrompt = recommendation?.prompt?.trim() && /## Selected Repository Judgment Candidate/.test(recommendation.prompt) ? recommendation.prompt.trim() : '';
+  if (repositoryJudgmentPrompt) return repositoryJudgmentPrompt;
   const existing = recommendation?.implementationPrompt?.trim() || fallbackPrompt?.trim();
   if (existing) return existing;
   if (engineeringTask) return promptFromEngineeringTask(engineeringTask);
