@@ -445,9 +445,12 @@ async function readControlPlane(repositoryPath) {
   const topJudgmentCandidate = Array.isArray(repositoryJudgment?.candidates) ? repositoryJudgment.candidates[0] : null;
   const activeRecommendationSource = repositoryJudgmentReadiness?.promotionStatus === 'Ready for Promotion' && topJudgmentCandidate ? 'Repository Judgment' : 'Legacy';
   const recommendation = activeRecommendationSource === 'Repository Judgment' ? recommendationFromRepositoryJudgment(topJudgmentCandidate) : legacyRecommendation;
-  const implementedMatch = outcomeEvidence.entries.slice().reverse().find((entry) => entry.outcome === 'implemented' && (entry.recommendationId === recommendationIdFor(recommendation, decisionRanking) || entry.recommendationTitle === recommendation.title));
+  const implementedMatch = outcomeEvidence.entries.slice().reverse().find((entry) => entry.outcome === 'implemented' && entry.promptQuality === 'worked' && (entry.recommendationId === recommendationIdFor(recommendation, decisionRanking) || entry.recommendationTitle === recommendation.title));
+  const advancementReason = decisionRanking?.selectedIssue?.advancement?.reason ?? decisionRanking?.advancement?.selected?.reason;
   if (implementedMatch) {
-    recommendation.previousOutcomeWarning = 'This recommendation was previously marked implemented. It may be incomplete or the judgment engine did not advance.';
+    recommendation.previousOutcomeWarning = advancementReason?.startsWith('Retained despite implemented outcome because')
+      ? advancementReason
+      : `This recommendation was previously marked implemented with prompt quality "worked without clarification" at ${implementedMatch.timestamp}. ${advancementReason ?? 'Repository Judgment retained it because no alternate advancement decision was recorded.'}`;
   }
   recommendation.id = recommendationIdFor(recommendation, decisionRanking);
   recommendation.promptHash = hashPrompt(recommendation.prompt);
@@ -474,6 +477,9 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
     whyItMatters: nextImprovement.choice.reason,
     evidenceSource: '.ai/next-improvement-prompt.md',
     prompt: nextImprovement.prompt,
+    id: nextImprovement.choice.id,
+    advancementReason: nextImprovement.choice.advancement?.reason,
+    previousOutcomeWarning: nextImprovement.choice.retentionReason,
   };
   data.packages.builder = nextImprovement.prompt;
   await runStep({ id: 'context-package', label: 'Context Package', command: ['node', [join(appRoot, 'scripts/context-package.mjs')]] }, repositoryPath);

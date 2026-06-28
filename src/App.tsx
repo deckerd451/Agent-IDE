@@ -54,6 +54,7 @@ type ControlPlaneRecommendation = {
   id?: string;
   promptHash?: string;
   previousOutcomeWarning?: string;
+  advancementReason?: string;
 };
 
 type VerificationArtifact = { artifact: string; generatedAt: string | null; generatedHash: string | null; displayedHash: string | null; status: 'Verified' | 'Failed'; failures: string[] };
@@ -679,6 +680,7 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
         </div>
         <h2>{taskTitle}</h2>
         {data.recommendation.previousOutcomeWarning && <p className="summary warningCard">{data.recommendation.previousOutcomeWarning}</p>}
+        {!data.recommendation.previousOutcomeWarning && data.recommendation.advancementReason && <p className="summary">{data.recommendation.advancementReason}</p>}
         <p className="recommendationReason">{task?.reason ?? data.recommendation.whyItMatters}</p>
         <ol className="simpleLoop" aria-label="Agent IDE loop">
           <li>Copy the implementation prompt.</li>
