@@ -32,7 +32,7 @@ the domain of qualified patent counsel.
 
 ## Status
 
-`ACTIVE — v1.1 — 2026-06-28`
+`ACTIVE — v1.2 — 2026-06-28`
 
 ---
 
@@ -75,14 +75,24 @@ specification changes. They are consumers, not dependencies.
 |---|---|---|---|
 | 1.0 | 2026-06-28 | Agent IDE Architect | Initial specification |
 | 1.1 | 2026-06-28 | Agent IDE Architect | Architecture remediation: added Layer Position section; fixed dependency table (removed incorrect disclosure.md entry, added REG as Layer 0 dependency); reframed confidence model as IP extension of REG; reframed universal edge types as REG-authoritative with IP-specific notes; added Known Consumers section |
+| 1.2 | 2026-06-28 | Agent IDE Architect | Architecture remediation (pass 2): added authority note to Section 1 (principles are universal REG properties defined in REG Section 1.3); added authority note to Section 4 (lineage structural rules are REG-authoritative); retitled Section 6 from "Repository Evidence Graph" to "Per-Invention Evidence Subgraph" with clarifying note; added REG invariant cross-references to Section 6.4 graph invariants (INV-04, INV-06, INV-07, INV-14); added REG invariant cross-references to Section 9 validation rules (EV-S01→INV-01, EV-S02→INV-03, EV-S03→INV-04, EV-S04→INV-18, EV-S05→INV-19, EV-S06→INV-07, EV-S07→INV-06, EV-Q01→INV-14) |
 
 ---
 
 ## Section 1 — Evidence Principles
 
-Evidence in the Repository IP subsystem is governed by seven principles. Every
-evidence artifact must satisfy all seven. An artifact that fails any principle
-is either ineligible as evidence or requires remediation before it can be used.
+> **Authority note:** The seven principles below are universal REG properties defined
+> authoritatively in `repository-evidence-graph.md` Section 1.3. This section is an
+> IP-specific application — it explains what each universal principle means for an
+> IP evidence artifact specifically, and adds IP-domain implications for tooling and
+> validators. Do not use this section as the authority for the principle definitions
+> when building Layer 0 or Layer 1 tooling; reference REG Section 1.3 instead.
+
+Evidence in the Repository IP subsystem is governed by the seven universal principles
+defined in `repository-evidence-graph.md` Section 1.3. Every evidence artifact must
+satisfy all seven. An artifact that fails any principle is either ineligible as
+evidence or requires remediation before it can be used. The subsections below explain
+how each universal principle applies specifically to IP evidence artifacts.
 
 ---
 
@@ -846,10 +856,20 @@ Section 2.6. The following IP-specific downgrade conditions apply in addition:
 
 ## Section 4 — Evidence Lineage
 
+> **Authority note:** The structural rules that govern the lineage graph — DAG
+> acyclicity, temporal monotonicity, append-only immutability, supersession without
+> deletion — are defined as universal invariants in `repository-evidence-graph.md`
+> Sections 2.7, 4.2, 4.12, 5 (INV-04, INV-06, INV-07, INV-12, INV-13). This section
+> defines how those universal structural rules apply to the IP evidence lifecycle
+> specifically: the four time phases (pre-disclosure, conception, progression,
+> reduction-to-practice), the inventive role taxonomy, and the lineage gap detection
+> requirement. The structural rules are not re-defined here; they are applied here.
+
 Evidence lineage tracks how an invention's evidentiary record evolves from first
-signal through filing. The lineage graph is a directed acyclic graph (DAG) where
-nodes are evidence artifacts and edges represent: temporal succession,
-corroboration, derivation, or supersession.
+signal through filing. The lineage graph is a directed acyclic graph (DAG) —
+whose structural properties are governed by the REG — where nodes are evidence
+artifacts and edges represent: temporal succession, corroboration, derivation,
+or supersession.
 
 ### 4.1 Lineage Model
 
@@ -960,12 +980,23 @@ IP-specific usage guidance. Canonical definitions are in `repository-evidence-gr
 
 ---
 
-## Section 6 — Repository Evidence Graph
+## Section 6 — Per-Invention Evidence Subgraph
 
-The evidence graph is the machine-readable representation of all evidence artifacts
-and their relationships for a single Invention Disclosure. It is stored as a JSON
-document in the invention's directory (`evidence-graph.json`) and is the authoritative
-input for all evidence validators and tooling.
+> **Naming note:** This section was previously titled "Repository Evidence Graph."
+> That title was incorrect — the Repository Evidence Graph (REG) is the universal
+> substrate defined in `repository-evidence-graph.md`. This section defines the
+> IP-scoped, per-invention subgraph that is a view over the REG restricted to one
+> invention's nodes and edges. The `evidence-graph.json` file is not the REG; it
+> is a serialized snapshot of the REG subgraph reachable from one Invention node.
+
+The per-invention evidence subgraph is the machine-readable representation of all
+evidence artifacts and their relationships for a single Invention Disclosure. It is
+stored as a JSON document in the invention's directory (`evidence-graph.json`) and
+is the authoritative input for all evidence validators and tooling.
+
+The structural model (nodes, typed edges, DAG invariants) is the REG model applied
+to the IP domain. The JSON schema in Section 7 is the IP-specific serialization format
+for this subgraph; it does not define the REG itself.
 
 ### 6.1 Graph Structure
 
@@ -1017,16 +1048,21 @@ Example: `"INV-2026-0001:section:4"` for the Inventive Date section.
 
 ### 6.4 Graph Invariants
 
+The following invariants apply to the per-invention evidence subgraph. Invariants 1–4
+are IP-scoped applications of universal REG invariants (cross-references noted);
+invariants 5–6 are IP-specific and have no REG-level equivalent.
+
 Validators must enforce:
 
-1. No cycles. The graph is a DAG.
-2. Every `PRECEDES` edge must have `source.date ≤ target.date`.
-3. Every `DERIVES_FROM` edge must have `source.date ≥ target.date`.
+1. No cycles. The graph is a DAG. *(Universal: REG INV-04)*
+2. Every `PRECEDES` edge must have `source.date ≤ target.date`. *(Universal: REG INV-07)*
+3. Every `DERIVES_FROM` edge must have `source.date ≥ target.date`. *(Universal: REG INV-06)*
 4. Every node with `confidence: UNVERIFIED` must not be used as the sole
-   artifact for any minimum-confidence requirement.
+   artifact for any minimum-confidence requirement. *(Universal: REG INV-14)*
 5. At least one path from an evidence node to each required disclosure section
-   must exist.
+   must exist. *(IP-specific: disclosure coverage requirement)*
 6. No `CONTRADICTS` edges may remain unresolved in a disclosure at REVIEW status.
+   *(IP-specific: Filing Status gate requirement)*
 
 ---
 
@@ -1381,16 +1417,20 @@ this specification. Validators operate on the `evidence-graph.json` file.
 
 ### 9.1 Structural Validation
 
-| Rule ID | Rule | Severity |
-|---|---|---|
-| EV-S01 | Every `evidenceId` is unique within the graph | BLOCKING |
-| EV-S02 | Every relationship target ID resolves to a node in the graph or to a valid disclosure section reference | BLOCKING |
-| EV-S03 | The graph contains no cycles | BLOCKING |
-| EV-S04 | Every artifact passes JSON schema validation (Section 7) | BLOCKING |
-| EV-S05 | Every `commit`-type artifact has a `commitHash` matching the pattern `^[0-9a-f]{40}$` | BLOCKING |
-| EV-S06 | Every `PRECEDES` edge has `source.date ≤ target.date` | BLOCKING |
-| EV-S07 | Every `DERIVES_FROM` edge has `source.date ≥ target.date` | BLOCKING |
-| EV-S08 | No `CONTRADICTS` edge exists without a corresponding resolution note in `evidence.md` | BLOCKING |
+Rules marked with a REG invariant reference are IP-subsystem applications of a universal
+REG invariant. The REG invariant is the authoritative definition; the rule here is the
+IP validator's check that the universal invariant holds for this evidence subgraph.
+
+| Rule ID | Rule | Severity | REG Invariant |
+|---|---|---|---|
+| EV-S01 | Every `evidenceId` is unique within the graph | BLOCKING | INV-01 (unique nodeId) |
+| EV-S02 | Every relationship target ID resolves to a node in the graph or to a valid disclosure section reference | BLOCKING | INV-03 (edge node resolution) |
+| EV-S03 | The graph contains no cycles | BLOCKING | INV-04 (DAG for DERIVES_FROM, DEPENDS_ON) |
+| EV-S04 | Every artifact passes JSON schema validation (Section 7) | BLOCKING | INV-18 (schemaVersion match) |
+| EV-S05 | Every `commit`-type artifact has a `commitHash` matching the pattern `^[0-9a-f]{40}$` | BLOCKING | INV-19 (commit hash format) |
+| EV-S06 | Every `PRECEDES` edge has `source.date ≤ target.date` | BLOCKING | INV-07 (PRECEDES temporal order) |
+| EV-S07 | Every `DERIVES_FROM` edge has `source.date ≥ target.date` | BLOCKING | INV-06 (DERIVES_FROM temporal order) |
+| EV-S08 | No `CONTRADICTS` edge exists without a corresponding resolution note in `evidence.md` | BLOCKING | *(IP-specific: no REG equivalent)* |
 
 ### 9.2 Coverage Validation
 
@@ -1407,12 +1447,12 @@ this specification. Validators operate on the `evidence-graph.json` file.
 
 ### 9.3 Confidence Validation
 
-| Rule ID | Rule | Severity |
-|---|---|---|
-| EV-Q01 | No `UNVERIFIED` artifact is the sole support for any required section | BLOCKING |
-| EV-Q02 | Any `human-declaration` artifact with an empty `corroboratingArtifacts` array is automatically `UNVERIFIED` | BLOCKING |
-| EV-Q03 | Any artifact referenced by mutable path (no `commitHash`) is automatically downgraded one confidence level | WARNING |
-| EV-Q04 | Any artifact with `confidence: LOW` that is the only artifact supporting a section generates a warning | WARNING |
+| Rule ID | Rule | Severity | REG Invariant |
+|---|---|---|---|
+| EV-Q01 | No `UNVERIFIED` artifact is the sole support for any required section | BLOCKING | INV-14 (confidence inheritance) |
+| EV-Q02 | Any `human-declaration` artifact with an empty `corroboratingArtifacts` array is automatically `UNVERIFIED` | BLOCKING | *(IP-specific downgrade rule — see Section 3.2)* |
+| EV-Q03 | Any artifact referenced by mutable path (no `commitHash`) is automatically downgraded one confidence level | WARNING | *(IP-specific downgrade rule — see Section 3.2)* |
+| EV-Q04 | Any artifact with `confidence: LOW` that is the only artifact supporting a section generates a warning | WARNING | *(IP-specific)* |
 
 ### 9.4 Lineage Validation
 
@@ -1521,7 +1561,7 @@ This specification is the foundation for the following planned capabilities:
 
 ## Architecture Review Remediation
 
-*Applied 2026-06-28 per recommendations in `architecture-review-2026-06-28.md`.*
+*Applied 2026-06-28 (pass 1 and pass 2) per recommendations in `architecture-review-2026-06-28.md`.*
 
 **Refactoring 1 — Dependency inversion fix:**
 This document previously appeared in the REG's dependency table (as a document
@@ -1545,6 +1585,29 @@ document (Section 5). Because these edge types connect universal node types,
 they belong in Layer 0. They have been added as canonical edge types 4.11, 4.12,
 and 4.13 in `repository-evidence-graph.md`. Section 5 of this document now
 provides IP-specific usage guidance and references the REG sections for definitions.
+
+**Pass 2 — Additional remediations (v1.2):**
+
+*Section 1 (Evidence Principles):* Added authority note directing readers to REG Section 1.3
+as the authoritative definition of the seven universal principles. Section 1 is now explicitly
+framed as the IP-domain application of those universal principles, not their authority.
+
+*Section 4 (Evidence Lineage):* Added authority note documenting that the structural rules
+governing the lineage DAG (acyclicity, temporal monotonicity, immutability, supersession)
+are universal REG invariants. Section 4 applies those rules to the IP evidence lifecycle.
+
+*Section 6 (retitled):* Renamed from "Repository Evidence Graph" to "Per-Invention Evidence
+Subgraph." The old name was factually incorrect — the REG is defined in repository-evidence-graph.md,
+not here. Added a clarifying note explaining that evidence-graph.json is an IP-scoped serialized
+view of the REG subgraph for one invention.
+
+*Section 6.4 invariants:* Added REG cross-references to invariants 1–4 (INV-04, INV-07,
+INV-06, INV-14). Invariants 5–6 remain IP-specific.
+
+*Section 9 validation rules:* Added REG invariant cross-references to EV-S01 (INV-01),
+EV-S02 (INV-03), EV-S03 (INV-04), EV-S04 (INV-18), EV-S05 (INV-19), EV-S06 (INV-07),
+EV-S07 (INV-06), EV-Q01 (INV-14). Rules without a REG equivalent are annotated as
+IP-specific.
 
 **Circular dependency status after remediation:**
 This document now has a clean one-way dependency on `repository-evidence-graph.md`.

@@ -29,7 +29,7 @@ value those contributions produced.
 
 ## Status
 
-`ACTIVE — v1.1 — 2026-06-28`
+`ACTIVE — v1.2 — 2026-06-28`
 
 ---
 
@@ -37,10 +37,17 @@ value those contributions produced.
 
 | Document | Path | Relationship |
 |---|---|---|
-| Glossary | `../glossary.md` | Canonical term definitions; all node and edge type names are canonical vocabulary |
-| IP README | `../README.md` | IP subsystem context |
+| IP README | `../README.md` | IP subsystem context — for orientation only; the REG does not depend on IP subsystem content |
 
-> **Note (Architecture Remediation 2026-06-28):** `evidence-specification.md` was removed from this
+> **Note (Architecture Remediation 2026-06-28):** Both `evidence-specification.md` and `glossary.md`
+> have been removed from this dependency table. The REG is Layer 0; it cannot depend on Layer 2A
+> documents. `glossary.md` is an IP-subsystem vocabulary document; the REG defines its own canonical
+> node and edge type names independently. Where REG node type names (Invention, Patent Family,
+> Filing) align with glossary terms, that alignment is intentional but the glossary is not a
+> dependency — the REG's definitions are self-contained. `evidence-specification.md` was removed
+> in the previous remediation pass; `glossary.md` is removed in this pass.
+
+> **Note:** `evidence-specification.md` was removed from this
 > dependency table. The REG is Layer 0; it cannot depend on a Layer 2A document.
 > Concepts that originated in evidence-specification.md (confidence model, CORROBORATES,
 > PRECEDES, MOTIVATED_BY edge types) have been moved to this document as universal
@@ -63,6 +70,7 @@ The following documents depend on this specification:
 |---|---|---|---|
 | 1.0 | 2026-06-28 | Agent IDE Architect | Initial specification |
 | 1.1 | 2026-06-28 | Agent IDE Architect | Architecture remediation: removed evidence-specification.md from dependencies; made confidence model self-contained and authoritative (Section 2.6); added self-contained schema versioning policy (Section 2.7); added layer annotations to node types 3.7, 3.8, 3.14–3.19 and edge types 4.8–4.9; added three universal edge types CORROBORATES (4.11), PRECEDES (4.12), MOTIVATED_BY (4.13); added Known Consumers table; added Architecture Review Remediation section |
+| 1.2 | 2026-06-28 | Agent IDE Architect | Architecture remediation (pass 2): removed glossary.md from dependencies (Layer 0 cannot depend on Layer 2A vocabulary); added Section 1.3 Universal Node and Edge Principles (seven universal principles previously defined only in evidence-specification.md Section 1); added layer annotations to all six query patterns in Section 6 (6.1–6.2 as Layer 1A/1B placeholders, 6.3–6.4 and 6.6 as Layer 2A placeholders) |
 
 ---
 
@@ -125,6 +133,66 @@ human-readable record. The graph is the machine-readable index of relationships.
 The REG is not a claim or a legal instrument. It is an engineering record.
 Nodes that represent Inventions or Patent Families are engineering artifacts;
 their legal interpretation is the domain of counsel.
+
+### 1.3 Universal Node and Edge Principles
+
+Every node and edge in the REG must satisfy all seven principles below. These
+are Layer 0 constraints. Subsystem-specific specifications (Layer 1A, 1B, 2A)
+may add domain-specific rules as extensions but may not relax these universal
+principles.
+
+> **Authority note for Layer 2A documents:** `evidence-specification.md` Section 1
+> defines how these seven principles apply specifically to IP evidence artifacts.
+> The authoritative definitions are here; that section is an IP-domain application.
+
+**Repository-First**
+Nodes representing repository artifacts (commits, files, tests, decisions) are
+preferred over nodes representing external claims of the same fact. A node
+sourced from a version-controlled commit carries timestamp provenance from the
+version-control system and requires no additional verification. External nodes
+(publications, filed artifacts, declarations) are acceptable when no repository
+source exists, but must carry explicit provenance (`sourceKind: "external"`) and
+have independently verifiable timestamps.
+
+**Verifiable**
+Every node must have a timestamp verifiable by a party other than the node's
+creator. Version-control commit timestamps, repository push histories on hosted
+platforms, and publication dates from external registries all satisfy this requirement.
+Self-reported dates without external verification must produce `confidence: UNVERIFIED`.
+
+**Immutable**
+Nodes and edges are never deleted or modified after creation. This is enforced
+by graph invariants INV-12 and INV-13. When content changes, a new node version
+is created. The historical sequence is permanently preserved and replayable.
+
+**Traceable**
+Every node must be reachable from the Repository root node through a finite chain
+of typed edges. Isolated nodes — those with no inbound or outbound edges connecting
+them to the broader graph — are a graph invariant violation. Every relationship
+must be declared as an explicit, typed edge; prose-only relationships within node
+payloads are not recognized by query engines or validators.
+
+**Time-Aware**
+The REG maintains three time dimensions for every node (graph time, artifact time,
+effective time — see Section 2.5). All temporal reasoning, lineage ordering, and
+confidence inheritance must use artifact time, not graph time. Temporal edges
+(PRECEDES, DERIVES_FROM) carry temporal constraints that are enforced as invariants
+INV-06 and INV-07.
+
+**Human-Reviewable**
+Every node payload must be readable by a human engineer without specialized tooling.
+Binary artifacts may be referenced by nodes but the node's `label` and payload
+`description` fields must convey the artifact's evidential meaning in plain language.
+Structured fields use standard formats (ISO 8601 dates, SHA commit hashes, relative
+file paths). Abbreviations and domain-specific codes must be defined in the relevant
+subsystem specification.
+
+**AI-Readable**
+Every node payload must be parseable by AI systems operating within Agent IDE
+without requiring human interpretation to extract its meaning. Structured metadata
+fields use the canonical schemas defined in Section 3. Free-text description fields
+use complete sentences. Dates use ISO 8601. IDs use the canonical formats defined
+in Section 2.3. Diagrams referenced from nodes carry a textual `altText` description.
 
 ---
 
@@ -1225,6 +1293,11 @@ the termination condition, and the answer extracted at termination.
 
 ### 6.1 Why is this Recommendation selected?
 
+> **Layer note:** This query pattern references Recommendation (Layer 1A placeholder
+> node type — see Section 3.7). When the Layer 1A Repository Intelligence specification
+> is written, this query pattern should migrate there. It is defined here as a
+> placeholder to demonstrate the universal traversal model.
+
 **Start:** Recommendation node `R`
 
 **Traversal:**
@@ -1246,6 +1319,10 @@ the termination condition, and the answer extracted at termination.
 
 ### 6.2 Why was this Digital Penny minted?
 
+> **Layer note:** This query pattern references Digital Penny (Layer 1B placeholder
+> node type — see Section 3.19). When the Layer 1B Attribution specification is
+> written, this query pattern should migrate there.
+
 **Start:** Digital Penny node `DP`
 
 **Traversal:**
@@ -1264,6 +1341,12 @@ the termination condition, and the answer extracted at termination.
 ---
 
 ### 6.3 Which evidence supports this Invention?
+
+> **Layer note:** This query pattern is Layer 2A (Repository IP). It references
+> Invention and Evidence Artifact (Sections 3.14–3.15, both Layer 2A placeholder
+> node types). When the IP REG Extension specification is written, this query
+> pattern should migrate there. The confidence filters referenced in step 5 are
+> authoritative in `evidence-specification.md` Section 3.3.
 
 **Start:** Invention node `INV`
 
@@ -1288,6 +1371,11 @@ the termination condition, and the answer extracted at termination.
 ---
 
 ### 6.4 Which Patent Family owns this implementation?
+
+> **Layer note:** This query pattern is Layer 2A (Repository IP). It references
+> Invention and Patent Family (Sections 3.15–3.16, both Layer 2A placeholder node
+> types). When the IP REG Extension specification is written, this query pattern
+> should migrate there.
 
 **Start:** Source File node `F` (or Commit node `C`)
 
@@ -1328,6 +1416,13 @@ the termination condition, and the answer extracted at termination.
 ---
 
 ### 6.6 What is the complete traceability chain for this Invention?
+
+> **Layer note:** This query pattern is Layer 2A (Repository IP). Steps 1–3 and 5
+> reference Invention, Evidence Artifact, Recommendation (Layer 2A and 1A placeholder
+> node types). Step 4 (ATTRIBUTED_TO) is Layer 1B. The universal portions of this
+> traversal (backwards DERIVES_FROM from any node to its inputs; forward SUPPORTS
+> to any supporting node) are universal and may be used by any subsystem. The
+> IP-specific result interpretation should migrate to the IP REG Extension specification.
 
 **Start:** Invention node `INV`
 
@@ -1513,7 +1608,7 @@ subgraph.
 
 ## Architecture Review Remediation
 
-*Applied 2026-06-28 per recommendations in `architecture-review-2026-06-28.md`.*
+*Applied 2026-06-28 (pass 1 and pass 2) per recommendations in `architecture-review-2026-06-28.md`.*
 
 **Refactoring 1 — Authority inversion fix (CRITICAL):**
 The original v1.0 of this document referenced `evidence-specification.md` Section 3
@@ -1548,9 +1643,30 @@ payload specification.
 The Section 2.7 reference to `evidence-specification.md` Section 10.3 for schema
 versioning policy has been replaced with a self-contained semver policy statement.
 
+**Pass 2 — Additional remediations (v1.2):**
+
+*Refactoring 5 — glossary.md removed from dependency table:* `glossary.md` (Layer 2A) was
+declared as a REG dependency for "canonical term definitions." This was a Layer 0 → Layer 2A
+dependency violation. The REG now defines its own canonical node and edge type names
+self-containedly. Where REG node type names align with glossary terms, that alignment is
+intentional but the glossary is not a dependency.
+
+*Section 1.3 — Universal Node and Edge Principles added:* The seven evidence principles
+previously defined only in `evidence-specification.md` Section 1 are now declared as
+universal Layer 0 principles in Section 1.3 of this document. `evidence-specification.md`
+Section 1 has been updated to reference Section 1.3 as the authority.
+
+*Section 6 query pattern annotations:* Layer ownership annotations added to all six query
+patterns. Queries 6.1 (Recommendation/Layer 1A) and 6.2 (Digital Penny/Layer 1B) are
+annotated as placeholders. Queries 6.3, 6.4, and 6.6 are annotated as Layer 2A
+(Repository IP), to be migrated to the IP REG Extension specification when that document
+is created.
+
 **Circular dependency status after remediation:**
-- D5 (REG) → D4 (evidence-spec): **ELIMINATED**. REG no longer depends on evidence-spec.
-- D4 (evidence-spec) → D5 (REG): evidence-spec now correctly depends on REG as Layer 0.
+- D5 (REG) → D4 (evidence-spec): **ELIMINATED** (pass 1).
+- D5 (REG) → D2 (glossary): **ELIMINATED** (pass 2).
+- D4 (evidence-spec) → D5 (REG): evidence-spec correctly depends on REG as Layer 0.
+- D4 (evidence-spec) → D2 (glossary): correct — Layer 2A depends on Layer 2A vocabulary.
 - No circular dependencies remain.
 
 ---
