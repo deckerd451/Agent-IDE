@@ -137,6 +137,15 @@ type ControlPlane = {
   evidence: Array<{ file: string; section: string; line: number; evidence: string; confidence: string }>;
   packages: Record<string, string>;
   timeline: Array<{ timestamp: string; repositoryHealth: string; strategyQuality: string; confidence: string; recommendation: string }>;
+  judgmentComparison?: {
+    metrics: { agreementScore: number; recommendationDivergenceScore: number; evidenceOverlap: number };
+    engines: { repositoryJudgment: { recommendation: string }; productJudgment: { recommendation: string } };
+    evidence: { sharedEvidence: string[]; uniqueRepositoryJudgmentEvidence: string[]; uniqueProductJudgmentEvidence: string[] };
+    explanation: { whyEnginesDisagreed: string; recommendationAppearsStronger: string };
+    shadowEvaluation: { winner: string; reason: string; repositoryJudgmentRemainsAuthoritative: boolean; productJudgmentRemainsShadowOnly: boolean };
+    summary: string;
+    markdown?: string;
+  } | null;
   productJudgment?: {
     shadowMode: boolean;
     generatedAt: string;
@@ -1237,6 +1246,40 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
       <details className="controlCard disclosureCard"><summary>Validation</summary><p>Open Validation in the sidebar for deterministic validation guidance.</p></details>
       <details className="controlCard disclosureCard"><summary>Backlog</summary><p>Open Backlog in the sidebar for generated next work.</p></details>
       <details className="controlCard disclosureCard"><summary>Generated Artifacts</summary><p>Open Prompt Center or Context Package in the sidebar for generated artifacts.</p></details>
+
+
+      {data.judgmentComparison && (
+        <section className="controlCard judgmentComparisonCard" aria-label="Judgment Comparison">
+          <p className="kicker">Judgment Comparison</p>
+          <h2>Repository Judgment vs Product Judgment</h2>
+          <div className="workMetaGrid compact">
+            <div><small>Repository Recommendation</small><strong>{data.judgmentComparison.engines.repositoryJudgment.recommendation}</strong></div>
+            <div><small>Product Recommendation</small><strong>{data.judgmentComparison.engines.productJudgment.recommendation}</strong></div>
+            <div><small>Agreement Score</small><strong>{data.judgmentComparison.metrics.agreementScore}/100</strong></div>
+            <div><small>Divergence Score</small><strong>{data.judgmentComparison.metrics.recommendationDivergenceScore}/100</strong></div>
+            <div><small>Recommendation Winner</small><strong>{data.judgmentComparison.shadowEvaluation.winner}</strong></div>
+            <div><small>Repository Judgment Authority</small><strong>{data.judgmentComparison.shadowEvaluation.repositoryJudgmentRemainsAuthoritative ? 'Authoritative' : 'Changed'}</strong></div>
+          </div>
+          <p><b>Comparison Summary:</b> {data.judgmentComparison.summary}</p>
+          <p><b>Reason:</b> {data.judgmentComparison.shadowEvaluation.reason}</p>
+          <p><b>{data.judgmentComparison.engines.repositoryJudgment.recommendation === data.judgmentComparison.engines.productJudgment.recommendation ? 'Agreement' : 'Disagreement'}:</b> {data.judgmentComparison.explanation.whyEnginesDisagreed}</p>
+          <div className="answerGrid">
+            <div><h2>Shared Evidence</h2>{data.judgmentComparison.evidence.sharedEvidence.length ? <ul>{data.judgmentComparison.evidence.sharedEvidence.slice(0, 5).map((item) => <li key={item}>{item}</li>)}</ul> : <p>None.</p>}</div>
+            <div><h2>Unique Repository Judgment Evidence</h2>{data.judgmentComparison.evidence.uniqueRepositoryJudgmentEvidence.length ? <ul>{data.judgmentComparison.evidence.uniqueRepositoryJudgmentEvidence.slice(0, 5).map((item) => <li key={item}>{item}</li>)}</ul> : <p>None.</p>}</div>
+            <div><h2>Unique Product Judgment Evidence</h2>{data.judgmentComparison.evidence.uniqueProductJudgmentEvidence.length ? <ul>{data.judgmentComparison.evidence.uniqueProductJudgmentEvidence.slice(0, 5).map((item) => <li key={item}>{item}</li>)}</ul> : <p>None.</p>}</div>
+          </div>
+        </section>
+      )}
+
+
+
+      {data.judgmentComparison && (
+        <details className="controlCard disclosureCard judgmentComparisonRaw" aria-label="Judgment Comparison Raw">
+          <summary>Judgment Comparison — generated artifacts</summary>
+          <details><summary>judgment-comparison.md</summary><pre>{data.judgmentComparison.markdown ?? 'Markdown artifact not loaded.'}</pre></details>
+          <details><summary>judgment-comparison.json</summary><pre>{JSON.stringify(data.judgmentComparison, null, 2)}</pre></details>
+        </details>
+      )}
 
       {data.productJudgment && (
         <details className="controlCard disclosureCard productJudgmentRaw" aria-label="Product Judgment Shadow Raw">
