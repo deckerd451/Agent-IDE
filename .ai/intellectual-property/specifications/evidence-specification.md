@@ -32,7 +32,21 @@ the domain of qualified patent counsel.
 
 ## Status
 
-`ACTIVE — v1.0 — 2026-06-28`
+`ACTIVE — v1.1 — 2026-06-28`
+
+---
+
+## Layer Position
+
+This document is a **Layer 2A (Repository IP)** specification. It extends the universal
+model defined in the Repository Evidence Graph (REG, Layer 0). Concepts defined in this
+document are IP-specific specializations. Universal concepts — the confidence model,
+the five evidence principles that map to REG node properties, and the canonical edge
+types — are authoritative in the REG and referenced here.
+
+Do not use this document as the authority for confidence levels, edge type semantics, or
+graph invariants when building Layer 0 or Layer 1 tooling. Use `repository-evidence-graph.md`
+for those concepts and reference this document only for IP-specific extensions.
 
 ---
 
@@ -40,9 +54,18 @@ the domain of qualified patent counsel.
 
 | Document | Path | Relationship |
 |---|---|---|
-| Glossary | `../glossary.md` | Canonical definitions for all terms used here |
+| Repository Evidence Graph | `./repository-evidence-graph.md` | Layer 0 substrate; authoritative source for confidence model, universal edge types, and graph invariants. This document extends those definitions with IP-specific rules. |
+| Glossary | `../glossary.md` | Canonical IP terminology used throughout this document |
 | IP README | `../README.md` | Parent subsystem overview and directory structure |
-| Disclosure Template | `../inventions/TEMPLATE/disclosure.md` | Consumer of this specification |
+
+## Known Consumers
+
+The following documents depend on this specification and must be updated if this
+specification changes. They are consumers, not dependencies.
+
+| Consumer | Path | What they consume |
+|---|---|---|
+| Disclosure Template | `../inventions/TEMPLATE/disclosure.md` | Evidence types, evidence.md structure, evidence-graph.json schema, IRL level requirements |
 
 ---
 
@@ -51,6 +74,7 @@ the domain of qualified patent counsel.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 1.0 | 2026-06-28 | Agent IDE Architect | Initial specification |
+| 1.1 | 2026-06-28 | Agent IDE Architect | Architecture remediation: added Layer Position section; fixed dependency table (removed incorrect disclosure.md entry, added REG as Layer 0 dependency); reframed confidence model as IP extension of REG; reframed universal edge types as REG-authoritative with IP-specific notes; added Known Consumers section |
 
 ---
 
@@ -769,23 +793,34 @@ evidence types are capped at `HIGH`.
 
 ## Section 3 — Evidence Confidence
 
+> **Authority note:** The canonical five-level confidence scale is defined in
+> `repository-evidence-graph.md` Section 2.6 (Layer 0). This section extends
+> that definition with IP-specific rules: evidence-type confidence caps and
+> downgrade conditions specific to the IP use case. Do not use this section as
+> the authority for the confidence model when building Layer 0 or Layer 1 tooling.
+
 Confidence is an assessment of how reliably an evidence artifact establishes
 the claim it supports. Confidence is assigned per artifact, not per evidence type,
 though type constrains the maximum achievable confidence.
 
 ### 3.1 Confidence Levels
 
-| Level | Code | Meaning | Maximum Achievable By |
-|---|---|---|---|
-| Definitive | `DEFINITIVE` | Established by an authoritative external institution | Filing Artifact only |
-| High | `HIGH` | Verifiable, repository-native, directly supports the claim | Commit, Source Code, Benchmark, Validation Output, Test, Architecture Document (when dated before inventive date), Human Declaration (when corroborated) |
-| Medium | `MEDIUM` | Verifiable and relevant; indirect or contextual support | Pull Request, Issue, Repository Intelligence Artifact, Design Document, Prototype (TRL-1), Screenshot, Customer Feedback, Publication |
-| Low | `LOW` | Verifiable but weak connection to the specific claim | Any type when connection to claim requires significant interpretation |
-| Unverified | `UNVERIFIED` | Timestamp or provenance cannot be independently confirmed | Human Declaration without corroboration; undated external artifact |
+The five confidence levels are defined in `repository-evidence-graph.md` Section 2.6.
+The table below maps those levels to which evidence types can achieve them within
+the IP subsystem:
 
-### 3.2 Confidence Downgrade Rules
+| Level | Code | Maximum Achievable By (IP-specific cap) |
+|---|---|---|
+| Definitive | `DEFINITIVE` | Filing Artifact only — the only evidence type that achieves this level |
+| High | `HIGH` | Commit, Source Code, Benchmark, Validation Output, Test, Architecture Document (when dated before inventive date), Human Declaration (when corroborated) |
+| Medium | `MEDIUM` | Pull Request, Issue, Repository Intelligence Artifact, Design Document, Prototype (TRL-1), Screenshot, Customer Feedback, Publication |
+| Low | `LOW` | Any type when connection to claim requires significant interpretation |
+| Unverified | `UNVERIFIED` | Human Declaration without corroboration; undated external artifact |
 
-An artifact's confidence must be downgraded if any of the following apply:
+### 3.2 IP-Specific Confidence Downgrade Rules
+
+The universal confidence inheritance and upgrade rules are in `repository-evidence-graph.md`
+Section 2.6. The following IP-specific downgrade conditions apply in addition:
 
 | Condition | Downgrade |
 |---|---|
@@ -885,21 +920,32 @@ flag lineage gaps and request progression artifacts.
 
 ## Section 5 — Evidence Relationships
 
+> **Authority note:** All seven relationship types used in this section are
+> defined as universal edge types in `repository-evidence-graph.md` Sections 4.1–4.13
+> (Layer 0). SUPPORTS (4.1), DERIVES_FROM (4.2), SUPERSEDES (4.10), and CONTRADICTS (4.5)
+> were universal from v1.0. CORROBORATES (4.11), PRECEDES (4.12), and MOTIVATED_BY (4.13)
+> were added in REG v1.1 to resolve the authority inversion identified in the
+> architecture review. This section provides IP-specific usage notes for all seven
+> types; for semantics, validity constraints, and graph invariants, see the REG.
+
 Evidence artifacts relate to each other and to Invention Disclosure elements
 through typed relationships. Every relationship must be declared explicitly;
 implicit relationships are not recognized by validators.
 
 ### 5.1 Relationship Types
 
-| Relationship | Source | Target | Meaning |
-|---|---|---|---|
-| `SUPPORTS` | Evidence artifact | Disclosure section | The artifact provides evidence for the named section |
-| `CORROBORATES` | Evidence artifact | Evidence artifact | The source independently supports the same claim as the target |
-| `DERIVES_FROM` | Evidence artifact | Evidence artifact | The source was produced by running against or processing the target |
-| `SUPERSEDES` | Evidence artifact | Evidence artifact | The source replaces the target as the current best evidence for a claim |
-| `CONTRADICTS` | Evidence artifact | Evidence artifact | The source conflicts with the target; resolution required |
-| `PRECEDES` | Evidence artifact | Evidence artifact | The source predates the target in the inventive timeline |
-| `MOTIVATED_BY` | Evidence artifact | Evidence artifact | The source artifact was created in response to the target (e.g., a benchmark motivated by a design document) |
+The table below shows the seven relationship types used in the IP subsystem with
+IP-specific usage guidance. Canonical definitions are in `repository-evidence-graph.md`.
+
+| Relationship | REG Section | IP-Specific Usage |
+|---|---|---|
+| `SUPPORTS` | 4.1 | The artifact provides evidence for the named disclosure section. `claimLinks` field carries the section reference. |
+| `CORROBORATES` | 4.11 | The source independently supports the same claim as the target artifact. Used to strengthen timeline claims where two artifacts arrive at the same conclusion via independent paths. |
+| `DERIVES_FROM` | 4.2 | The source was produced by running against or processing the target (e.g., a benchmark `DERIVES_FROM` a source file commit). |
+| `SUPERSEDES` | 4.10 | The source replaces the target as the current best evidence for a claim. Original artifact stays in graph; `supersededBy` field is set. |
+| `CONTRADICTS` | 4.5 | The source conflicts with the target. Must be resolved before disclosure advances to `REVIEW` Filing Status. |
+| `PRECEDES` | 4.12 | The source predates the target in the inventive timeline. Used to construct the temporal evidence chain from earliest conception to filing. `source.date ≤ target.date` enforced. |
+| `MOTIVATED_BY` | 4.13 | The source artifact was created in response to the target (e.g., a benchmark motivated by a design document or a prototype motivated by an Issue). |
 
 ### 5.2 Minimum Required Relationships
 
@@ -1470,6 +1516,39 @@ This specification is the foundation for the following planned capabilities:
   they reference an active Invention Disclosure.
 - **Litigation support**: `blockchain-anchor` evidence type and litigation-grade
   export format will be added when that use case is active.
+
+---
+
+## Architecture Review Remediation
+
+*Applied 2026-06-28 per recommendations in `architecture-review-2026-06-28.md`.*
+
+**Refactoring 1 — Dependency inversion fix:**
+This document previously appeared in the REG's dependency table (as a document
+that REG depended on for the confidence model). This was an inversion: a Layer 2A
+document cannot be a dependency of a Layer 0 document. The confidence model now
+lives in `repository-evidence-graph.md` Section 2.6. Section 3 of this document
+has been updated to add an authority note and reframe its confidence content as
+IP-specific extensions (type caps and IP-specific downgrade rules) rather than
+the definition.
+
+**Refactoring 2 — Dependency table fix:**
+`disclosure.md` was incorrectly listed in this document's Dependencies table with
+an annotation "Consumer of this specification." This was an error — a consumer is
+not a dependency. The table has been corrected: `disclosure.md` is now listed in
+the `Known Consumers` table, not the Dependencies table. `repository-evidence-graph.md`
+has been added as the Layer 0 dependency.
+
+**Refactoring 3 — Universal edge types moved to REG:**
+CORROBORATES, PRECEDES, and MOTIVATED_BY were originally defined only in this
+document (Section 5). Because these edge types connect universal node types,
+they belong in Layer 0. They have been added as canonical edge types 4.11, 4.12,
+and 4.13 in `repository-evidence-graph.md`. Section 5 of this document now
+provides IP-specific usage guidance and references the REG sections for definitions.
+
+**Circular dependency status after remediation:**
+This document now has a clean one-way dependency on `repository-evidence-graph.md`.
+No circular dependencies exist.
 
 ---
 

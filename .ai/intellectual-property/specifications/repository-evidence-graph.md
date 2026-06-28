@@ -29,7 +29,7 @@ value those contributions produced.
 
 ## Status
 
-`ACTIVE — v1.0 — 2026-06-28`
+`ACTIVE — v1.1 — 2026-06-28`
 
 ---
 
@@ -38,8 +38,22 @@ value those contributions produced.
 | Document | Path | Relationship |
 |---|---|---|
 | Glossary | `../glossary.md` | Canonical term definitions; all node and edge type names are canonical vocabulary |
-| Evidence Specification | `./evidence-specification.md` | Defines evidence artifact types, confidence levels, and lineage model that are lifted into the REG |
 | IP README | `../README.md` | IP subsystem context |
+
+> **Note (Architecture Remediation 2026-06-28):** `evidence-specification.md` was removed from this
+> dependency table. The REG is Layer 0; it cannot depend on a Layer 2A document.
+> Concepts that originated in evidence-specification.md (confidence model, CORROBORATES,
+> PRECEDES, MOTIVATED_BY edge types) have been moved to this document as universal
+> definitions. `evidence-specification.md` now declares the REG as its dependency.
+
+## Known Consumers
+
+The following documents depend on this specification:
+
+| Consumer | Path | What they consume |
+|---|---|---|
+| Evidence Specification | `./evidence-specification.md` | Confidence model, universal edge types, graph invariants — extended with IP-specific rules |
+| Architecture Review | `./architecture-review-2026-06-28.md` | Dependency graph and refactoring recommendations |
 
 ---
 
@@ -48,6 +62,7 @@ value those contributions produced.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 1.0 | 2026-06-28 | Agent IDE Architect | Initial specification |
+| 1.1 | 2026-06-28 | Agent IDE Architect | Architecture remediation: removed evidence-specification.md from dependencies; made confidence model self-contained and authoritative (Section 2.6); added self-contained schema versioning policy (Section 2.7); added layer annotations to node types 3.7, 3.8, 3.14–3.19 and edge types 4.8–4.9; added three universal edge types CORROBORATES (4.11), PRECEDES (4.12), MOTIVATED_BY (4.13); added Known Consumers table; added Architecture Review Remediation section |
 
 ---
 
@@ -237,23 +252,29 @@ Inventive Date reasoning must be based on artifact time.
 
 ### 2.6 Confidence
 
-Confidence in the REG uses the same five-level scale defined in
-`evidence-specification.md` Section 3, extended to all node and edge types:
+The REG defines the canonical five-level confidence scale. This is the authoritative
+definition; all subsystem-specific documents (including `evidence-specification.md`)
+extend these definitions with domain-specific rules but do not override them.
 
 | Level | Code | Meaning |
 |---|---|---|
-| Definitive | `DEFINITIVE` | Established by an authoritative external institution (patent office, standards body) |
+| Definitive | `DEFINITIVE` | Established by an authoritative external institution (patent office, standards body, public registry) |
 | High | `HIGH` | Verifiable from version-controlled repository artifacts with no interpretive gap |
 | Medium | `MEDIUM` | Verifiable but requires one inferential step or relies on non-repository sources |
 | Low | `LOW` | Present in the graph but connection to claim is interpretive |
 | Unverified | `UNVERIFIED` | Provenance cannot be confirmed independently |
 
-Confidence is inherited downward through derivation chains: a node `DERIVES_FROM`
-a chain of nodes whose minimum confidence is `MEDIUM` cannot itself be `HIGH`
-unless it has independent `HIGH`-confidence support.
+**Confidence inheritance:** A node that `DERIVES_FROM` a chain of nodes whose
+minimum confidence is `MEDIUM` cannot itself be `HIGH` unless it has independent
+`HIGH`-confidence support via a `SUPPORTS` edge from a `HIGH` or `DEFINITIVE` node.
 
-Confidence is never silently upgraded. Upgrades require an explicit new edge
-from a `HIGH` or `DEFINITIVE` source node, with a new provenance record.
+**Confidence upgrades:** Confidence is never silently upgraded. Upgrades require
+an explicit new edge from a `HIGH` or `DEFINITIVE` source node, with a new
+provenance record documenting the basis for the upgrade.
+
+**Domain extensions:** Layer 2A documents may define which evidence types are
+capped at specific confidence levels and additional downgrade rules. Those rules
+are extensions of this model; they may not relax the inheritance constraints above.
 
 ### 2.7 Versioning
 
@@ -267,9 +288,9 @@ Edges always reference the node by `nodeId` without a version pin; they implicit
 reference the current version unless the edge payload specifies `targetVersion`.
 
 **Schema versioning:** The REG schema is versioned independently from its content.
-Schema versions follow the same semver policy defined in `evidence-specification.md`
-Section 10.3. All nodes carry the `schemaVersion` of the REG schema under which
-they were created.
+Schema versions follow semver: patch for non-breaking additions (new optional fields),
+minor for new node or edge types, major for breaking changes to existing semantics.
+All nodes carry the `schemaVersion` of the REG schema under which they were created.
 
 ---
 
@@ -433,6 +454,12 @@ to an inventive solution, and as traceable inputs to Recommendations and Tasks.
 
 ### 3.7 Recommendation
 
+> **Layer note:** This node type is defined here because Recommendation nodes are
+> referenced by universal edge types (DERIVES_FROM, GENERATES, ATTRIBUTED_TO) and
+> by the attribution subsystem. The full payload specification belongs in the Layer 1A
+> (Repository Intelligence) document when that document is created. Until then, this
+> document is the authoritative definition.
+
 **Definition**
 A structured recommendation produced by the Repository Intelligence subsystem
 selecting a specific engineering action as the highest-value next improvement
@@ -464,6 +491,11 @@ event at a specific point in time and is immutable once created.
 ---
 
 ### 3.8 Task
+
+> **Layer note:** Task nodes are universal (used by Repository Intelligence, Agent IDE
+> workflow tracking, and attribution). The `workflowKey` payload field is an Agent IDE
+> Layer 2B concern. When a Layer 1A Repository Intelligence specification is created,
+> the canonical Task payload definition should migrate there.
 
 **Definition**
 A discrete unit of engineering work derived from a Recommendation and assigned
@@ -627,6 +659,14 @@ at a specific scale or under specific conditions.
 
 ### 3.14 Evidence Artifact
 
+> **Layer note:** Evidence Artifact is a Layer 2A (Repository IP) node type defined
+> here because it participates in universal edge types (SUPPORTS, DERIVES_FROM,
+> SUPERSEDES, CORROBORATES, PRECEDES, MOTIVATED_BY) and must be referenceable
+> by non-IP subsystems. The full evidence type taxonomy and metadata schema are
+> authoritative in `evidence-specification.md` Section 2. This node type's presence
+> in the REG enables cross-subsystem lineage queries without requiring Layer 0
+> tooling to depend on Layer 2A documents.
+
 **Definition**
 A node representing a single evidence artifact conforming to the Evidence
 Specification (`evidence-specification.md`). Evidence Artifact nodes are the
@@ -652,6 +692,11 @@ Section 7, plus:
 ---
 
 ### 3.15 Invention
+
+> **Layer note:** Layer 2A (Repository IP) node type. Defined here to enable
+> universal edge participation (SUPPORTS, IMPLEMENTS, BELONGS_TO, CONTRADICTS,
+> GENERATES). Full disclosure structure and IRL requirements are authoritative in
+> `evidence-specification.md` and `inventions/TEMPLATE/disclosure.md`.
 
 **Definition**
 A documented novel technical solution corresponding to an Invention Disclosure
@@ -683,6 +728,10 @@ hub of the IP subgraph; all other IP nodes connect to it.
 
 ### 3.16 Patent Family
 
+> **Layer note:** Layer 2A (Repository IP) node type. Defined here for edge
+> participation. Full claim strategy and continuation planning are authoritative
+> in the IP subsystem documents.
+
 **Definition**
 A group of related Inventions managed together for strategic purposes, as defined
 in glossary.md § Patent Family. The Patent Family node is the coordination point
@@ -708,6 +757,10 @@ for claim strategy, continuation planning, and commercialization analysis.
 ---
 
 ### 3.17 Prior Art
+
+> **Layer note:** Layer 2A (Repository IP) node type. Defined here for CONTRADICTS
+> and DEPENDS_ON edge participation. Prior art analysis methodology is authoritative
+> in the IP subsystem.
 
 **Definition**
 A specific documented prior-art source assigned a REF-ID, as defined in
@@ -736,6 +789,10 @@ before an invention and are used to bound novelty claims.
 
 ### 3.18 Filing
 
+> **Layer note:** Layer 2A (Repository IP) node type. Filing nodes carry
+> `DEFINITIVE` confidence (the only node type that does so by definition). The
+> Filing Status state machine is authoritative in `glossary.md` § Filing Status.
+
 **Definition**
 A patent application, provisional application, or defensive publication event —
 the formal entry of an invention into the patent system or public record.
@@ -763,6 +820,11 @@ and carry `DEFINITIVE` confidence.
 ---
 
 ### 3.19 Digital Penny
+
+> **Layer note:** Layer 1B (Digital Penny Attribution) node type. Defined here
+> because MINTED_FROM and ATTRIBUTED_TO edges connect to universal node types
+> (Commit, Task, Outcome). The full Digital Penny economic model will be specified
+> in a future Layer 1B document.
 
 **Definition**
 A unit of attribution representing a discrete contribution of value to the
@@ -974,6 +1036,10 @@ caused the target to come into being.
 
 ### 4.8 ATTRIBUTED_TO
 
+> **Layer note:** This edge type is defined here because it connects universal
+> node types (Commit, Outcome) to contributor identities. The attribution weighting
+> model belongs in the future Layer 1B Digital Penny specification.
+
 **Semantics:** The source node is attributed to the target identity. Attribution
 records which person, team, or AI agent is credited with producing the source node.
 
@@ -993,6 +1059,10 @@ records which person, team, or AI agent is credited with producing the source no
 ---
 
 ### 4.9 MINTED_FROM
+
+> **Layer note:** Layer 1B (Digital Penny Attribution) edge type. Defined here
+> because target node types (Commit, Task, Outcome, Invention, Recommendation)
+> are universal. Full minting rules belong in the Layer 1B specification.
 
 **Semantics:** The Digital Penny source node was minted because of the target
 node's existence or value contribution. The target is the specific contribution
@@ -1033,6 +1103,80 @@ in the graph as a historical record.
   the time period during which that node was current.
 - Only one node may supersede a given target. If two nodes both claim to supersede
   the same target, a `CONTRADICTS` edge must be raised.
+
+---
+
+### 4.11 CORROBORATES
+
+**Semantics:** The source node independently supports the same claim or conclusion
+as the target node. Unlike `SUPPORTS` (which points to the claim), `CORROBORATES`
+points to another artifact — indicating that two artifacts arrive at the same
+conclusion through independent paths. The relationship strengthens the target's
+evidentiary standing without requiring the source to derive from it.
+
+**Direction:** source → target (source corroborates target)
+
+**Valid source node types:** Evidence Artifact, Benchmark, Validation, Test, Commit
+
+**Valid target node types:** Evidence Artifact, Benchmark, Validation, Invention
+
+**Constraints:**
+- Source and target must support the same claim (same `claimLinks` intersection
+  or same target Invention node) for the edge to be meaningful.
+- A `CORROBORATES` edge does not itself raise the confidence of either node;
+  it enables aggregated confidence assessment at the claim level.
+- `source.artifactDate` and `target.artifactDate` may differ in either direction
+  (corroboration is not temporally ordered).
+- `CORROBORATES` edges must carry a `rationale` explaining what shared claim
+  the two artifacts independently support.
+
+---
+
+### 4.12 PRECEDES
+
+**Semantics:** The source node's artifact time predates the target node's artifact
+time in a meaningful way — specifically, the source was created, committed, or
+effective before the target in the inventive or engineering timeline. This edge
+makes temporal ordering explicit and machine-readable.
+
+**Direction:** source → target (source precedes target in time)
+
+**Valid source node types:** Any node with `payload.artifactDate`
+
+**Valid target node types:** Any node with `payload.artifactDate`
+
+**Constraints:**
+- `source.artifactDate ≤ target.artifactDate` (invariant INV-07). A `PRECEDES`
+  edge that would violate this is rejected.
+- `PRECEDES` is not transitive by default; each link in a temporal chain must be
+  declared explicitly unless a query engine infers transitivity from the chain.
+- Use `PRECEDES` only when the temporal ordering is evidentially significant
+  (e.g., to establish that a conception artifact predates a competing reference).
+  Do not use `PRECEDES` as a general ordering annotation for non-evidential sequences.
+
+---
+
+### 4.13 MOTIVATED_BY
+
+**Semantics:** The source node was created in direct response to, or as a consequence
+of, the target node. The relationship is causal but softer than `DERIVES_FROM`:
+the source does not process the target's data; instead, the target's existence or
+content motivated the decision to create the source.
+
+**Direction:** source → target (source was motivated by target)
+
+**Valid source node types:** Evidence Artifact, Benchmark, Validation, Decision,
+Architecture, Recommendation, Task, Invention
+
+**Valid target node types:** Issue, Decision, Architecture, Goal, Recommendation,
+Evidence Artifact, Invention, Prior Art
+
+**Constraints:**
+- `source.artifactDate ≥ target.artifactDate` (the motivated artifact cannot
+  predate its motivating input).
+- `MOTIVATED_BY` does not imply data derivation. If the source was produced by
+  processing the target's content, use `DERIVES_FROM` instead.
+- A `MOTIVATED_BY` edge must carry a `rationale` explaining the motivation.
 
 ---
 
@@ -1364,6 +1508,50 @@ specific session, the specific inputs the agent consumed, and the specific model
 or system that ran it. The REG is the audit log for autonomous operation. Human
 reviewers can reconstruct every decision an agent made by traversing its session
 subgraph.
+
+---
+
+## Architecture Review Remediation
+
+*Applied 2026-06-28 per recommendations in `architecture-review-2026-06-28.md`.*
+
+**Refactoring 1 — Authority inversion fix (CRITICAL):**
+The original v1.0 of this document referenced `evidence-specification.md` Section 3
+as the authority for the confidence model. This was an authority inversion: the REG
+is Layer 0 and cannot depend on a Layer 2A document. The confidence model is now
+defined self-containedly in Section 2.6 of this document with explicit language
+marking it as the canonical definition. `evidence-specification.md` has been updated
+to reference Section 2.6 of this document as the authoritative source.
+
+**Refactoring 2 — Dependency table corrected:**
+`evidence-specification.md` was removed from the Dependencies table. A `Known Consumers`
+table was added listing evidence-specification.md correctly as a consumer, not a dependency.
+
+**Refactoring 3 — Three universal edge types added:**
+CORROBORATES (4.11), PRECEDES (4.12), and MOTIVATED_BY (4.13) were added as universal
+edge types in this document. These types were previously defined only in evidence-specification.md
+Section 5 (a Layer 2A document). Because they express relationships between universal
+node types (Commit, Benchmark, Validation, Architecture, Decision), they belong in Layer 0.
+`evidence-specification.md` Section 5 has been updated to reference these types as
+defined here and to document IP-specific usage notes.
+
+**Refactoring 4 — Layer annotations added:**
+Layer notes have been added to node types 3.7 (Recommendation), 3.8 (Task),
+3.14 (Evidence Artifact), 3.15 (Invention), 3.16 (Patent Family), 3.17 (Prior Art),
+3.18 (Filing), 3.19 (Digital Penny) and edge types 4.8 (ATTRIBUTED_TO), 4.9 (MINTED_FROM).
+These annotations document the correct architectural layer for each type, explain
+why the definition lives in this Layer 0 document (universal edge participation),
+and identify which future Layer 1A or 1B document should eventually own the full
+payload specification.
+
+**Refactoring 5 — Schema versioning policy made self-contained:**
+The Section 2.7 reference to `evidence-specification.md` Section 10.3 for schema
+versioning policy has been replaced with a self-contained semver policy statement.
+
+**Circular dependency status after remediation:**
+- D5 (REG) → D4 (evidence-spec): **ELIMINATED**. REG no longer depends on evidence-spec.
+- D4 (evidence-spec) → D5 (REG): evidence-spec now correctly depends on REG as Layer 0.
+- No circular dependencies remain.
 
 ---
 
