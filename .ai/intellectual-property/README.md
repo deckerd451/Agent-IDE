@@ -146,7 +146,7 @@ flowchart TD
     E --> F[Capture evidence links]
     F --> G[Schedule prior-art review]
     G --> H[Engineer review and approval]
-    H --> I[Status: DISCLOSED]
+    H --> I[Filing Status: REVIEW]
 ```
 
 ### Evidence Preservation
@@ -162,19 +162,24 @@ flowchart LR
 
 ### Patent Family Lifecycle
 
+States and transitions below use canonical Filing Status values from `glossary.md`.
+See the Filing Status entry for the authoritative state machine, transition evidence requirements, and terminal states.
+
 ```mermaid
 stateDiagram-v2
-    [*] --> RESEARCH : Technical area identified
-    RESEARCH --> DISCLOSED : Invention disclosure created
-    DISCLOSED --> REVIEWED : Engineer + counsel review
-    REVIEWED --> FILED : Application submitted
-    FILED --> PROSECUTION : Office actions in progress
+    [*] --> DRAFT : Invention Disclosure created
+    DRAFT --> REVIEW : Disclosure complete; evidence linked
+    REVIEW --> DRAFT : Human Review — Revise
+    REVIEW --> APPROVED : Human Review — Approve
+    APPROVED --> FILED : Filing decision; application submitted
+    APPROVED --> PUBLISHED : Filing decision — Defensive Publication
+    APPROVED --> ABANDONED : Filing decision — Abandon
+    APPROVED --> TRADE_SECRET : Filing decision — Trade Secret
+    FILED --> PROSECUTION : Office examination begins
     PROSECUTION --> GRANTED : Claims allowed
-    PROSECUTION --> ABANDONED : Strategic decision
-    GRANTED --> MAINTAINED : Annuities paid
-    MAINTAINED --> EXPIRED : Term ended
-    GRANTED --> CONTINUATION : Divisional or continuation filed
-    CONTINUATION --> FILED
+    PROSECUTION --> ABANDONED : Claims rejected or strategic decision
+    GRANTED --> ARCHIVED : Patent term expired
+    GRANTED --> [*] : Spawns CONTINUATION or DIVISIONAL at DRAFT
 ```
 
 ---

@@ -1479,6 +1479,36 @@ Repository Intelligence, Traceability, Engineering Artifact
 
 ---
 
+## Patch Summary
+
+### v1.1 — 2026-06-28
+
+**Added terms**
+
+- **Inventive Date** (Section 2) — Engineering record of first verifiable capture of an inventive concept. Distinguished explicitly from Priority Date and Filing Date. Required field in every Invention Disclosure.
+- **Priority Date** (Section 2) — Legally recognized novelty anchor date established by the filing system. Equals Filing Date for a first filing; may be earlier when claiming priority to a prior application.
+- **Filing Date** (Section 2) — Administrative record of when an application was received by a patent office or publication venue. Always ≥ Inventive Date and ≥ Priority Date.
+
+All three terms include a shared relationship table clarifying the invariant ordering: Inventive Date ≤ Priority Date ≤ Filing Date.
+
+**Modified definitions**
+
+- **Innovation Lifecycle** — Replaced competing lifecycle stage descriptions with a mapping table that translates human-readable stage labels to canonical Filing Status values. The term now functions as a human-readable orientation wrapper; all operational state tracking delegates to Filing Status.
+
+**Lifecycle changes**
+
+- **Filing Status** — Elevated to the sole canonical state machine for all lifecycle tracking. Added Mermaid `stateDiagram-v2` diagram, full valid-transition table with required evidence per transition, and explicit enumeration of terminal states (`GRANTED`, `PUBLISHED`, `ABANDONED`, `TRADE_SECRET`, `ARCHIVED`).
+- **README.md Patent Family Lifecycle diagram** — Updated to use canonical Filing Status state values (`DRAFT`, `REVIEW`, `APPROVED`, `FILED`, `PROSECUTION`, `GRANTED`, `PUBLISHED`, `ABANDONED`, `TRADE_SECRET`, `ARCHIVED`) replacing the prior non-canonical labels (`RESEARCH`, `DISCLOSED`, `REVIEWED`, `MAINTAINED`, `EXPIRED`, `CONTINUATION`). Added reference to glossary Filing Status entry as the authoritative source.
+- **README.md Invention Discovery workflow** — Updated terminal node from `Status: DISCLOSED` (non-canonical) to `Filing Status: REVIEW` (canonical).
+
+**Remaining known architectural debt**
+
+- README.md `## Document Standards` section lists document `Status` field values as `DRAFT | REVIEW | ACTIVE | SUPERSEDED | ARCHIVED`. These are document-level statuses, not Filing Status values, and must not be confused with invention lifecycle states. A future patch should add a `Document Status` term to the glossary and explicitly distinguish it from Filing Status.
+- No Invention Disclosure template exists yet. The glossary pre-defines terms (Inventive Date, IRL levels, Evidence Bundle, etc.) that templates will consume; consistency cannot be fully verified until the first template is authored.
+- Jurisdiction-specific notes (US, EP, PCT) for Priority Date and Filing Date are deferred to a future appendix.
+
+---
+
 ## Consistency Audit
 
 The following checks were performed after v1.1 patch:
@@ -1491,7 +1521,7 @@ The following checks were performed after v1.1 patch:
 | Undefined cross-references: Priority Date | Resolved — term added in v1.1 |
 | Undefined cross-references: Filing Date | Resolved — term added in v1.1 |
 | Circular definitions | None detected |
-| Terms used in README.md without definition | README state diagram uses stage labels (RESEARCH, DISCLOSED, etc.) not Filing Status values — this is a known inconsistency in README.md, logged as remaining architectural debt below; the glossary itself is internally consistent |
+| Terms used in README.md without definition | Resolved — README Patent Family Lifecycle diagram updated to canonical Filing Status values; Invention Discovery workflow terminal node updated to canonical Filing Status: REVIEW |
 | Duplicate concepts | None detected |
 | Terms defined here not yet used elsewhere | Several (by design — pre-defining for future template documents) |
 
