@@ -22,27 +22,27 @@
     "repositoryJudgment": {
       "engine": "Repository Judgment",
       "available": true,
-      "recommendation": "**Add Backlog Quality Filtering**",
-      "category": "product-capability",
+      "recommendation": "Advance strategy: Control Plane reports repository handoff readiness as Ready.",
+      "category": "workflow-simplification",
       "confidence": 67,
       "scores": {
-        "total": 78,
-        "productValue": 99,
-        "repositoryValue": 78,
-        "strategicAlignment": 78,
-        "userImpact": 99,
+        "total": 76,
+        "productValue": 83,
+        "repositoryValue": 76,
+        "strategicAlignment": 76,
+        "userImpact": 83,
         "implementationCost": 50,
-        "leverage": 71
+        "leverage": 85
       },
       "evidence": [
-        ".ai/backlog.md#Backlog: **Add Backlog Quality Filtering**"
+        ".ai/strategy.md#Success Definition: Control Plane reports repository handoff readiness as Ready."
       ],
       "repositoryFilesUsed": [
-        ".ai/backlog.md",
-        ".ai/backlog.md#Backlog"
+        ".ai/strategy.md",
+        ".ai/strategy.md#Success"
       ],
-      "reasoning": "Backlog evidence names focused future work that can create repository value once the shadow judgment engine becomes authoritative.",
-      "expectedProductValue": 99
+      "reasoning": "Strategy evidence identifies repository-local intent that can prioritize future product improvements beyond health remediation.",
+      "expectedProductValue": 83
     },
     "productJudgment": {
       "engine": "Product Judgment",
@@ -80,25 +80,26 @@
       "uniqueProductEvidenceCount": 1
     },
     "recommendationDivergenceScore": 100,
-    "productValueDifference": -4,
-    "repositoryValueDifference": -6,
-    "strategicAlignmentDifference": 14,
-    "userImpactDifference": -9,
+    "productValueDifference": 12,
+    "repositoryValueDifference": -4,
+    "strategicAlignmentDifference": 16,
+    "userImpactDifference": 7,
     "implementationCostDifference": 5,
-    "leverageDifference": 17,
+    "leverageDifference": 3,
     "confidenceDifference": 18
   },
   "evidence": {
     "sharedEvidence": [],
     "sharedRepositoryFiles": [],
     "uniqueRepositoryJudgmentEvidence": [
-      ".ai/backlog.md#Backlog: **Add Backlog Quality Filtering**"
+      ".ai/strategy.md#Success Definition: Control Plane reports repository handoff readiness as Ready."
     ],
     "uniqueProductJudgmentEvidence": [
       "docs/repository-improvement-product-redesign.md — explicit product vision: \"Open Agent IDE → see the next best improvement → generate one prompt → implement → validate → refresh → repeat\""
     ],
     "ignoredEvidence": [
       ".ai/architecture.md",
+      ".ai/backlog.md",
       ".ai/context-package.md",
       ".ai/decisions.md",
       ".ai/execution-model.md",
@@ -109,27 +110,26 @@
       ".ai/repository-health.md",
       ".ai/repository-judgment-evaluation.md",
       ".ai/repository-judgment.json",
-      ".ai/repository-judgment.md",
-      ".ai/strategy.md"
+      ".ai/repository-judgment.md"
     ]
   },
   "explanation": {
-    "whyRepositoryJudgmentSelected": "Backlog evidence names focused future work that can create repository value once the shadow judgment engine becomes authoritative.",
+    "whyRepositoryJudgmentSelected": "Strategy evidence identifies repository-local intent that can prioritize future product improvements beyond health remediation.",
     "whyProductJudgmentSelected": "Transforms Agent IDE from a repository-intelligence browser into a focused improvement operating system. Every user visit answers one question: what is the single highest-impact improvement and what happens next? Addresses the primary user journey end-to-end. All other product opportunities are components or downstream effects of this loop.",
     "mostInfluentialEvidence": [
       "docs/repository-improvement-product-redesign.md — explicit product vision: \"Open Agent IDE → see the next best improvement → generate one prompt → implement → validate → refresh → repeat\"",
-      ".ai/backlog.md#Backlog: **Add Backlog Quality Filtering**"
+      ".ai/strategy.md#Success Definition: Control Plane reports repository handoff readiness as Ready."
     ],
-    "whyEnginesDisagreed": "The engines optimized different deterministic signals: Repository Judgment selected product-capability; Product Judgment selected product-experience.",
+    "whyEnginesDisagreed": "The engines optimized different deterministic signals: Repository Judgment selected workflow-simplification; Product Judgment selected product-experience.",
     "disagreementIndicates": "strategic optimization",
-    "recommendationAppearsStronger": "Repository Judgment"
+    "recommendationAppearsStronger": "Product Judgment"
   },
   "shadowEvaluation": {
-    "repositoryJudgmentCurrentlyAppears": "stronger",
-    "winner": "Repository Judgment",
-    "reason": "Repository Judgment has the stronger deterministic product-value signal (99/100).",
+    "repositoryJudgmentCurrentlyAppears": "weaker",
+    "winner": "Product Judgment",
+    "reason": "Product Judgment has the stronger deterministic product-value signal (95/100).",
     "repositoryJudgmentRemainsAuthoritative": true,
     "productJudgmentRemainsShadowOnly": true
   },
-  "summary": "**Add Backlog Quality Filtering** vs Implement Focused Improvement Loop UX. Agreement 0/100; divergence 100/100. Winner: Repository Judgment."
+  "summary": "Advance strategy: Control Plane reports repository handoff readiness as Ready. vs Implement Focused Improvement Loop UX. Agreement 0/100; divergence 100/100. Winner: Product Judgment."
 }

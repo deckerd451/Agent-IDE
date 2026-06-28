@@ -1,0 +1,14 @@
+[
+  {
+    "timestamp": "2026-06-28T12:17:38.681Z",
+    "repository": "Agent-IDE",
+    "recommendationId": "ai-handoff-validation",
+    "recommendationTitle": "**Add Backlog Quality Filtering**",
+    "promptHash": "806e1a14c7dede1c",
+    "outcome": "implemented",
+    "promptQuality": "worked",
+    "userNote": "",
+    "testsRun": [],
+    "refreshAfterCompletion": true
+  }
+]

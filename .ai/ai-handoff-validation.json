@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-28T03:56:59.294Z",
+  "generatedAt": "2026-06-28T13:23:39.660Z",
   "overallScore": 96,
   "status": "Ready",
   "categories": {
@@ -42,7 +42,7 @@
     "highestPriorityIssue": {
       "label": "Highest-priority issue",
       "status": "Present",
-      "evidence": "Context Package exposes ## Decision Ranking."
+      "evidence": "Context Package exposes ## Highest-Priority Issue."
     },
     "nextImplementationStep": {
       "label": "Next implementation step",

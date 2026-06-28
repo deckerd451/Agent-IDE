@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-06-28T00:07:49.118Z",
-  "overallScore": 92,
+  "timestamp": "2026-06-28T13:23:39.544Z",
+  "overallScore": 91,
   "canonicalIntelligenceQuality": {
     "score": 90,
     "completenessScore": 83,
@@ -214,7 +214,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T00:07:49.119Z",
+            "generatedAt": "2026-06-28T13:23:39.545Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -245,7 +245,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T00:07:49.119Z",
+            "generatedAt": "2026-06-28T13:23:39.545Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -338,7 +338,7 @@
           ],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T00:07:49.120Z",
+            "generatedAt": "2026-06-28T13:23:39.546Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -437,7 +437,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T00:07:49.120Z",
+            "generatedAt": "2026-06-28T13:23:39.546Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -530,7 +530,7 @@
           ],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T00:07:49.121Z",
+            "generatedAt": "2026-06-28T13:23:39.546Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -629,7 +629,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T00:07:49.121Z",
+            "generatedAt": "2026-06-28T13:23:39.546Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -660,7 +660,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T00:07:49.121Z",
+            "generatedAt": "2026-06-28T13:23:39.546Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -691,7 +691,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T00:07:49.121Z",
+            "generatedAt": "2026-06-28T13:23:39.546Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -715,7 +715,7 @@
     },
     "evidenceLineage": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-28T00:07:49.121Z",
+      "generatedAt": "2026-06-28T13:23:39.547Z",
       "categories": {
         "Canonical": [
           {
@@ -1004,7 +1004,7 @@
     "aiHandoffReadinessScore": 96,
     "aiHandoffValidation": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-28T00:07:49.125Z",
+      "generatedAt": "2026-06-28T13:23:39.549Z",
       "overallScore": 96,
       "status": "Ready",
       "categories": {
@@ -1046,7 +1046,7 @@
         "highestPriorityIssue": {
           "label": "Highest-priority issue",
           "status": "Present",
-          "evidence": "Context Package exposes ## Decision Ranking."
+          "evidence": "Context Package exposes ## Highest-Priority Issue."
         },
         "nextImplementationStep": {
           "label": "Next implementation step",
@@ -1116,7 +1116,7 @@
   },
   "freshness": {
     "score": 100,
-    "lastRefresh": "2026-06-28T00:07:49.118Z",
+    "lastRefresh": "2026-06-28T13:23:39.544Z",
     "filesChanged": 0,
     "staleDocuments": [],
     "canonicalStaleDocuments": [],
@@ -1163,10 +1163,12 @@
     "overallRepositoryConfidence": "High"
   },
   "verification": {
-    "score": 95,
+    "score": 90,
     "status": "Failed",
     "failures": [
-      "intelligence-explanations.json: Artifact timestamp is older than refresh start."
+      "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
+      "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
+      "Explanation contradiction: selected recommendation is not referenced by generated package."
     ]
   },
   "drift": {
@@ -1190,7 +1192,7 @@
   "explanations": {
     "aiHandoffValidation": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-28T00:07:49.125Z",
+      "generatedAt": "2026-06-28T13:23:39.549Z",
       "overallScore": 96,
       "status": "Ready",
       "categories": {
@@ -1232,7 +1234,7 @@
         "highestPriorityIssue": {
           "label": "Highest-priority issue",
           "status": "Present",
-          "evidence": "Context Package exposes ## Decision Ranking."
+          "evidence": "Context Package exposes ## Highest-Priority Issue."
         },
         "nextImplementationStep": {
           "label": "Next implementation step",
@@ -1798,7 +1800,7 @@
     "quality": {
       "id": "intelligence-quality",
       "title": "Intelligence Quality Evaluation",
-      "score": 92,
+      "score": 91,
       "components": {
         "canonicalCompleteness": {
           "score": 83,
@@ -1831,7 +1833,7 @@
           ]
         },
         "verification": {
-          "score": 95,
+          "score": 90,
           "rule": "Verification score is the percent of expected artifacts verified.",
           "evidence": ".ai/intelligence-verification.json"
         }
@@ -1844,6 +1846,16 @@
         },
         {
           "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "Explanation contradiction: selected recommendation is not referenced by generated package.",
           "points": 15,
           "evidence": ".ai/intelligence-verification.json"
         }
@@ -1879,6 +1891,6 @@
       "rule": "All consumers must read Manual Goals missing fields from the canonical completeness evaluation and must not render independent missing-field logic."
     }
   },
-  "trend": "Improving",
+  "trend": "Stable",
   "recommendedAction": "Refresh Repository Intelligence: intelligence-explanations.json: Artifact timestamp is older than refresh start."
 }

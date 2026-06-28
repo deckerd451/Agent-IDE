@@ -1,6 +1,6 @@
 # Context Package
 
-Generated: 2026-06-28T00:39:24.094Z
+Generated: 2026-06-28T13:23:39.468Z
 
 ## Product Thesis
 Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
@@ -18,7 +18,7 @@ Evidence: .ai/goals.md
 
 Repository intelligence that turns repository understanding into reusable AI context for developer workflows.
 
-Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md, docs/repository-improvement-product-redesign.md
+Evidence: .ai/goals.md, .ai/architecture.md, .ai/decisions.md, README.md, docs/product-judgment-migration-plan.md, docs/product-judgment-model-rfc.md, docs/repository-improvement-product-redesign.md
 
 The repository is currently focused on making repository understanding the primary surface of Agent IDE.
 
@@ -40,6 +40,8 @@ Strategy Evidence Sources:
 - .ai/architecture.md
 - .ai/decisions.md
 - README.md
+- docs/product-judgment-migration-plan.md
+- docs/product-judgment-model-rfc.md
 - docs/repository-improvement-product-redesign.md
 
 ## Core Systems
@@ -118,21 +120,42 @@ Consequences:
 Generated decision records should include context, reason, and consequences, and should not duplicate backlog items or suggested next steps.
 
 ## Decision Ranking
-Selected Issue: Run AI Handoff Validation
-Selected Issue ID: ai-handoff-validation
-Package Type/Actionability: validation-experiment
-Priority Score: 10
-Expected Improvement: repositoryHealth: 2, canonicalCompleteness: 0, quality: 2, verification: 4, handoffReadiness: 3, total: 11
-Deterministic Selection Explanation: Run AI Handoff Validation is ranked #1 with priority 10 and total expected improvement +11.
+Selected Issue: Repository documentation identifies actionable follow-up work from: Add backlog quality
+Selected Issue ID: backlog-repository-documentation-identifies-actionable-follow-up-work-from-add
+Package Type/Actionability: implementation
+Priority Score: 46
+Expected Improvement: repositoryHealth: 3, canonicalCompleteness: 0, quality: 2, verification: 1, handoffReadiness: 2, total: 8
+Deterministic Selection Explanation: Repository documentation identifies actionable follow-up work from: Add backlog quality is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation.
 
 Ranked Candidates:
-1. Run AI Handoff Validation (ai-handoff-validation)
+1. Repository documentation identifies actionable follow-up work from: Add backlog quality (backlog-repository-documentation-identifies-actionable-follow-up-work-from-add)
   - selected: yes
+  - package type/actionability: implementation
+  - priority score: 46
+  - expected improvement: repositoryHealth: 3, canonicalCompleteness: 0, quality: 2, verification: 1, handoffReadiness: 2, total: 8
+  - reason: Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).
+  - recommended action: Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering
+2. Suggested Next Step: Define the smallest local, deterministic change needed (backlog-suggested-next-step-define-the-smallest-local-deterministic-change-nee)
+  - selected: no
+  - package type/actionability: implementation
+  - priority score: 46
+  - expected improvement: repositoryHealth: 3, canonicalCompleteness: 0, quality: 2, verification: 1, handoffReadiness: 2, total: 8
+  - reason: Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).
+  - recommended action: Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering
+3. No `npm run lint` script was detected; style/static lint coverage (validation-no-script-was-detected-style-static-lint-coverage)
+  - selected: no
   - package type/actionability: validation-experiment
-  - priority score: 10
-  - expected improvement: repositoryHealth: 2, canonicalCompleteness: 0, quality: 2, verification: 4, handoffReadiness: 3, total: 11
-  - reason: When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.
-  - recommended action: Run and document a local AI handoff validation dry run.
+  - priority score: 42
+  - expected improvement: repositoryHealth: 3, canonicalCompleteness: 0, quality: 2, verification: 1, handoffReadiness: 2, total: 8
+  - reason: Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).
+  - recommended action: No `npm run lint` script was detected; style/static lint coverage is unknown
+4. No standalone typecheck script was detected; type validation is covered (validation-no-standalone-typecheck-script-was-detected-type-validation-is-covered)
+  - selected: no
+  - package type/actionability: validation-experiment
+  - priority score: 42
+  - expected improvement: repositoryHealth: 3, canonicalCompleteness: 0, quality: 2, verification: 1, handoffReadiness: 2, total: 8
+  - reason: Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).
+  - recommended action: No standalone typecheck script was detected; type validation is covered only insofar as the build runs it
 
 Selection Rules:
 - Priority score = issue base priority + severity boost + actionability boost, capped at 100.
@@ -148,19 +171,19 @@ Tie Breakers:
 - id asc
 
 ## Highest-Priority Issue
-- ID: ai-handoff-validation
-- Category: AI handoff validation
-- Severity: low
-- Actionability: validation-experiment
-- Package Type: validation-experiment
-- Source: No serious repository intelligence issue detected.
-- Title: Run AI Handoff Validation
-- Evidence: No serious repository intelligence issue detected.
-- Reason: When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.
-- Recommended Action: Run and document a local AI handoff validation dry run.
+- ID: backlog-repository-documentation-identifies-actionable-follow-up-work-from-add
+- Category: .ai/backlog.md candidate expansion
+- Severity: medium
+- Actionability: code-fixable
+- Package Type: implementation
+- Source: .ai/backlog.md Medium Priority
+- Title: Repository documentation identifies actionable follow-up work from: Add backlog quality
+- Evidence: Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering
+- Reason: Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).
+- Recommended Action: Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering
 
 ## Next Implementation Step
-No serious repository intelligence issue is detected, so the safest next step is validating that the generated AI handoff package is usable as-is.
+Repository documentation identifies actionable follow-up work from: Add backlog quality
 
 ## Validation Summary
 - Medium
@@ -227,6 +250,29 @@ No serious repository intelligence issue is detected, so the safest next step is
 - No repository health risks detected.
 
 Keep the intelligence layer current by running Refresh Intelligence after meaningful repository changes.
+
+## Outcome Evidence
+# Outcome Tracking
+
+## Last Outcome
+- Time: 2026-06-28T12:17:38.681Z
+- Recommendation: **Add Backlog Quality Filtering**
+- Outcome: Implemented
+- Prompt quality: Worked without clarification
+- Note: none
+
+## Recent Recommendation Success Rate
+- 100% implemented (1 recent outcome).
+
+## Prompt Quality Trend
+- Most common recent prompt quality: Worked without clarification.
+
+## Failed/Skipped Recommendations
+- None recorded.
+
+## Recommendations Needing Better Prompt Specificity
+- None recorded.
+
 
 ## Confidence Explanation
 Confidence is derived from repository-local canonical, independent, and generated evidence lineage. See Repository Health Evidence Lineage and Intelligence Quality confidence fields for the deterministic calculation.

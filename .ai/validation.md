@@ -1,7 +1,7 @@
 # Validation
 
 ## Last Validation
-- 2026-06-28T00:39:22.642Z
+- 2026-06-28T13:23:32.936Z
 
 ## Confidence
 - Medium
@@ -16,10 +16,9 @@
 ### npm run build
 - Status: PASS
 - Exit code: 0
-- Duration: 5.1s
+- Duration: 3.6s
 - Output summary:
 ```text
-  npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
   > agent-ide@0.1.0 build
   > tsc -b && vite build
   vite v8.1.0 building client environment for production...
@@ -27,29 +26,29 @@
   rendering chunks...
   computing gzip size...
   dist/index.html                   0.39 kB │ gzip:  0.26 kB
-  dist/assets/index-o4m7tovk.css   16.49 kB │ gzip:  3.81 kB
-  dist/assets/index-B6IAqu8G.js   267.02 kB │ gzip: 76.96 kB
-  ✓ built in 310ms
+  dist/assets/index-C0PW3cF5.css   18.49 kB │ gzip:  4.22 kB
+  dist/assets/index-CvoHqGR-.js   280.46 kB │ gzip: 79.36 kB
+  ✓ built in 152ms
 ```
 
 ### npm run test
 - Status: PASS
 - Exit code: 0
-- Duration: 8.0s
+- Duration: 5.0s
 - Output summary:
 ```text
-    ---
-    duration_ms: 0.471788
-    ...
-  1..189
-  # tests 189
-  # suites 0
-  # pass 189
-  # fail 0
-  # cancelled 0
-  # skipped 0
-  # todo 0
-  # duration_ms 7541.845241
+  ✔ auto-refresh triggers when workflow advances to refresh-repository state (0.648329ms)
+  ✔ implementation workflow first step is copy-implementation-prompt (0.687383ms)
+  ✔ implementation prompt is visible at both copy-implementation-prompt and open-codex steps (0.613147ms)
+  ✔ implementation prompt artifact renders builder package content (0.288117ms)
+  ℹ tests 230
+  ℹ suites 0
+  ℹ pass 230
+  ℹ fail 0
+  ℹ cancelled 0
+  ℹ skipped 0
+  ℹ todo 0
+  ℹ duration_ms 4081.420373
 ```
 
 ## Xcode Project Validation
