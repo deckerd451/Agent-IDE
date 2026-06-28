@@ -92,6 +92,7 @@ re-select.
 | Consumer | Path | What they consume |
 |---|---|---|
 | Evidence Specification | `./evidence-specification.md` | `repository-intelligence-artifact` evidence type (Section 2.6) — RI Signals and Recommendations used as IP evidence |
+| Responsibility Matrix | `./responsibility-matrix.md` | All Layer 1A concept definitions — referenced for canonical ownership records |
 | Agent IDE (Layer 2B) | *(future specification)* | Recommendation `implementationPrompt`, `workflowKey` derivation, Task lifecycle |
 | Attribution (Layer 1B) | *(future specification)* | Task completion → Commit chain → ATTRIBUTED_TO → Digital Penny |
 
