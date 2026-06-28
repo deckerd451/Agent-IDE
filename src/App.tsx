@@ -579,7 +579,11 @@ function UpToDateCard({ repositoryName, confidence, recommendationSource }: { re
 
 function implementationPrompt(data: ControlPlane, documents: Record<string, DocumentState>) {
   const prompt = data.recommendation.implementationPrompt || data.packages.builder || documents['prompts/builder.md']?.content || data.recommendation.prompt;
-  if (prompt?.trim()) return prompt;
+  if (prompt?.trim()) {
+    const displayTitle = recommendationDisplayTitle(data);
+    if (displayTitle && data.recommendation.displayTitle && /^#\s+.+/m.test(prompt)) return prompt.replace(/^#\s+.+/m, `# ${displayTitle}`);
+    return prompt;
+  }
   if (data.recommendation.engineeringTask) return data.recommendation.engineeringTask.status === 'blocked' ? 'Recommendation requires task clarification' : `# ${data.recommendation.engineeringTask.title}
 
 Implementation target: ${data.recommendation.engineeringTask.implementationTarget ?? data.recommendation.displaySummary ?? data.recommendation.whyItMatters}`;

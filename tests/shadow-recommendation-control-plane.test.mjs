@@ -139,6 +139,60 @@ test('compiled engineering task appears in Control Plane response with implement
   assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt);
 });
 
+test('decorated Control Plane recommendation is the single source for card preview copy and open prompts', async () => {
+  const dir = await writeControlPlaneFixture({ withJudgment: false });
+  const originalTitle = 'Advance strategy: Control Plane reports repository handoff readiness as Ready.';
+  const actionableTitle = 'Expand deterministic recommendation candidate extraction after handoff readiness is Ready';
+  const engineeringTask = {
+    schemaVersion: 1,
+    status: 'compiled',
+    originalRecommendation: { id: 'readiness', title: originalTitle },
+    title: actionableTitle,
+    rootCause: 'Repository handoff readiness is a state signal, not an implementation task.',
+    implementationTarget: 'Add deterministic Engineering Task Compilation behavior.',
+    likelyFiles: ['scripts/next-improvement.mjs', 'src/App.tsx'],
+    deterministicEvidence: ['Control Plane reports repository handoff readiness as Ready.'],
+    acceptanceCriteria: ['The Do Next card, preview prompt, copy prompt, and open prompt use the actionable title.'],
+    nonGoals: ['Do not change Repository Judgment promotion thresholds.'],
+    clarification: null,
+  };
+  await writeFile(join(dir, '.ai', 'next-improvement-prompt.md'), `# ${originalTitle}\n\n## Goal\n${originalTitle}\n`);
+  await writeFile(join(dir, '.ai', 'decision-ranking.json'), JSON.stringify({
+    schemaVersion: 1,
+    engineeringTask,
+    originalSelectedRecommendation: engineeringTask.originalRecommendation,
+    candidates: [{
+      rank: 1,
+      selected: true,
+      id: 'readiness',
+      kind: 'readiness',
+      class: 'improvement',
+      category: 'automation',
+      severity: 'medium',
+      actionability: 'code-fixable',
+      packageType: 'implementation',
+      title: originalTitle,
+      evidence: engineeringTask.deterministicEvidence[0],
+      reason: 'Repository Judgment selected a readiness signal.',
+      recommendedAction: 'Advance strategy.',
+      priorityScore: 98,
+      expectedImprovement: { total: 1, repositoryHealth: 0, canonicalCompleteness: 0, quality: 1, verification: 0, handoffReadiness: 0 },
+      engineeringTask,
+    }],
+    selectedIssue: { id: 'readiness', title: originalTitle, rank: 1, priorityScore: 98 },
+    selectionExplanation: 'Compiled task selected from a vague readiness recommendation.',
+  }, null, 2));
+
+  const controlPlane = await readControlPlane(dir);
+  assert.equal(controlPlane.recommendation.displayTitle, actionableTitle);
+  assert.equal(controlPlane.recommendation.engineeringTask.title, actionableTitle);
+  assert.equal(controlPlane.recommendation.originalRecommendationTitle, originalTitle);
+  assert.match(controlPlane.recommendation.implementationPrompt, new RegExp(`^# ${actionableTitle}`));
+  assert.doesNotMatch(controlPlane.recommendation.implementationPrompt, new RegExp(`^# ${originalTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  assert.equal(controlPlane.recommendation.prompt, controlPlane.recommendation.implementationPrompt);
+  assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt);
+});
+
 test('blocked engineering task returns clarification prompt instead of empty implementation prompt', async () => {
   const dir = await writeControlPlaneFixture({ withJudgment: false });
   const engineeringTask = {
