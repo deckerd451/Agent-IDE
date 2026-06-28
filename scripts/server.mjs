@@ -423,7 +423,6 @@ function promptFromEngineeringTask(engineeringTask, fallbackTitle = 'Recommendat
     '',
     '## Engineering Task Compilation',
     `- Status: ${engineeringTask.status}`,
-    `- Original selected recommendation: ${engineeringTask.originalRecommendation?.title ?? 'Unknown'}`,
     `- Root cause: ${engineeringTask.rootCause ?? 'Not specified.'}`,
     `- Implementation target: ${engineeringTask.implementationTarget ?? 'Not specified.'}`,
     '- Likely files or artifact sources:',
@@ -432,6 +431,9 @@ function promptFromEngineeringTask(engineeringTask, fallbackTitle = 'Recommendat
     ...(engineeringTask.deterministicEvidence?.length ? engineeringTask.deterministicEvidence : ['No deterministic evidence available.']).map((item) => `  - ${item}`),
     '- Acceptance criteria:',
     ...(engineeringTask.acceptanceCriteria?.length ? engineeringTask.acceptanceCriteria : ['A concrete implementation target is available before implementation.']).map((item) => `  - ${item}`),
+    '',
+    '## Original Repository Judgment Recommendation',
+    `- Title: ${engineeringTask.originalRecommendation?.title ?? 'Unknown'}`,
   ];
   if (engineeringTask.clarification) lines.push('', '## Missing Evidence', engineeringTask.clarification);
   return lines.filter((line, index, arr) => line || arr[index - 1] !== '').join('\n');
@@ -447,11 +449,16 @@ function implementationPromptForRecommendation(recommendation, decisionRanking, 
         title: engineeringTask.title ?? selected.title,
         reason: engineeringTask.rootCause ?? selected.reason,
         recommendedAction: engineeringTask.implementationTarget ?? selected.recommendedAction,
-        evidence: engineeringTask.deterministicEvidence?.[0] ?? selected.evidence,
+        evidence: engineeringTask.deterministicEvidence?.length ? engineeringTask.deterministicEvidence.join(' ') : selected.evidence,
         affectedFiles: engineeringTask.likelyFiles ?? selected.affectedFiles,
         engineeringTask,
       };
-      const rendered = renderPrompt({ selectedIssue: decoratedSelected, decisionRanking });
+      const decoratedRanking = {
+        ...decisionRanking,
+        selectedIssue: decisionRanking?.selectedIssue ? { ...decisionRanking.selectedIssue, title: decoratedSelected.title } : decisionRanking?.selectedIssue,
+        candidates: decisionRanking?.candidates?.map((candidate, index) => index === 0 ? { ...candidate, ...decoratedSelected } : candidate),
+      };
+      const rendered = renderPrompt({ selectedIssue: decoratedSelected, decisionRanking: decoratedRanking });
       if (rendered.trim()) return rendered;
     }
     return promptFromEngineeringTask(engineeringTask);

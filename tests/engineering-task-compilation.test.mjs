@@ -84,7 +84,7 @@ test('implementation prompt uses compiled task details', () => {
   const prompt = renderPrompt({ selectedIssue: ranking.candidates[0], decisionRanking: ranking });
   assert.match(prompt, /^# Expand deterministic recommendation candidate extraction after handoff readiness is Ready/);
   assert.match(prompt, /## Engineering Task Compilation/);
-  assert.match(prompt, /Original selected recommendation: Advance strategy: Control Plane reports repository handoff readiness as Ready\./);
+  assert.match(prompt, /## Original Repository Judgment Recommendation\n- Title: Advance strategy: Control Plane reports repository handoff readiness as Ready\./);
   assert.match(prompt, /Implementation target: Add deterministic Engineering Task Compilation or candidate extraction behavior/);
   assert.doesNotMatch(prompt, /^# Advance strategy: Control Plane reports repository handoff readiness as Ready\./);
 });

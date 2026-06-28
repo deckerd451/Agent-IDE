@@ -196,6 +196,7 @@ test('implementation package sections render in deterministic order', () => {
     '## Motivation',
     '## Current Evidence',
     '## Problem',
+    '## Why This Helps',
     '## Goal',
     '## Requirements',
     '## Acceptance Criteria',

@@ -189,6 +189,11 @@ test('decorated Control Plane recommendation is the single source for card previ
   assert.equal(controlPlane.recommendation.originalRecommendationTitle, originalTitle);
   assert.match(controlPlane.recommendation.implementationPrompt, new RegExp(`^# ${actionableTitle}`));
   assert.doesNotMatch(controlPlane.recommendation.implementationPrompt, new RegExp(`^# ${originalTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  assert.doesNotMatch(controlPlane.recommendation.implementationPrompt, new RegExp(`## Goal\n${originalTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  assert.doesNotMatch(controlPlane.recommendation.implementationPrompt, /## Goal\nAdvance strategy\./);
+  assert.match(controlPlane.recommendation.implementationPrompt, new RegExp(`## Goal\n${actionableTitle}`));
+  assert.match(controlPlane.recommendation.implementationPrompt, /## Why This Helps\nRepository handoff readiness is a state signal, not an implementation task\./);
+  assert.match(controlPlane.recommendation.implementationPrompt, /## Original Repository Judgment Recommendation\n- Title: Advance strategy: Control Plane reports repository handoff readiness as Ready\./);
   assert.equal(controlPlane.recommendation.prompt, controlPlane.recommendation.implementationPrompt);
   assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt);
 });
