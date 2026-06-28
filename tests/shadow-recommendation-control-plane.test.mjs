@@ -227,3 +227,47 @@ test('blocked engineering task returns clarification prompt instead of empty imp
   assert.match(controlPlane.recommendation.implementationPrompt, /Recommendation requires task clarification/);
   assert.match(controlPlane.recommendation.implementationPrompt, /Missing deterministic evidence/);
 });
+
+test('readControlPlane uses persisted active-recommendation.json over repositoryJudgment.candidates[0] after refresh', async () => {
+  const dir = await writeControlPlaneFixture({ ready: true }); // candidates[0] = 'Shadow Recommendation Title'
+
+  // Simulate persistControlPlane having selected a different, decorated recommendation via generateNextImprovement
+  const rawJudgmentTitle = 'Advance strategy: Control Plane reports repository handoff readiness as Ready.';
+  const backlogTitle = 'Add backlog quality';
+  const backlogPrompt = `# ${backlogTitle}\n\n## Implementation Instructions\nAdd a backlog quality metric.\n\n## Goal\n${backlogTitle}\n\n## Why This Helps\nBacklog quality is actionable.\n\n## Acceptance Criteria\n- Backlog quality metric is added.\n`;
+  const activeRecommendation = {
+    title: backlogTitle,
+    displayTitle: backlogTitle,
+    originalRecommendationTitle: rawJudgmentTitle,
+    displaySummary: 'Backlog quality is actionable.',
+    implementationPrompt: backlogPrompt,
+    prompt: backlogPrompt,
+    packageType: 'implementation',
+    whyItMatters: 'Backlog quality is actionable.',
+    evidenceSource: '.ai/next-improvement-prompt.md',
+    id: 'add-backlog-quality',
+    promptHash: 'abc123def456',
+  };
+  await writeFile(join(dir, '.ai', 'active-recommendation.json'), JSON.stringify(activeRecommendation, null, 2));
+
+  const controlPlane = await readControlPlane(dir);
+
+  assert.equal(controlPlane.recommendation.title, backlogTitle, 'title must come from active-recommendation.json, not repositoryJudgment.candidates[0]');
+  assert.equal(controlPlane.recommendation.displayTitle, backlogTitle);
+  assert.match(controlPlane.recommendation.implementationPrompt, new RegExp(`^# ${backlogTitle}`), 'implementationPrompt must start with the selected actionable candidate title');
+  assert.doesNotMatch(controlPlane.recommendation.implementationPrompt, /## Goal\nAdvance strategy/, 'implementationPrompt must not contain the raw Repository Judgment goal heading');
+  assert.doesNotMatch(controlPlane.recommendation.implementationPrompt, new RegExp(rawJudgmentTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'raw Repository Judgment title must not appear in implementationPrompt');
+  assert.match(controlPlane.recommendation.implementationPrompt, new RegExp(`## Goal\n${backlogTitle}`), 'implementationPrompt must contain the actionable candidate title in the Goal section');
+  assert.equal(controlPlane.recommendation.prompt, controlPlane.recommendation.implementationPrompt, 'prompt and implementationPrompt must be the same');
+  assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt, 'packages.builder must match implementationPrompt');
+  // Shadow source metadata should still reflect Repository Judgment status
+  assert.equal(controlPlane.activeRecommendationSource, 'Repository Judgment');
+});
+
+test('readControlPlane falls back to repositoryJudgment.candidates[0] when active-recommendation.json does not exist', async () => {
+  const dir = await writeControlPlaneFixture({ ready: true }); // no active-recommendation.json written
+  const controlPlane = await readControlPlane(dir);
+  assert.equal(controlPlane.activeRecommendationSource, 'Repository Judgment');
+  assert.equal(controlPlane.recommendation.title, 'Shadow Recommendation Title', 'without persisted recommendation, falls back to repositoryJudgment.candidates[0]');
+  assert.match(controlPlane.recommendation.implementationPrompt, /Selected Repository Judgment Candidate/);
+});
