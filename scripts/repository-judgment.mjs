@@ -30,6 +30,13 @@ const categoryWeights = {
   'strategic-alignment': { impact: 64, effort: 72, urgency: 45, leverage: 75 },
 };
 
+const promotionGates = {
+  requiredConsecutiveShadowWins: 3,
+  minimumReadinessScore: 85,
+  evaluationWindow: 10,
+  historyLimit: 50,
+};
+
 function stableHash(value = '') {
   let hash = 5381;
   for (let index = 0; index < value.length; index += 1) hash = ((hash << 5) + hash + value.charCodeAt(index)) >>> 0;
@@ -269,13 +276,13 @@ function compareRecommendations(production, shadow) {
 }
 
 function readinessStatus(score, consecutiveShadowWins) {
-  if (score >= 85 && consecutiveShadowWins >= 3) return 'Ready for Promotion';
+  if (score >= promotionGates.minimumReadinessScore && consecutiveShadowWins >= promotionGates.requiredConsecutiveShadowWins) return 'Ready for Promotion';
   if (score >= 45) return 'Evaluating';
   return 'Not Ready';
 }
 
 function readinessScore({ comparison, history }) {
-  const last = history.slice(-10);
+  const last = history.slice(-promotionGates.evaluationWindow);
   const consecutiveShadowWins = [...history].reverse().findIndex((entry) => entry.winner !== 'Shadow');
   const wins = consecutiveShadowWins === -1 ? history.length : consecutiveShadowWins;
   let score = 20;
@@ -285,7 +292,7 @@ function readinessScore({ comparison, history }) {
   add(comparison.shadowMetrics.unsupportedEvidence ? -20 : 15, comparison.shadowMetrics.unsupportedEvidence ? 'Shadow recommendation has unsupported evidence.' : 'Shadow recommendation has evidence for every cited claim.');
   add(comparison.shadowMetrics.determinism >= 90 ? 15 : 5, `Shadow determinism score is ${comparison.shadowMetrics.determinism}.`);
   add(comparison.winner === 'Shadow' ? 15 : comparison.winner === 'Tie' ? 5 : -10, `Current deterministic winner is ${comparison.winner}.`);
-  add(last.length >= 3 && last.every((entry) => entry.winner !== 'Production') ? 10 : 0, `${last.length} historical refresh(es) checked for production-quality regression.`);
+  add(last.length >= promotionGates.requiredConsecutiveShadowWins && last.every((entry) => entry.winner !== 'Production') ? 10 : 0, `${last.length} historical refresh(es) checked for production-quality regression.`);
   add(comparison.shadowMetrics.userValue >= comparison.productionMetrics.userValue ? 10 : -5, `Shadow user value ${comparison.shadowMetrics.userValue} versus production ${comparison.productionMetrics.userValue}.`);
   const finalScore = clampScore(score);
   return { score: finalScore, consecutiveShadowWins: wins, status: readinessStatus(finalScore, wins), evidence };
@@ -294,7 +301,7 @@ function readinessScore({ comparison, history }) {
 function renderEvaluationMarkdown({ timestamp, production, shadow, comparison, readiness }) {
   const metricRows = ['actionability', 'expectedRepositoryImpact', 'evidenceQuality', 'determinism', 'implementationSize', 'repositoryWideLeverage', 'userValue', 'total']
     .map((metric) => `| ${metric} | ${comparison.productionMetrics[metric]} | ${comparison.shadowMetrics[metric]} |`).join('\n');
-  return `# Repository Judgment Evaluation\n\nGenerated: ${timestamp}\n\nRepository Judgment remains shadow-only. This evaluation compares the production recommendation engine with the shadow Repository Judgment engine without promoting Repository Judgment or changing the Work Queue.\n\n## Recommendation Comparison\n\n### Production recommendation\n\n- Title: ${production.title}\n- Evidence: ${production.evidence.map((item) => `${item.sourceFile}${item.sourceSection ? ` (${item.sourceSection})` : ''}: ${item.text}`).join('; ')}\n\n### Shadow recommendation\n\n- Title: ${shadow.title}\n- Evidence: ${shadow.evidence.map((item) => `${item.sourceFile}${item.sourceSection ? ` (${item.sourceSection})` : ''}: ${item.text}`).join('; ') || 'No evidence'}\n\n## Deterministic Metrics\n\n| Metric | Production | Shadow |\n| --- | ---: | ---: |\n${metricRows}\n\n## Overall Winner\n\n${comparison.winner}\n\nThe winner is selected by comparing weighted deterministic totals. A difference under 3 points is a tie; otherwise the higher total wins. Current shadow delta: ${comparison.delta}.\n\n## Repository Judgment Score\n\nReadiness score: ${readiness.score}/100\n\n${readiness.evidence.map((item) => `- ${item.points >= 0 ? '+' : ''}${item.points}: ${item.reason}`).join('\n')}\n\n## Promotion Criteria\n\n- Shadow wins at least 3 consecutive refreshes.\n- Shadow has no unsupported evidence.\n- Shadow produces deterministic output across repeated refreshes.\n- Shadow recommendations successfully resolve after implementation.\n- No regression in existing recommendation quality.\n\n## Promotion Status\n\n${readiness.status}\n`;
+  return `# Repository Judgment Evaluation\n\nGenerated: ${timestamp}\n\nRepository Judgment remains shadow-only. This evaluation compares the production recommendation engine with the shadow Repository Judgment engine without promoting Repository Judgment or changing the Work Queue.\n\n## Recommendation Comparison\n\n### Production recommendation\n\n- Title: ${production.title}\n- Evidence: ${production.evidence.map((item) => `${item.sourceFile}${item.sourceSection ? ` (${item.sourceSection})` : ''}: ${item.text}`).join('; ')}\n\n### Shadow recommendation\n\n- Title: ${shadow.title}\n- Evidence: ${shadow.evidence.map((item) => `${item.sourceFile}${item.sourceSection ? ` (${item.sourceSection})` : ''}: ${item.text}`).join('; ') || 'No evidence'}\n\n## Deterministic Metrics\n\n| Metric | Production | Shadow |\n| --- | ---: | ---: |\n${metricRows}\n\n## Overall Winner\n\n${comparison.winner}\n\nThe winner is selected by comparing weighted deterministic totals. A difference under 3 points is a tie; otherwise the higher total wins. Current shadow delta: ${comparison.delta}.\n\n## Repository Judgment Score\n\nReadiness score: ${readiness.score}/100\n\n${readiness.evidence.map((item) => `- ${item.points >= 0 ? '+' : ''}${item.points}: ${item.reason}`).join('\n')}\n\n## Promotion Criteria\n\n- Shadow wins at least ${promotionGates.requiredConsecutiveShadowWins} consecutive refreshes.\n- Readiness score is at least ${promotionGates.minimumReadinessScore}/100.\n- Shadow has no unsupported evidence.\n- Shadow produces deterministic output across repeated refreshes.\n- Shadow recommendations successfully resolve after implementation.\n- No regression in existing recommendation quality across the latest ${promotionGates.evaluationWindow} refreshes.\n\n## Promotion Status\n\n${readiness.status}\n`;
 }
 
 async function generateRepositoryJudgmentEvaluation(repositoryPath, judgment, docs) {
@@ -304,7 +311,7 @@ async function generateRepositoryJudgmentEvaluation(repositoryPath, judgment, do
   const comparison = compareRecommendations(production, shadow);
   const existingHistory = JSON.parse(await readFile(historyPath, 'utf8').catch(() => '[]'));
   const timestamp = new Date().toISOString();
-  const provisionalHistory = existingHistory.concat([{ timestamp, productionRecommendation: production.title, shadowRecommendation: shadow.title, winner: comparison.winner, readinessScore: 0 }]).slice(-50);
+  const provisionalHistory = existingHistory.concat([{ timestamp, productionRecommendation: production.title, shadowRecommendation: shadow.title, winner: comparison.winner, readinessScore: 0 }]).slice(-promotionGates.historyLimit);
   const readiness = readinessScore({ comparison, history: provisionalHistory });
   provisionalHistory[provisionalHistory.length - 1].readinessScore = readiness.score;
   await writeFile(historyPath, `${JSON.stringify(provisionalHistory, null, 2)}\n`);

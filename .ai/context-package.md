@@ -1,6 +1,6 @@
 # Context Package
 
-Generated: 2026-06-28T00:07:49.002Z
+Generated: 2026-06-28T00:39:24.094Z
 
 ## Product Thesis
 Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
