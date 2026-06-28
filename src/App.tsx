@@ -78,7 +78,7 @@ type QualitySnapshot = {
   recommendedAction: string;
 };
 
-type DecisionCandidate = { rank: number; id: string; title: string; category: string; severity: string; actionability: string; priorityScore: number; expectedImprovement: { total: number; repositoryHealth: number; canonicalCompleteness: number; quality: number; verification: number; handoffReadiness: number }; reason: string; evidence: string; selected: boolean; ownerAction?: string; expectedCompletionTarget?: string; dependency?: string };
+type DecisionCandidate = { rank: number; id: string; title: string; category: string; severity: string; actionability: string; priorityScore: number; expectedImprovement: { total: number; repositoryHealth: number; canonicalCompleteness: number; quality: number; verification: number; handoffReadiness: number }; reason: string; evidence: string; selected: boolean; ownerAction?: string; expectedCompletionTarget?: string; dependency?: string; source?: string };
 
 type AIHandoffValidation = { overallScore: number; status: string; recoverableInformation: string[]; hiddenInformation: string[]; contradictions: string[]; missingExplanations: string[]; suggestedImprovements: string[] };
 
@@ -966,6 +966,7 @@ function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onPri
         <div>
           <p className="kicker">{workspaceType} Workspace</p>
           <h2>{title}</h2>
+          <p><b>Source:</b> {task?.source ?? data.recommendation.evidenceSource}</p>
           <p><b>Why:</b> {task?.reason ?? data.recommendation.whyItMatters}</p>
           <p><b>Goal:</b> {workflow.goal}</p>
           <div className="workMetaGrid">
