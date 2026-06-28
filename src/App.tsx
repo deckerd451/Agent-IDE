@@ -51,6 +51,9 @@ type ControlPlaneRecommendation = {
   packageType?: 'implementation' | 'product-decision' | 'validation-experiment';
   evidenceSource: string;
   prompt: string;
+  id?: string;
+  promptHash?: string;
+  previousOutcomeWarning?: string;
 };
 
 type VerificationArtifact = { artifact: string; generatedAt: string | null; generatedHash: string | null; displayedHash: string | null; status: 'Verified' | 'Failed'; failures: string[] };
@@ -110,7 +113,10 @@ type ProgressSummary = {
   newlyIntroducedIssues: string[];
 };
 
+type OutcomeEntry = { timestamp: string; repository: string; recommendationId: string; recommendationTitle: string; promptHash: string; outcome: 'implemented' | 'partial' | 'skipped' | 'failed'; promptQuality: 'worked' | 'needed_clarification' | 'missing_context' | 'too_broad' | 'wrong_recommendation'; userNote: string; testsRun: string[]; refreshAfterCompletion: boolean };
+
 type ControlPlane = {
+  outcomeEvidence?: { entries: OutcomeEntry[]; summary: { lastOutcome: OutcomeEntry | null; successRate: number | null; recentCount: number; qualityTrend: string | null } };
   activeRecommendationSource?: 'Repository Judgment' | 'Legacy' | string;
   legacyRecommendation?: ControlPlaneRecommendation;
   status: Record<string, string>;
@@ -202,7 +208,7 @@ const promptRoles = [
   { role: 'Reviewer', file: 'prompts/reviewer.md', downloadName: 'reviewer.md' },
   { role: 'Debugger', file: 'prompts/debugger.md', downloadName: 'debugger.md' },
 ] as const;
-const intelligenceFiles = new Set([...sections.map((section) => section.markdownFile), ...promptFiles]);
+const intelligenceFiles = new Set([...sections.map((section) => section.markdownFile), 'outcomes.json', 'outcomes.md', ...promptFiles]);
 const serverBaseUrl = import.meta.env.VITE_AGENT_IDE_SERVER_URL ?? 'http://localhost:5174';
 const selectedTabStorageKey = 'agent-ide:selected-intelligence-tab';
 
@@ -576,7 +582,82 @@ function TaskArtifact({ artifactType, data, documents, repositoryPath }: { artif
   return null;
 }
 
-function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryAction, onRefresh }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void }) {
+
+const outcomeLabels = [
+  ['implemented', 'Implemented'],
+  ['partial', 'Partially implemented'],
+  ['skipped', 'Skipped'],
+  ['failed', 'Failed'],
+] as const;
+
+const promptQualityLabels = [
+  ['worked', 'Worked without clarification'],
+  ['needed_clarification', 'Needed clarification'],
+  ['missing_context', 'Missing context'],
+  ['too_broad', 'Too broad'],
+  ['wrong_recommendation', 'Wrong recommendation'],
+] as const;
+
+function labelPromptQuality(value?: string | null) {
+  return promptQualityLabels.find(([key]) => key === value)?.[1] ?? value ?? 'Unknown';
+}
+
+function CompletionPanel({ data, repositoryPath, onSaved, onRefresh }: { data: ControlPlane; repositoryPath?: string; onSaved: () => Promise<void>; onRefresh: () => void }) {
+  const [outcome, setOutcome] = useState<OutcomeEntry['outcome']>('implemented');
+  const [promptQuality, setPromptQuality] = useState<OutcomeEntry['promptQuality']>('worked');
+  const [userNote, setUserNote] = useState('');
+  const [refreshAfterCompletion, setRefreshAfterCompletion] = useState(true);
+  const [status, setStatus] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function saveOutcome() {
+    if (!repositoryPath) return;
+    setIsSaving(true);
+    setStatus('');
+    try {
+      const response = await fetch(new URL('/api/repository/outcome', serverBaseUrl), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repositoryPath,
+          recommendationId: data.recommendation.id ?? data.decisionRanking?.selectedIssue?.id,
+          recommendationTitle: data.recommendation.title,
+          promptHash: data.recommendation.promptHash,
+          prompt: data.recommendation.prompt,
+          outcome,
+          promptQuality,
+          userNote,
+          testsRun: [],
+          refreshAfterCompletion,
+        }),
+      });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? 'Unable to save outcome.');
+      setStatus('Outcome saved to .ai/outcomes.json and .ai/outcomes.md.');
+      setUserNote('');
+      await onSaved();
+      if (refreshAfterCompletion) onRefresh();
+    } catch (saveError) {
+      setStatus(saveError instanceof Error ? saveError.message : String(saveError));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <section className="completionPanel" aria-label="Mark External Work Complete">
+      <h3>Mark External Work Complete</h3>
+      <label>Outcome<select value={outcome} onChange={(event) => setOutcome(event.target.value as OutcomeEntry['outcome'])}>{outcomeLabels.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label>Prompt quality<select value={promptQuality} onChange={(event) => setPromptQuality(event.target.value as OutcomeEntry['promptQuality'])}>{promptQualityLabels.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label>Optional note<textarea value={userNote} onChange={(event) => setUserNote(event.target.value)} rows={3} /></label>
+      <label className="checkboxLabel"><input checked={refreshAfterCompletion} onChange={(event) => setRefreshAfterCompletion(event.target.checked)} type="checkbox" /> Refresh Repository Intelligence after saving</label>
+      <div className="promptActions"><button className="primaryCta" disabled={isSaving || !repositoryPath} onClick={() => void saveOutcome()} type="button">{isSaving ? 'Saving…' : 'Save Outcome'}</button><button className="secondaryCta" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Repository Intelligence</button></div>
+      {status && <p className="summary">{status}</p>}
+    </section>
+  );
+}
+
+function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryAction, onRefresh, onOutcomeSaved }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOutcomeSaved: () => Promise<void> }) {
   const recommendationSource = data.activeRecommendationSource ?? 'Legacy';
   const task = recommendationSource === 'Repository Judgment' ? null : firstCandidate(data, 1);
   const taskTitle = humanTaskTitle(task, data.recommendation.title);
@@ -597,6 +678,7 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
           <span>{confidence} confidence</span>
         </div>
         <h2>{taskTitle}</h2>
+        {data.recommendation.previousOutcomeWarning && <p className="summary warningCard">{data.recommendation.previousOutcomeWarning}</p>}
         <p className="recommendationReason">{task?.reason ?? data.recommendation.whyItMatters}</p>
         <ol className="simpleLoop" aria-label="Agent IDE loop">
           <li>Copy the implementation prompt.</li>
@@ -607,6 +689,7 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
           <summary>Preview prompt</summary>
           <TaskArtifact artifactType={userTask?.artifactType ?? 'implementation-prompt'} data={data} documents={documents} repositoryPath={repositoryPath} />
         </details>
+        <CompletionPanel data={data} repositoryPath={repositoryPath} onSaved={onOutcomeSaved} onRefresh={onRefresh} />
       </div>
       <div className="heroActions">
         {workflow ? <WorkflowPrimaryButton workflow={workflow} onPrimaryAction={onPrimaryAction} /> : <button className="primaryCta" onClick={onRefresh} type="button">Refresh Repository Intelligence</button>}
@@ -914,9 +997,9 @@ function WorkItemPage({ data, repositoryPath, documents, workflow, onBack, onPri
   );
 }
 
-function ControlPlaneDashboard({ data, progressSummary, workflow, documents, diagnostics, onPrimaryAction, onRefresh, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
+function ControlPlaneDashboard({ data, progressSummary, workflow, documents, diagnostics, onPrimaryAction, onRefresh, onOpenWorkItem, onViewStrategy, onOutcomeSaved, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void; onOutcomeSaved: () => Promise<void> }) {
   if (!data) return <WelcomeDashboard />;
-  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} documents={documents} diagnostics={diagnostics} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOpenWorkItem={onOpenWorkItem} onViewStrategy={onViewStrategy} />;
+  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} documents={documents} diagnostics={diagnostics} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOpenWorkItem={onOpenWorkItem} onViewStrategy={onViewStrategy} onOutcomeSaved={onOutcomeSaved} />;
 }
 
 function ProductJudgmentShadowCard({ data }: { data: ControlPlane }) {
@@ -951,7 +1034,7 @@ function primaryHomepageAction(workflow?: Workflow | null) {
   return outcomeWorkflowText(workflow.currentPrimaryAction);
 }
 
-function ControlPlaneDashboardContent({ data, progressSummary, workflow, documents, diagnostics, onPrimaryAction, onRefresh, onOpenWorkItem, onViewStrategy, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void }) {
+function ControlPlaneDashboardContent({ data, progressSummary, workflow, documents, diagnostics, onPrimaryAction, onRefresh, onOpenWorkItem, onViewStrategy, onOutcomeSaved, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void; onOutcomeSaved: () => Promise<void> }) {
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
       return {
@@ -1000,12 +1083,26 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
 
   return (
     <div className="controlPlane compactDashboard">
-      <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} />
+      <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOutcomeSaved={onOutcomeSaved} />
       <WorkflowDiagnosticsDisclosure workflow={workflow} diagnostics={diagnostics} />
 
       <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced</summary>
       <ShadowRecommendationCard data={data} />
       <RepositoryJudgmentReadinessCard data={data} />
+
+      {data.outcomeEvidence?.summary.lastOutcome && (
+        <section className="controlCard" aria-label="Last outcome">
+          <p className="kicker">Last outcome</p>
+          <h2>{data.outcomeEvidence.summary.lastOutcome.recommendationTitle}</h2>
+          <div className="workMetaGrid compact">
+            <div><small>Outcome</small><strong>{data.outcomeEvidence.summary.lastOutcome.outcome}</strong></div>
+            <div><small>Prompt quality</small><strong>{labelPromptQuality(data.outcomeEvidence.summary.lastOutcome.promptQuality)}</strong></div>
+            <div><small>Recent success rate</small><strong>{data.outcomeEvidence.summary.successRate === null ? 'No outcomes yet' : `${data.outcomeEvidence.summary.successRate}%`}</strong></div>
+          </div>
+          {data.outcomeEvidence.summary.lastOutcome.userNote && <p>{data.outcomeEvidence.summary.lastOutcome.userNote}</p>}
+        </section>
+      )}
+
       <ProductJudgmentShadowCard data={data} />
       {data.repositoryJudgment && (
         <details className="controlCard disclosureCard" aria-label="Repository Judgment Raw Artifact Details"><summary>Repository Judgment raw artifact details</summary>
@@ -1543,6 +1640,14 @@ export function App() {
   }
 
 
+  async function reloadOutcomeEvidence() {
+    const path = connectedPath || repositoryPath;
+    if (!path) return;
+    await loadControlPlane(path);
+    await Promise.all(['outcomes.json', 'outcomes.md', 'context-package.md'].map((file) => loadIntelligenceFile(path, file)));
+  }
+
+
   async function performWorkflowStepAction(workflow: Workflow, data: ControlPlane) {
     const task = firstCandidate(data, 1);
     const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
@@ -1675,7 +1780,7 @@ export function App() {
         </section>}
 
         {selected.id === 'Control Plane' && isWorkItemOpen && controlPlane && currentWorkflow && <WorkItemPage data={controlPlane} repositoryPath={connectedPath || repositoryPath} documents={documents} workflow={currentWorkflow} onBack={() => setIsWorkItemOpen(false)} onPrimaryAction={() => void handleWorkflowPrimaryAction()} />}
-        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} documents={documents} diagnostics={workflowDiagnostics} repositoryPath={connectedPath || repositoryPath} onPrimaryAction={() => void handleWorkflowPrimaryAction()} onRefresh={() => void refreshIntelligence()} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onViewStrategy={() => setSelectedId('Strategy')} />}
+        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} documents={documents} diagnostics={workflowDiagnostics} repositoryPath={connectedPath || repositoryPath} onPrimaryAction={() => void handleWorkflowPrimaryAction()} onRefresh={() => void refreshIntelligence()} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onViewStrategy={() => setSelectedId('Strategy')} onOutcomeSaved={() => reloadOutcomeEvidence()} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}

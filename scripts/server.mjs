@@ -12,12 +12,13 @@ import { generateProductJudgment } from './product-judgment.mjs';
 import { generateJudgmentComparison } from './judgment-comparison.mjs';
 import { explainCompleteness, explainQuality, explainCompletenessSynchronization, explainEvidenceSynthesis, persistIntelligenceExplanations, readIntelligenceExplanations } from './intelligence-explanations.mjs';
 import { fileURLToPath } from 'node:url';
+import { appendOutcome, hashPrompt, readOutcomeEvidence, recommendationIdFor } from './outcomes.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
 const port = Number(process.env.AGENT_IDE_PORT ?? 5174);
 
-const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'execution-model.md', 'recommendation-trace.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'intelligence-explanations.json', 'ai-handoff-validation.json', 'evidence-lineage.json', 'decision-ranking.json', 'repository-judgment.json', 'repository-judgment.md', 'repository-judgment-evaluation.md', 'repository-judgment-history.json', 'product-judgment.json', 'product-judgment.md', 'product-judgment-evaluation.md', 'judgment-comparison.json', 'judgment-comparison.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
+const allowedIntelligenceFiles = new Set(['goals.md', 'architecture.md', 'strategy.md', 'backlog.md', 'decisions.md', 'validation.md', 'agents.md', 'code.md', 'repository-health.md', 'context-package.md', 'next-improvement-prompt.md', 'execution-model.md', 'recommendation-trace.md', 'intelligence-quality.json', 'intelligence-history.json', 'intelligence-verification.json', 'intelligence-explanations.json', 'ai-handoff-validation.json', 'evidence-lineage.json', 'decision-ranking.json', 'repository-judgment.json', 'repository-judgment.md', 'repository-judgment-evaluation.md', 'repository-judgment-history.json', 'product-judgment.json', 'product-judgment.md', 'product-judgment-evaluation.md', 'judgment-comparison.json', 'judgment-comparison.md', 'outcomes.json', 'outcomes.md', 'prompts/architect.md', 'prompts/builder.md', 'prompts/reviewer.md', 'prompts/debugger.md']);
 
 const baselineFiles = {
   'goals.md': `# Goals
@@ -436,6 +437,7 @@ async function readControlPlane(repositoryPath) {
   const aiHandoffValidation = parseJsonArtifact(await readFile(join(aiDir, 'ai-handoff-validation.json'), 'utf8').catch(() => ''), null);
   const productJudgment = parseJsonArtifact(await readFile(join(aiDir, 'product-judgment.json'), 'utf8').catch(() => ''), null);
   const judgmentComparison = parseJsonArtifact(await readFile(join(aiDir, 'judgment-comparison.json'), 'utf8').catch(() => ''), null);
+  const outcomeEvidence = await readOutcomeEvidence(repositoryPath);
   if (judgmentComparison && docs['judgment-comparison.md']?.trim()) judgmentComparison.markdown = docs['judgment-comparison.md'];
   const legacyRecommendation = docs['next-improvement-prompt.md']?.trim()
     ? { title: firstLine(docs['next-improvement-prompt.md'].replace(/^#\s*/, ''), snapshot.recommendedNextStep), actionability: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Actionability', 'Not classified.'), packageType: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Package Type', 'implementation'), explanation: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Source risk/recommendation', 'See generated prompt.'), whyItMatters: promptEvidenceValue(docs['next-improvement-prompt.md'], 'Reason', 'Generated from Control Plane intelligence.'), evidenceSource: '.ai/next-improvement-prompt.md', prompt: docs['next-improvement-prompt.md'] }
@@ -443,9 +445,15 @@ async function readControlPlane(repositoryPath) {
   const topJudgmentCandidate = Array.isArray(repositoryJudgment?.candidates) ? repositoryJudgment.candidates[0] : null;
   const activeRecommendationSource = repositoryJudgmentReadiness?.promotionStatus === 'Ready for Promotion' && topJudgmentCandidate ? 'Repository Judgment' : 'Legacy';
   const recommendation = activeRecommendationSource === 'Repository Judgment' ? recommendationFromRepositoryJudgment(topJudgmentCandidate) : legacyRecommendation;
+  const implementedMatch = outcomeEvidence.entries.slice().reverse().find((entry) => entry.outcome === 'implemented' && (entry.recommendationId === recommendationIdFor(recommendation, decisionRanking) || entry.recommendationTitle === recommendation.title));
+  if (implementedMatch) {
+    recommendation.previousOutcomeWarning = 'This recommendation was previously marked implemented. It may be incomplete or the judgment engine did not advance.';
+  }
+  recommendation.id = recommendationIdFor(recommendation, decisionRanking);
+  recommendation.promptHash = hashPrompt(recommendation.prompt);
   const packages = handoffPackages(docs);
   if (activeRecommendationSource === 'Repository Judgment') packages.builder = recommendation.prompt;
-  return { status: snapshot, aiHandoffValidation, decisionRanking, evidenceLineage, repositoryJudgment, repositoryJudgmentReadiness, activeRecommendationSource, legacyRecommendation, productJudgment, judgmentComparison, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages, timeline };
+  return { status: snapshot, outcomeEvidence, aiHandoffValidation, decisionRanking, evidenceLineage, repositoryJudgment, repositoryJudgmentReadiness, activeRecommendationSource, legacyRecommendation, productJudgment, judgmentComparison, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages, timeline };
 }
 
 async function persistControlPlane(repositoryPath, previousSnapshot, refreshStartedAt = new Date(), options = {}) {
@@ -725,6 +733,11 @@ const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host}`);
     if (request.method === 'POST' && url.pathname === '/api/repository/refresh') return handleRefresh(request, response);
     if (request.method === 'POST' && url.pathname === '/api/repository/apply-canonical-edit') return sendJson(response, 200, await applyCanonicalEdit(await readJson(request)));
+    if (request.method === 'POST' && url.pathname === '/api/repository/outcome') {
+      const body = await readJson(request);
+      const resolvedPath = await validateRepositoryPath(body.repositoryPath);
+      return sendJson(response, 200, await appendOutcome(resolvedPath, body));
+    }
     if (request.method === 'GET' && url.pathname === '/api/repository/file') return handleFile(request, response, url);
     if (request.method === 'GET' && url.pathname === '/api/repository/control-plane') {
       const resolvedPath = await validateRepositoryPath(url.searchParams.get('repositoryPath'));
