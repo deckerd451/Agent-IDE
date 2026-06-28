@@ -442,7 +442,16 @@ function implementationPromptForRecommendation(recommendation, decisionRanking, 
   const selected = decisionRanking?.candidates?.[0];
   if (engineeringTask && engineeringTask.status !== 'preserved') {
     if (selected) {
-      const rendered = renderPrompt({ selectedIssue: selected, decisionRanking });
+      const decoratedSelected = {
+        ...selected,
+        title: engineeringTask.title ?? selected.title,
+        reason: engineeringTask.rootCause ?? selected.reason,
+        recommendedAction: engineeringTask.implementationTarget ?? selected.recommendedAction,
+        evidence: engineeringTask.deterministicEvidence?.[0] ?? selected.evidence,
+        affectedFiles: engineeringTask.likelyFiles ?? selected.affectedFiles,
+        engineeringTask,
+      };
+      const rendered = renderPrompt({ selectedIssue: decoratedSelected, decisionRanking });
       if (rendered.trim()) return rendered;
     }
     return promptFromEngineeringTask(engineeringTask);
