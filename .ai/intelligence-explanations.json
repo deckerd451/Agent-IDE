@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-27T23:09:17.814Z",
+  "generatedAt": "2026-06-28T00:07:49.143Z",
   "aiHandoffValidation": {
     "schemaVersion": 1,
-    "generatedAt": "2026-06-27T23:09:17.721Z",
+    "generatedAt": "2026-06-28T00:07:49.037Z",
     "overallScore": 96,
     "status": "Ready",
     "categories": {
@@ -611,7 +611,7 @@
   "quality": {
     "id": "intelligence-quality",
     "title": "Intelligence Quality Evaluation",
-    "score": 83,
+    "score": 92,
     "components": {
       "canonicalCompleteness": {
         "score": 83,
@@ -644,7 +644,7 @@
         ]
       },
       "verification": {
-        "score": 40,
+        "score": 95,
         "rule": "Verification score is the percent of expected artifacts verified.",
         "evidence": ".ai/intelligence-verification.json"
       }
@@ -656,67 +656,7 @@
         "evidence": ".ai/goals.md"
       },
       {
-        "rule": "strategy.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "architecture.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "backlog.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "validation.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "decisions.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "repository-health.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
         "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "prompts/architect.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "prompts/builder.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "prompts/debugger.md: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "Explanation contradiction: selected recommendation is not referenced by generated package.",
         "points": 15,
         "evidence": ".ai/intelligence-verification.json"
       }

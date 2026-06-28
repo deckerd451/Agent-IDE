@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-06-27T23:09:17.796Z",
-  "overallScore": 83,
+  "timestamp": "2026-06-28T00:07:49.118Z",
+  "overallScore": 92,
   "canonicalIntelligenceQuality": {
     "score": 90,
     "completenessScore": 83,
@@ -214,7 +214,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-27T23:09:17.797Z",
+            "generatedAt": "2026-06-28T00:07:49.119Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -245,7 +245,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-27T23:09:17.797Z",
+            "generatedAt": "2026-06-28T00:07:49.119Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -338,7 +338,7 @@
           ],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-27T23:09:17.798Z",
+            "generatedAt": "2026-06-28T00:07:49.120Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -437,7 +437,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-27T23:09:17.798Z",
+            "generatedAt": "2026-06-28T00:07:49.120Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -530,7 +530,7 @@
           ],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-27T23:09:17.800Z",
+            "generatedAt": "2026-06-28T00:07:49.121Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -629,7 +629,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-27T23:09:17.800Z",
+            "generatedAt": "2026-06-28T00:07:49.121Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -660,7 +660,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-27T23:09:17.800Z",
+            "generatedAt": "2026-06-28T00:07:49.121Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -691,7 +691,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-27T23:09:17.800Z",
+            "generatedAt": "2026-06-28T00:07:49.121Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -715,7 +715,7 @@
     },
     "evidenceLineage": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-27T23:09:17.800Z",
+      "generatedAt": "2026-06-28T00:07:49.121Z",
       "categories": {
         "Canonical": [
           {
@@ -1004,7 +1004,7 @@
     "aiHandoffReadinessScore": 96,
     "aiHandoffValidation": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-27T23:09:17.808Z",
+      "generatedAt": "2026-06-28T00:07:49.125Z",
       "overallScore": 96,
       "status": "Ready",
       "categories": {
@@ -1116,7 +1116,7 @@
   },
   "freshness": {
     "score": 100,
-    "lastRefresh": "2026-06-27T23:09:17.796Z",
+    "lastRefresh": "2026-06-28T00:07:49.118Z",
     "filesChanged": 0,
     "staleDocuments": [],
     "canonicalStaleDocuments": [],
@@ -1163,22 +1163,10 @@
     "overallRepositoryConfidence": "High"
   },
   "verification": {
-    "score": 40,
+    "score": 95,
     "status": "Failed",
     "failures": [
-      "strategy.md: Artifact timestamp is older than refresh start.",
-      "architecture.md: Artifact timestamp is older than refresh start.",
-      "backlog.md: Artifact timestamp is older than refresh start.",
-      "validation.md: Artifact timestamp is older than refresh start.",
-      "decisions.md: Artifact timestamp is older than refresh start.",
-      "repository-health.md: Artifact timestamp is older than refresh start.",
-      "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
-      "prompts/architect.md: Artifact timestamp is older than refresh start.",
-      "prompts/builder.md: Artifact timestamp is older than refresh start.",
-      "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
-      "prompts/debugger.md: Artifact timestamp is older than refresh start.",
-      "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
-      "Explanation contradiction: selected recommendation is not referenced by generated package."
+      "intelligence-explanations.json: Artifact timestamp is older than refresh start."
     ]
   },
   "drift": {
@@ -1202,7 +1190,7 @@
   "explanations": {
     "aiHandoffValidation": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-27T23:09:17.808Z",
+      "generatedAt": "2026-06-28T00:07:49.125Z",
       "overallScore": 96,
       "status": "Ready",
       "categories": {
@@ -1810,7 +1798,7 @@
     "quality": {
       "id": "intelligence-quality",
       "title": "Intelligence Quality Evaluation",
-      "score": 83,
+      "score": 92,
       "components": {
         "canonicalCompleteness": {
           "score": 83,
@@ -1843,7 +1831,7 @@
           ]
         },
         "verification": {
-          "score": 40,
+          "score": 95,
           "rule": "Verification score is the percent of expected artifacts verified.",
           "evidence": ".ai/intelligence-verification.json"
         }
@@ -1855,67 +1843,7 @@
           "evidence": ".ai/goals.md"
         },
         {
-          "rule": "strategy.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "architecture.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "backlog.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "validation.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "decisions.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "repository-health.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
           "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "prompts/architect.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "prompts/builder.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "prompts/reviewer.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "prompts/debugger.md: Artifact timestamp is older than refresh start.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
-          "points": 15,
-          "evidence": ".ai/intelligence-verification.json"
-        },
-        {
-          "rule": "Explanation contradiction: selected recommendation is not referenced by generated package.",
           "points": 15,
           "evidence": ".ai/intelligence-verification.json"
         }
@@ -1951,6 +1879,6 @@
       "rule": "All consumers must read Manual Goals missing fields from the canonical completeness evaluation and must not render independent missing-field logic."
     }
   },
-  "trend": "Stable",
-  "recommendedAction": "Refresh Repository Intelligence: strategy.md: Artifact timestamp is older than refresh start."
+  "trend": "Improving",
+  "recommendedAction": "Refresh Repository Intelligence: intelligence-explanations.json: Artifact timestamp is older than refresh start."
 }

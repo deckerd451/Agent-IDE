@@ -15,6 +15,8 @@ Candidate count: 19
 - .ai/decisions.md
 - .ai/execution-model.md
 - .ai/repository-health.md
+- .ai/next-improvement-prompt.md
+- .ai/decision-ranking.json
 - docs/repository-judgment-engine-rfc.md
 
 ## Selection Status
