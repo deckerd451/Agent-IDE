@@ -111,6 +111,8 @@ type ProgressSummary = {
 };
 
 type ControlPlane = {
+  activeRecommendationSource?: 'Repository Judgment' | 'Legacy' | string;
+  legacyRecommendation?: ControlPlaneRecommendation;
   status: Record<string, string>;
   understanding: Array<{ label: string; state: IntelligenceState; source: string }>;
   unknowns: Array<{ label: string; source: string }>;
@@ -512,7 +514,7 @@ function stepToUserTask(stepId: string, workflowType: string, data: ControlPlane
   }
 }
 
-function UpToDateCard({ repositoryName, confidence }: { repositoryName: string; confidence: string }) {
+function UpToDateCard({ repositoryName, confidence, recommendationSource }: { repositoryName: string; confidence: string; recommendationSource: string }) {
   return (
     <section className="todayWorkCard singleRecommendationCard upToDateCard" aria-label="Repository Up To Date">
       <div>
@@ -522,6 +524,7 @@ function UpToDateCard({ repositoryName, confidence }: { repositoryName: string; 
           <span>Repository up to date</span>
           <span>{confidence} confidence</span>
         </div>
+        <p><b>Recommendation Source:</b> {recommendationSource}</p>
         <h2>Repository is up to date</h2>
         <p className="recommendationReason">No high-priority improvement detected. Continue working on your implementation or refresh after making changes.</p>
       </div>
@@ -546,12 +549,13 @@ function TaskArtifact({ artifactType, data, documents, repositoryPath }: { artif
 }
 
 function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryAction }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; onPrimaryAction: () => void }) {
-  const task = firstCandidate(data, 1);
+  const recommendationSource = data.activeRecommendationSource ?? 'Legacy';
+  const task = recommendationSource === 'Repository Judgment' ? null : firstCandidate(data, 1);
   const taskTitle = humanTaskTitle(task, data.recommendation.title);
   const resolvedRepositoryName = data.status.repositoryName || repositoryPath?.split(/[\\/]/).filter(Boolean).pop() || 'Connected repository';
   const confidence = data.status.currentConfidence || `${data.quality?.confidence.score ?? 0}%`;
 
-  if (task?.id === 'repository-up-to-date') return <UpToDateCard repositoryName={resolvedRepositoryName} confidence={confidence} />;
+  if (task?.id === 'repository-up-to-date') return <UpToDateCard repositoryName={resolvedRepositoryName} confidence={confidence} recommendationSource={recommendationSource} />;
 
   const userTask = workflow ? stepToUserTask(workflow.currentStep.id, workflow.type, data, documents) : null;
 
@@ -564,6 +568,7 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
           <span>Repository improving</span>
           <span>{confidence} confidence</span>
         </div>
+        <p><b>Recommendation Source:</b> {recommendationSource}</p>
         <h2>{userTask?.instruction ?? taskTitle}</h2>
         <p className="recommendationReason">{userTask?.why ?? task?.reason ?? data.recommendation.whyItMatters}</p>
         {userTask && <TaskArtifact artifactType={userTask.artifactType} data={data} documents={documents} repositoryPath={repositoryPath} />}
@@ -590,6 +595,7 @@ function outcomeWorkflowText(value?: string | null) {
 }
 
 function firstCandidate(data: ControlPlane | null, rank: number) {
+  if (data?.activeRecommendationSource === 'Repository Judgment') return null;
   return data?.decisionRanking?.candidates?.find((candidate) => candidate.rank === rank) ?? data?.decisionRanking?.candidates?.[rank - 1];
 }
 
@@ -1054,12 +1060,22 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
 
       <details className="controlCard recommended disclosureCard"><summary>{recommendedPackage.heading} — uses Today's Work selection</summary><section aria-label={recommendedPackage.ariaLabel}>
         <small>{recommendedPackage.heading}</small>
+        <p><b>Recommendation Source:</b> {data.activeRecommendationSource ?? 'Legacy'}</p>
         <strong>{data.recommendation.title}</strong>
         {data.recommendation.actionability && <p><b>Actionability:</b> {data.recommendation.actionability}</p>}
         {data.recommendation.packageType && <p><b>Package type:</b> {data.recommendation.packageType}</p>}
         <p><b>Why this is recommended:</b> {data.recommendation.explanation}</p>
         <p><b>Why this helps:</b> {data.recommendation.whyItMatters}</p>
         <p><b>Evidence source:</b> {data.recommendation.evidenceSource}</p>
+
+        {data.legacyRecommendation && data.activeRecommendationSource === 'Repository Judgment' && (
+          <details>
+            <summary>Advanced legacy recommendation comparison</summary>
+            <p><b>Legacy recommendation:</b> {data.legacyRecommendation.title}</p>
+            <p><b>Why legacy recommended it:</b> {data.legacyRecommendation.explanation}</p>
+            <p><b>Legacy evidence source:</b> {data.legacyRecommendation.evidenceSource}</p>
+          </details>
+        )}
         {data.recommendation.packageType === 'product-decision' && <div className="canonicalEditNotice"><b>Repository Owner edits:</b><code>.ai/goals.md</code><span>Everything else will be regenerated.</span></div>}
         <div className="promptActions">
           <button onClick={() => void copyText(data.recommendation.prompt)} type="button">{recommendedPackage.copyLabel}</button>
