@@ -54,11 +54,11 @@ test('partial skipped and failed outcomes do not suppress recommendations', () =
   }
 });
 
-test('implemented + worked recommendation is not suppressed when no alternate candidate exists', () => {
+test('implemented + worked recommendation produces positive empty state when no alternate exists', () => {
   const advanced = applyRecommendationAdvancement([candidate()], [implementedWorked()]);
   const ranking = buildDecisionRanking(advanced);
 
-  assert.equal(ranking.selectedIssue.id, 'done-work');
-  assert.equal(ranking.selectedIssue.advancement.state, 'ambiguous');
-  assert.match(ranking.selectedIssue.advancement.reason, /No alternate eligible recommendation exists/);
+  assert.equal(ranking.selectedIssue.id, 'no-eligible-next-improvement');
+  assert.equal(ranking.selectedIssue.title, 'No eligible next improvement found.');
+  assert.equal(ranking.advancement.suppressedCandidates.length, 1);
 });

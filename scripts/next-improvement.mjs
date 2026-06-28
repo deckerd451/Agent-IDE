@@ -6,7 +6,7 @@ import { renderSynthesisMarkdown } from './evidence-synthesis.mjs';
 import { analyzeImprovements, analyzeImprovementsWithTrace } from './improvement-analyzer.mjs';
 import { readOutcomeEvidence } from './outcomes.mjs';
 
-const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md','architecture.md','decisions.md','execution-model.md'];
+const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md','architecture.md','decisions.md','execution-model.md','validation.md','ai-handoff-validation.md','intelligence-verification.md'];
 
 export function contextSnapshotHash(value = '') {
   let hash = 5381;
@@ -111,10 +111,100 @@ export function applyRecommendationAdvancement(candidates = [], outcomeEntries =
     return { ...candidate, advancement: { state: 'satisfied', reason: `Satisfied by implemented + worked outcome recorded at ${outcome.timestamp ?? 'unknown time'}; no deterministic incomplete evidence remains.`, outcomeTimestamp: outcome.timestamp } };
   });
   const unsuppressed = evaluated.filter((candidate) => candidate.advancement?.state !== 'satisfied');
-  if (unsuppressed.length > 0) return unsuppressed.map((candidate) => ({ ...candidate, advancementSuppressedCandidates: evaluated.filter((item) => item.advancement?.state === 'satisfied').map((item) => ({ id: item.id, title: item.title, reason: item.advancement.reason })) }));
-  return evaluated.map((candidate, index) => index === 0
-    ? { ...candidate, advancement: { ...candidate.advancement, state: 'ambiguous', reason: `Ambiguous advancement: ${candidate.advancement.reason} No alternate eligible recommendation exists, so this recommendation remains selected.` } }
-    : candidate);
+  const suppressed = evaluated.filter((item) => item.advancement?.state === 'satisfied').map((item) => ({ id: item.id, title: item.title, reason: item.advancement.reason }));
+  if (unsuppressed.length > 0) return unsuppressed.map((candidate) => ({ ...candidate, advancementSuppressedCandidates: suppressed }));
+  if (evaluated.length > 0) {
+    return [{
+      ...selectedIssue({ id: 'no-eligible-next-improvement', category: 'repository status', severity: 'low', actionability: 'validation-experiment', source: 'No eligible next improvement found.', title: 'No eligible next improvement found.', evidence: 'No eligible next improvement found.', reason: 'All deterministic candidates were suppressed by implemented + worked outcomes and no incomplete evidence remains.', recommendedAction: 'Refresh after repository changes or add actionable repository intelligence.' }),
+      advancement: { state: 'empty', reason: 'No eligible next improvement found.' },
+      advancementSuppressedCandidates: suppressed,
+    }];
+  }
+  return [];
+}
+
+
+function slugify(value = '') {
+  return String(value).toLowerCase().replace(/`[^`]*`/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70) || 'item';
+}
+
+const expansionSourcePriority = {
+  backlog: 64,
+  strategy: 60,
+  'repository-health': 56,
+  validation: 52,
+  'ai-handoff-validation': 48,
+  'intelligence-verification': 44,
+};
+
+function isActionableCandidateLine(line = '') {
+  const text = line.replace(/^[-*]\s+/, '').replace(/^\d+[.)]\s+/, '').trim();
+  if (text.length < 8) return false;
+  if (/^(none|no\s+(?:current|known|eligible|failed|missing)|n\/a)\b/i.test(text)) return false;
+  return /\b(?:add|build|fix|improve|implement|restore|reduce|remove|merge|downgrade|update|refresh|validate|document|complete|resolve|remediate|address|create|wire|surface|extract|rank|filter|select|test|run|missing|failed|incomplete|partial|gap|weakness|risk|todo|action)\b/i.test(text);
+}
+
+function actionFromText(text = '') {
+  const cleaned = text.replace(/\s+/g, ' ').trim().replace(/[.;:]$/, '');
+  return cleaned.length > 140 ? `${cleaned.slice(0, 137).trim()}...` : cleaned;
+}
+
+function titleFromCandidateText(text = '', fallback = 'Improve Repository Intelligence') {
+  const cleaned = actionFromText(text).replace(/^\[[ x-]\]\s*/i, '').replace(/^\w+\s*:\s*/, '');
+  const withoutPrefix = cleaned.replace(/^(?:todo|action|next|gap|weakness|remediation|failed|missing|partial)\s*[:—-]\s*/i, '');
+  const words = withoutPrefix.split(/\s+/).slice(0, 10).join(' ');
+  return words ? words.replace(/^./, (c) => c.toUpperCase()) : fallback;
+}
+
+function candidateExpansionIssue({ sourceKey, sourceFile, index, text, section, priorityOffset = 0 }) {
+  const action = actionFromText(text);
+  const title = titleFromCandidateText(action);
+  const priority = (expansionSourcePriority[sourceKey] ?? 40) - index + priorityOffset;
+  return selectedIssue({
+    id: `${sourceKey}-${slugify(title)}`,
+    category: `${sourceFile} candidate expansion`,
+    severity: /\b(?:failed|missing|critical|blocker|broken)\b/i.test(action) ? 'high' : 'medium',
+    actionability: /\b(?:decide|product bet|strategy|owner)\b/i.test(`${section} ${action}`) ? 'manual' : /\b(?:validate|validation|test|dry run|failed|missing)\b/i.test(`${sourceKey} ${section} ${action}`) ? 'validation-experiment' : 'code-fixable',
+    source: `${sourceFile}${section ? ` ${section}` : ''}`,
+    title,
+    evidence: action,
+    reason: `Candidate expansion selected this actionable item from ${sourceFile}${section ? ` (${section})` : ''}.`,
+    recommendedAction: action,
+  },);
+}
+
+function linesFromMarkdown(markdown = '') {
+  const candidates = [];
+  let section = '';
+  for (const raw of markdown.split('\n')) {
+    const heading = raw.match(/^(#{1,4})\s+(.+?)\s*$/);
+    if (heading) section = heading[2].trim();
+    const line = raw.trim();
+    if (/^(?:[-*]|\d+[.)])\s+/.test(line) && isActionableCandidateLine(line)) candidates.push({ text: line.replace(/^(?:[-*]|\d+[.)])\s+/, '').trim(), section });
+  }
+  return candidates;
+}
+
+function limitedExpansion(sourceKey, sourceFile, markdown, sectionPatterns = []) {
+  const lines = linesFromMarkdown(markdown).filter((item) => !sectionPatterns.length || sectionPatterns.some((pattern) => pattern.test(item.section)) || sectionPatterns.some((pattern) => pattern.test(item.text)));
+  const seen = new Set();
+  return lines.filter((item) => {
+    const key = slugify(item.text);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 8).map((item, index) => candidateExpansionIssue({ sourceKey, sourceFile, index, text: item.text, section: item.section }));
+}
+
+export function expandRecommendationCandidates({ backlog = '', strategy = '', health = '', validation = '', aiHandoffValidation = '', intelligenceVerification = '' } = {}) {
+  return [
+    ...limitedExpansion('backlog', '.ai/backlog.md', backlog, [/backlog|prioritized|current|manual|future|known|implementation/i]),
+    ...limitedExpansion('strategy', '.ai/strategy.md', strategy, [/current product bet|next strategic moves|strategic moves|strategy|bet/i]),
+    ...limitedExpansion('repository-health', '.ai/repository-health.md', health, [/weakness|remediation|risk|recommended next step|gap/i]),
+    ...limitedExpansion('validation', '.ai/validation.md', validation, [/failed|missing|gap|validation|known/i]),
+    ...limitedExpansion('ai-handoff-validation', '.ai/ai-handoff-validation.md', aiHandoffValidation, [/incomplete|partial|gap|missing|handoff/i]),
+    ...limitedExpansion('intelligence-verification', '.ai/intelligence-verification.md', intelligenceVerification, [/verification|gap|failed|missing/i]),
+  ];
 }
 
 function packageTypeForActionability(actionability) {
@@ -272,10 +362,12 @@ export function chooseNextImprovement({ health = '', quality = null, audit = '',
   return chooseNextImprovementWithCandidates({ health, quality, audit, backlog, strategy, contextPackage, goals, architecture, decisions, executionModel }).selectedIssue;
 }
 
-export function chooseNextImprovementWithCandidates({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '', repositoryPath = '', validationCompletions = [], outcomeEntries = [], architecture = '', decisions = '', executionModel = '' }) {
+export function chooseNextImprovementWithCandidates({ health = '', quality = null, audit = '', backlog = '', strategy = '', contextPackage = '', goals = '', repositoryPath = '', validationCompletions = [], outcomeEntries = [], architecture = '', decisions = '', executionModel = '', validation = '', aiHandoffValidation = '', intelligenceVerification = '' }) {
   // --- Repository Improvement Analysis ---
   // Improvements must dominate maintenance recommendations.
-  const improvementCandidates = analyzeImprovements({ architecture, decisions, executionModel, backlog, strategy });
+  const analyzerCandidates = analyzeImprovements({ architecture, decisions, executionModel, backlog, strategy });
+  const expandedCandidates = expandRecommendationCandidates({ backlog, strategy, health, validation, aiHandoffValidation, intelligenceVerification });
+  const improvementCandidates = [...analyzerCandidates, ...expandedCandidates];
   const risks = healthRisks(health);
   const coverage = quality?.coverage ?? {};
   const issues = [];
@@ -333,9 +425,10 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
   }
   // Merge: improvements always appear first (enforced by classRank comparator).
   // Maintenance fallback only when there are no improvements and health is stable.
-  const maintenanceIssues = issues.length ? issues : (validationAlreadyCompleted
+  const includeMaintenanceFallback = issues.length > 0 || analyzerCandidates.length > 0 || improvementCandidates.length === 0;
+  const maintenanceIssues = issues.length ? issues : (!includeMaintenanceFallback ? [] : (validationAlreadyCompleted
     ? [upToDateIssue(contextHash)]
-    : [selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', actionability: 'validation-experiment', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' })]);
+    : [selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', actionability: 'validation-experiment', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' })]));
   const candidates = applyRecommendationAdvancement([...improvementCandidates, ...maintenanceIssues], outcomeEntries);
   const decisionRanking = buildDecisionRanking(candidates);
   console.error('[refresh:diagnostic] selected recommendation:', decisionRanking.candidates[0]?.id, '|', decisionRanking.candidates[0]?.title);
@@ -625,13 +718,13 @@ function renderRecommendationTrace({ stages, improvementCandidates, maintenanceI
 
 export async function generateNextImprovement(repositoryPath = process.cwd(), options = {}) {
   const resolved = resolve(repositoryPath);
-  const [goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel] = await Promise.all([readText(resolved, 'goals.md'), readText(resolved, 'repository-health.md'), readJson(resolved, 'intelligence-quality.json'), readText(resolved, 'intelligence-audit.md'), readText(resolved, 'backlog.md'), readText(resolved, 'strategy.md'), readText(resolved, 'context-package.md'), readText(resolved, 'architecture.md'), readText(resolved, 'decisions.md'), readText(resolved, 'execution-model.md')]);
+  const [goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, validation, aiHandoffValidation, intelligenceVerification] = await Promise.all([readText(resolved, 'goals.md'), readText(resolved, 'repository-health.md'), readJson(resolved, 'intelligence-quality.json'), readText(resolved, 'intelligence-audit.md'), readText(resolved, 'backlog.md'), readText(resolved, 'strategy.md'), readText(resolved, 'context-package.md'), readText(resolved, 'architecture.md'), readText(resolved, 'decisions.md'), readText(resolved, 'execution-model.md'), readText(resolved, 'validation.md'), readText(resolved, 'ai-handoff-validation.md'), readText(resolved, 'intelligence-verification.md')]);
 
   // Run improvement analysis with per-stage trace diagnostics.
   const { candidates: improvementCandidates, stages } = analyzeImprovementsWithTrace({ architecture, decisions, executionModel, backlog, strategy });
 
   const outcomeEntries = options.outcomeEntries ?? (await readOutcomeEvidence(resolved)).entries;
-  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, repositoryPath: resolved, validationCompletions: options.validationCompletions ?? [], outcomeEntries });
+  const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, validation, aiHandoffValidation, intelligenceVerification, repositoryPath: resolved, validationCompletions: options.validationCompletions ?? [], outcomeEntries });
   selectedIssue.explanation = explainRecommendation(selectedIssue, candidates);
   decisionRanking.explanation = explainDecisionRanking(decisionRanking);
   const prompt = renderPrompt({ selectedIssue, decisionRanking });
@@ -641,9 +734,9 @@ export async function generateNextImprovement(repositoryPath = process.cwd(), op
 
   // Write the deterministic recommendation trace.
   const maintenanceIssues = candidates.filter((c) => c.class === 'maintenance');
-  const docs = { goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel };
+  const docs = { goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, validation, aiHandoffValidation, intelligenceVerification };
   const generatorFailures = options.generatorFailures ?? [];
-  const trace = renderRecommendationTrace({ stages, improvementCandidates, maintenanceIssues, allCandidates: candidates, decisionRanking, filesRead: requiredFiles, docs, generatorFailures });
+  const trace = renderRecommendationTrace({ stages, improvementCandidates: candidates.filter((c) => c.class === 'improvement'), maintenanceIssues, allCandidates: candidates, decisionRanking, filesRead: requiredFiles, docs, generatorFailures });
   await writeFile(join(resolved, '.ai', 'recommendation-trace.md'), trace);
 
   return { choice: selectedIssue, selectedIssue, candidates, decisionRanking, explanation: selectedIssue.explanation, prompt, filesRead: requiredFiles };
