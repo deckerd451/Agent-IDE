@@ -578,14 +578,7 @@ function UpToDateCard({ repositoryName, confidence, recommendationSource }: { re
 
 
 function implementationPrompt(data: ControlPlane, documents: Record<string, DocumentState>) {
-  // Runtime prompt-body path investigation (2026-06-28): Preview Prompt renders
-  // through CurrentTaskCard -> TaskArtifact -> implementationPrompt(), while Copy
-  // Implementation Prompt and Open Codex route through performWorkflowStepAction().
-  // All three now read the same control-plane field only:
-  // data.recommendation.implementationPrompt. Do not fall back to packages.builder,
-  // loaded prompt documents, legacy generated markdown, or recommendation.prompt
-  // when implementationPrompt is present, because those stale sources can contain
-  // the raw Repository Judgment title in the Goal section.
+  // Single source of truth: do not fall back to packages.builder, documents, or recommendation.prompt.
   void documents;
   const prompt = data.recommendation.implementationPrompt;
   if (prompt?.trim()) return prompt;

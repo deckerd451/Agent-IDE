@@ -5,7 +5,7 @@ import { renderPrompt } from '../scripts/next-improvement.mjs';
 const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
 const implementationPromptFunction = appSource.match(/function implementationPrompt\([\s\S]*?\n}\n\nfunction recommendationDisplayTitle/)?.[0] ?? '';
 
-assert.match(implementationPromptFunction, /Runtime prompt-body path investigation/);
+assert.match(implementationPromptFunction, /Single source of truth/);
 assert.match(implementationPromptFunction, /data\.recommendation\.implementationPrompt/);
 assert.doesNotMatch(implementationPromptFunction, /data\.packages\.builder|documents\['prompts\/builder\.md'\]|data\.recommendation\.prompt/);
 assert.match(appSource, /'copy-implementation-prompt': implementationPrompt\(data, documents\)/);
