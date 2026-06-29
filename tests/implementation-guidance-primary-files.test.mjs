@@ -63,3 +63,71 @@ test('manual product-decision guidance may use .ai/goals.md as primary file', ()
   assert.equal(result.primaryFile, '.ai/goals.md');
   assert.equal(result.source, 'direct');
 });
+
+test('inferred primary files are limited to files that exist in the connected target repository', () => {
+  const candidate = {
+    rank: 1,
+    id: 'intelligence-contradiction-cleanup',
+    title: 'Clean Up Intelligence Contradictions',
+    category: 'intelligence contradictions',
+    severity: 'high',
+    actionability: 'code-fixable',
+    priorityScore: 95,
+    expectedImprovement: { total: 1, repositoryHealth: 1, canonicalCompleteness: 1, quality: 1, verification: 0, handoffReadiness: 1 },
+    reason: 'Canonical intelligence contradicts itself; recommendation ranking logic in Agent IDE should not leak into target guidance.',
+    evidence: 'Contradictions between `.ai/goals.md` and `.ai/strategy.md`.',
+    selected: true,
+  };
+  const recommendation = {
+    title: 'Clean Up Intelligence Contradictions',
+    originalRecommendationTitle: 'Clean Up Intelligence Contradictions',
+    displaySummary: 'Resolve canonical intelligence contradictions before implementation.',
+    explanation: 'Manual/canonical intelligence needs cleanup.',
+    whyItMatters: 'Contradictions lower repository handoff readiness.',
+    actionability: 'code-fixable',
+    packageType: 'implementation',
+    evidenceSource: '.ai/next-improvement-prompt.md',
+    prompt: 'The target repository has contradictions in `.ai/goals.md` and `.ai/strategy.md`.',
+  };
+
+  const result = selectPrimaryFiles(candidate, recommendation, {
+    existingFiles: ['.ai/goals.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/context-package.md', 'Nearify/App.swift'],
+  });
+
+  assert.equal(result.primaryFile, '.ai/goals.md');
+  assert.notEqual(result.primaryFile, 'scripts/next-improvement.mjs');
+  assert.equal(result.source, 'direct');
+});
+
+test('missing implementation-location guidance is shown when inferred Agent IDE files do not exist in target repository', () => {
+  const candidate = {
+    rank: 1,
+    id: 'backlog-noise',
+    title: 'Reduce Backlog Noise',
+    category: 'recommendation ranking',
+    severity: 'medium',
+    actionability: 'code-fixable',
+    priorityScore: 80,
+    expectedImprovement: { total: 1, repositoryHealth: 1, canonicalCompleteness: 0, quality: 1, verification: 0, handoffReadiness: 1 },
+    reason: 'Recommendation ranking should improve.',
+    evidence: 'No concrete target repository implementation files are named.',
+    selected: true,
+  };
+  const recommendation = {
+    title: 'Reduce Backlog Noise',
+    explanation: 'Improve recommendation ranking.',
+    whyItMatters: 'A noisy backlog hides important work.',
+    actionability: 'code-fixable',
+    packageType: 'implementation',
+    evidenceSource: '.ai/next-improvement-prompt.md',
+    prompt: 'No likely files are named by repository intelligence.',
+  };
+
+  const result = selectPrimaryFiles(candidate, recommendation, {
+    existingFiles: ['.ai/goals.md', '.ai/strategy.md', 'Nearify/App.swift'],
+  });
+
+  assert.equal(result.primaryFile, null);
+  assert.equal(result.source, 'missing');
+  assert.match(result.note, /No existing implementation or test file/);
+});
