@@ -287,9 +287,12 @@ Intentionally not included:
 - Database
 - Authentication
 
+## Implemented now:
+
+- Backlog quality filtering is implemented by `scripts/backlog.mjs` and covered by `tests/backlog-quality-filtering.test.mjs`.
+
 ## Future work
 
-- Add backlog quality filtering.
 - Add richer validation detection for additional ecosystems.
 - Improve markdown rendering.
 - Add cross-links between `.ai` documents.

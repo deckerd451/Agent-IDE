@@ -1,30 +1,26 @@
 # Backlog
 
-Last Audit: 2026-06-29T01:43:55.371Z
+Last Audit: 2026-06-29T03:03:42.285Z
 Confidence: 95%
 
 ## High Priority
 - None detected
 
 ## Medium Priority
-- **Add Backlog Quality Filtering**
-  - Source: README.md:292
-  - Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering.
-  - Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering.
 - **Add Cross-links Between .ai Documents**
-  - Source: README.md:295
+  - Source: README.md:298
   - Reason: Repository documentation identifies actionable follow-up work from: Add cross-links between `.ai` documents.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add cross-links between `.ai` documents.
 - **Add Expand Repository Health Checks**
-  - Source: README.md:296
+  - Source: README.md:299
   - Reason: Repository documentation identifies actionable follow-up work from: Expand repository health checks as more intelligence artifacts are added.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add expand repository health checks as more intelligence artifacts are added.
 - **Add Richer Validation Detection**
-  - Source: README.md:293
+  - Source: README.md:296
   - Reason: Repository documentation identifies actionable follow-up work from: Add richer validation detection for additional ecosystems.
   - Suggested Next Step: Define the smallest local, deterministic change needed to add richer validation detection for additional ecosystems.
 - **Improve Markdown Rendering**
-  - Source: README.md:294
+  - Source: README.md:297
   - Reason: Repository documentation identifies actionable follow-up work from: Improve markdown rendering.
   - Suggested Next Step: Define the smallest local, deterministic change needed to improve markdown rendering.
 

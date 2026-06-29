@@ -5,27 +5,26 @@
     "schemaVersion": 1,
     "status": "preserved",
     "originalRecommendation": {
-      "id": "backlog-add-backlog-quality-filtering",
-      "title": "Add backlog quality filtering",
-      "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-      "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
-      "recommendedAction": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-      "source": ".ai/backlog.md Medium Priority"
+      "id": "validation-no-script-was-detected-style-static-lint-coverage",
+      "title": "No `npm run lint` script was detected; style/static lint coverage",
+      "evidence": "No `npm run lint` script was detected; style/static lint coverage is unknown",
+      "reason": "Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).",
+      "recommendedAction": "No `npm run lint` script was detected; style/static lint coverage is unknown",
+      "source": ".ai/validation.md Known Gaps"
     },
-    "title": "Add backlog quality filtering",
-    "rootCause": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
-    "implementationTarget": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
+    "title": "No `npm run lint` script was detected; style/static lint coverage",
+    "rootCause": "Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).",
+    "implementationTarget": "No `npm run lint` script was detected; style/static lint coverage is unknown",
     "likelyFiles": [
       "repository files cited by Current Evidence"
     ],
     "deterministicEvidence": [
-      "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-      "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
-      ".ai/backlog.md Medium Priority"
+      "No `npm run lint` script was detected; style/static lint coverage is unknown",
+      "Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).",
+      ".ai/validation.md Known Gaps"
     ],
     "acceptanceCriteria": [
-      "The concrete recommendation is implemented as selected.",
-      "The selected issue is resolved or downgraded after refresh."
+      "The typed recommendation is handled by its existing deterministic workflow."
     ],
     "nonGoals": [
       "Do not broaden scope beyond the selected recommendation.",
@@ -34,12 +33,12 @@
     "clarification": null
   },
   "originalSelectedRecommendation": {
-    "id": "backlog-add-backlog-quality-filtering",
-    "title": "Add backlog quality filtering",
-    "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-    "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
-    "recommendedAction": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-    "source": ".ai/backlog.md Medium Priority"
+    "id": "validation-no-script-was-detected-style-static-lint-coverage",
+    "title": "No `npm run lint` script was detected; style/static lint coverage",
+    "evidence": "No `npm run lint` script was detected; style/static lint coverage is unknown",
+    "reason": "Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).",
+    "recommendedAction": "No `npm run lint` script was detected; style/static lint coverage is unknown",
+    "source": ".ai/validation.md Known Gaps"
   },
   "scoringRules": [
     "Priority score = issue base priority + severity boost + actionability boost, capped at 100.",
@@ -56,31 +55,25 @@
   ],
   "candidates": [
     {
-      "id": "backlog-add-backlog-quality-filtering",
-      "kind": "backlog-add-backlog-quality-filtering",
+      "id": "validation-no-script-was-detected-style-static-lint-coverage",
+      "kind": "validation-no-script-was-detected-style-static-lint-coverage",
       "class": "maintenance",
-      "category": ".ai/backlog.md candidate expansion",
+      "category": ".ai/validation.md candidate expansion",
       "severity": "medium",
-      "actionability": "code-fixable",
-      "packageType": "implementation",
-      "source": ".ai/backlog.md Medium Priority",
-      "title": "Add backlog quality filtering",
-      "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-      "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
-      "recommendedAction": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
+      "actionability": "validation-experiment",
+      "packageType": "validation-experiment",
+      "source": ".ai/validation.md Known Gaps",
+      "title": "No `npm run lint` script was detected; style/static lint coverage",
+      "evidence": "No `npm run lint` script was detected; style/static lint coverage is unknown",
+      "reason": "Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).",
+      "recommendedAction": "No `npm run lint` script was detected; style/static lint coverage is unknown",
       "advancement": {
         "state": "eligible",
         "reason": "No implemented + worked outcome matched this recommendation."
       },
-      "advancementSuppressedCandidates": [
-        {
-          "id": "backlog-add-backlog-quality-filtering",
-          "title": "**Add Backlog Quality Filtering**",
-          "reason": "Satisfied by implemented + worked outcome recorded at 2026-06-28T12:17:38.681Z; no deterministic incomplete evidence remains."
-        }
-      ],
-      "priorityScore": 46,
-      "priority": 46,
+      "advancementSuppressedCandidates": [],
+      "priorityScore": 42,
+      "priority": 42,
       "expectedImprovement": {
         "repositoryHealth": 3,
         "canonicalCompleteness": 0,
@@ -95,27 +88,26 @@
         "schemaVersion": 1,
         "status": "preserved",
         "originalRecommendation": {
-          "id": "backlog-add-backlog-quality-filtering",
-          "title": "Add backlog quality filtering",
-          "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-          "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
-          "recommendedAction": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-          "source": ".ai/backlog.md Medium Priority"
+          "id": "validation-no-script-was-detected-style-static-lint-coverage",
+          "title": "No `npm run lint` script was detected; style/static lint coverage",
+          "evidence": "No `npm run lint` script was detected; style/static lint coverage is unknown",
+          "reason": "Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).",
+          "recommendedAction": "No `npm run lint` script was detected; style/static lint coverage is unknown",
+          "source": ".ai/validation.md Known Gaps"
         },
-        "title": "Add backlog quality filtering",
-        "rootCause": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
-        "implementationTarget": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
+        "title": "No `npm run lint` script was detected; style/static lint coverage",
+        "rootCause": "Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).",
+        "implementationTarget": "No `npm run lint` script was detected; style/static lint coverage is unknown",
         "likelyFiles": [
           "repository files cited by Current Evidence"
         ],
         "deterministicEvidence": [
-          "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-          "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
-          ".ai/backlog.md Medium Priority"
+          "No `npm run lint` script was detected; style/static lint coverage is unknown",
+          "Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).",
+          ".ai/validation.md Known Gaps"
         ],
         "acceptanceCriteria": [
-          "The concrete recommendation is implemented as selected.",
-          "The selected issue is resolved or downgraded after refresh."
+          "The typed recommendation is handled by its existing deterministic workflow."
         ],
         "nonGoals": [
           "Do not broaden scope beyond the selected recommendation.",
@@ -124,34 +116,18 @@
         "clarification": null
       },
       "originalSelectedRecommendation": {
-        "id": "backlog-add-backlog-quality-filtering",
-        "title": "Add backlog quality filtering",
-        "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-        "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
-        "recommendedAction": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
-        "source": ".ai/backlog.md Medium Priority"
+        "id": "validation-no-script-was-detected-style-static-lint-coverage",
+        "title": "No `npm run lint` script was detected; style/static lint coverage",
+        "evidence": "No `npm run lint` script was detected; style/static lint coverage is unknown",
+        "reason": "Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).",
+        "recommendedAction": "No `npm run lint` script was detected; style/static lint coverage is unknown",
+        "source": ".ai/validation.md Known Gaps"
       },
       "explanation": {
         "id": "recommendation-selection",
         "title": "Why This Issue Was Selected",
         "rule": "Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.",
         "candidateIssues": [
-          {
-            "id": "backlog-add-backlog-quality-filtering",
-            "title": "Add backlog quality filtering",
-            "category": ".ai/backlog.md candidate expansion",
-            "priority": 46,
-            "actionability": "code-fixable",
-            "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering"
-          },
-          {
-            "id": "backlog-suggested-next-step-define-the-smallest-local-deterministic-change-nee",
-            "title": "Suggested Next Step: Define the smallest local, deterministic change needed",
-            "category": ".ai/backlog.md candidate expansion",
-            "priority": 46,
-            "actionability": "code-fixable",
-            "evidence": "Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering"
-          },
           {
             "id": "validation-no-script-was-detected-style-static-lint-coverage",
             "title": "No `npm run lint` script was detected; style/static lint coverage",
@@ -170,92 +146,18 @@
           }
         ],
         "selected": {
-          "id": "backlog-add-backlog-quality-filtering",
-          "title": "Add backlog quality filtering",
-          "priority": 46
+          "id": "validation-no-script-was-detected-style-static-lint-coverage",
+          "title": "No `npm run lint` script was detected; style/static lint coverage",
+          "priority": 42
         },
         "computed": {
-          "selectedPriority": 46,
-          "highestPriority": 46
+          "selectedPriority": 42,
+          "highestPriority": 42
         },
         "classification": "Consistent",
         "reason": "Highest deterministic priority requiring action.",
-        "recommendation": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering"
+        "recommendation": "No `npm run lint` script was detected; style/static lint coverage is unknown"
       }
-    },
-    {
-      "id": "backlog-suggested-next-step-define-the-smallest-local-deterministic-change-nee",
-      "kind": "backlog-suggested-next-step-define-the-smallest-local-deterministic-change-nee",
-      "class": "maintenance",
-      "category": ".ai/backlog.md candidate expansion",
-      "severity": "medium",
-      "actionability": "code-fixable",
-      "packageType": "implementation",
-      "source": ".ai/backlog.md Medium Priority",
-      "title": "Suggested Next Step: Define the smallest local, deterministic change needed",
-      "evidence": "Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering",
-      "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
-      "recommendedAction": "Suggested Next Step: Define the smallest local, deterministic change needed to add backlog quality filtering",
-      "advancement": {
-        "state": "eligible",
-        "reason": "No implemented + worked outcome matched this recommendation."
-      },
-      "advancementSuppressedCandidates": [
-        {
-          "id": "backlog-add-backlog-quality-filtering",
-          "title": "**Add Backlog Quality Filtering**",
-          "reason": "Satisfied by implemented + worked outcome recorded at 2026-06-28T12:17:38.681Z; no deterministic incomplete evidence remains."
-        }
-      ],
-      "priorityScore": 46,
-      "priority": 46,
-      "expectedImprovement": {
-        "repositoryHealth": 3,
-        "canonicalCompleteness": 0,
-        "quality": 2,
-        "verification": 1,
-        "handoffReadiness": 2,
-        "total": 8
-      },
-      "rank": 2,
-      "selected": false
-    },
-    {
-      "id": "validation-no-script-was-detected-style-static-lint-coverage",
-      "kind": "validation-no-script-was-detected-style-static-lint-coverage",
-      "class": "maintenance",
-      "category": ".ai/validation.md candidate expansion",
-      "severity": "medium",
-      "actionability": "validation-experiment",
-      "packageType": "validation-experiment",
-      "source": ".ai/validation.md Known Gaps",
-      "title": "No `npm run lint` script was detected; style/static lint coverage",
-      "evidence": "No `npm run lint` script was detected; style/static lint coverage is unknown",
-      "reason": "Candidate expansion selected this actionable item from .ai/validation.md (Known Gaps).",
-      "recommendedAction": "No `npm run lint` script was detected; style/static lint coverage is unknown",
-      "advancement": {
-        "state": "eligible",
-        "reason": "No implemented + worked outcome matched this recommendation."
-      },
-      "advancementSuppressedCandidates": [
-        {
-          "id": "backlog-add-backlog-quality-filtering",
-          "title": "**Add Backlog Quality Filtering**",
-          "reason": "Satisfied by implemented + worked outcome recorded at 2026-06-28T12:17:38.681Z; no deterministic incomplete evidence remains."
-        }
-      ],
-      "priorityScore": 42,
-      "priority": 42,
-      "expectedImprovement": {
-        "repositoryHealth": 3,
-        "canonicalCompleteness": 0,
-        "quality": 2,
-        "verification": 1,
-        "handoffReadiness": 2,
-        "total": 8
-      },
-      "rank": 3,
-      "selected": false
     },
     {
       "id": "validation-no-standalone-typecheck-script-was-detected-type-validation-is-covered",
@@ -274,13 +176,7 @@
         "state": "eligible",
         "reason": "No implemented + worked outcome matched this recommendation."
       },
-      "advancementSuppressedCandidates": [
-        {
-          "id": "backlog-add-backlog-quality-filtering",
-          "title": "**Add Backlog Quality Filtering**",
-          "reason": "Satisfied by implemented + worked outcome recorded at 2026-06-28T12:17:38.681Z; no deterministic incomplete evidence remains."
-        }
-      ],
+      "advancementSuppressedCandidates": [],
       "priorityScore": 42,
       "priority": 42,
       "expectedImprovement": {
@@ -291,49 +187,28 @@
         "handoffReadiness": 2,
         "total": 8
       },
-      "rank": 4,
+      "rank": 2,
       "selected": false
     }
   ],
   "selectedIssue": {
-    "id": "backlog-add-backlog-quality-filtering",
-    "title": "Add backlog quality filtering",
+    "id": "validation-no-script-was-detected-style-static-lint-coverage",
+    "title": "No `npm run lint` script was detected; style/static lint coverage",
     "rank": 1,
-    "priorityScore": 46,
+    "priorityScore": 42,
     "advancement": {
       "state": "eligible",
       "reason": "No implemented + worked outcome matched this recommendation."
     }
   },
   "advancement": {
-    "suppressedCandidates": [
-      {
-        "id": "backlog-add-backlog-quality-filtering",
-        "title": "**Add Backlog Quality Filtering**",
-        "reason": "Satisfied by implemented + worked outcome recorded at 2026-06-28T12:17:38.681Z; no deterministic incomplete evidence remains."
-      },
-      {
-        "id": "backlog-add-backlog-quality-filtering",
-        "title": "**Add Backlog Quality Filtering**",
-        "reason": "Satisfied by implemented + worked outcome recorded at 2026-06-28T12:17:38.681Z; no deterministic incomplete evidence remains."
-      },
-      {
-        "id": "backlog-add-backlog-quality-filtering",
-        "title": "**Add Backlog Quality Filtering**",
-        "reason": "Satisfied by implemented + worked outcome recorded at 2026-06-28T12:17:38.681Z; no deterministic incomplete evidence remains."
-      },
-      {
-        "id": "backlog-add-backlog-quality-filtering",
-        "title": "**Add Backlog Quality Filtering**",
-        "reason": "Satisfied by implemented + worked outcome recorded at 2026-06-28T12:17:38.681Z; no deterministic incomplete evidence remains."
-      }
-    ],
+    "suppressedCandidates": [],
     "selected": {
       "state": "eligible",
       "reason": "No implemented + worked outcome matched this recommendation."
     }
   },
-  "selectionExplanation": "Add backlog quality filtering is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation.",
+  "selectionExplanation": "No `npm run lint` script was detected; style/static lint coverage is ranked #1 with priority 42 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation.",
   "explanation": {
     "id": "decision-ranking",
     "title": "Decision Ranking Explanation",
@@ -354,9 +229,9 @@
     "candidateOrdering": [
       {
         "rank": 1,
-        "id": "backlog-add-backlog-quality-filtering",
-        "title": "Add backlog quality filtering",
-        "priorityScore": 46,
+        "id": "validation-no-script-was-detected-style-static-lint-coverage",
+        "title": "No `npm run lint` script was detected; style/static lint coverage",
+        "priorityScore": 42,
         "expectedImprovement": {
           "repositoryHealth": 3,
           "canonicalCompleteness": 0,
@@ -369,36 +244,6 @@
       },
       {
         "rank": 2,
-        "id": "backlog-suggested-next-step-define-the-smallest-local-deterministic-change-nee",
-        "title": "Suggested Next Step: Define the smallest local, deterministic change needed",
-        "priorityScore": 46,
-        "expectedImprovement": {
-          "repositoryHealth": 3,
-          "canonicalCompleteness": 0,
-          "quality": 2,
-          "verification": 1,
-          "handoffReadiness": 2,
-          "total": 8
-        },
-        "selected": false
-      },
-      {
-        "rank": 3,
-        "id": "validation-no-script-was-detected-style-static-lint-coverage",
-        "title": "No `npm run lint` script was detected; style/static lint coverage",
-        "priorityScore": 42,
-        "expectedImprovement": {
-          "repositoryHealth": 3,
-          "canonicalCompleteness": 0,
-          "quality": 2,
-          "verification": 1,
-          "handoffReadiness": 2,
-          "total": 8
-        },
-        "selected": false
-      },
-      {
-        "rank": 4,
         "id": "validation-no-standalone-typecheck-script-was-detected-type-validation-is-covered",
         "title": "No standalone typecheck script was detected; type validation is covered",
         "priorityScore": 42,
@@ -414,22 +259,6 @@
       }
     ],
     "expectedImprovementCalculations": {
-      "backlog-add-backlog-quality-filtering": {
-        "repositoryHealth": 3,
-        "canonicalCompleteness": 0,
-        "quality": 2,
-        "verification": 1,
-        "handoffReadiness": 2,
-        "total": 8
-      },
-      "backlog-suggested-next-step-define-the-smallest-local-deterministic-change-nee": {
-        "repositoryHealth": 3,
-        "canonicalCompleteness": 0,
-        "quality": 2,
-        "verification": 1,
-        "handoffReadiness": 2,
-        "total": 8
-      },
       "validation-no-script-was-detected-style-static-lint-coverage": {
         "repositoryHealth": 3,
         "canonicalCompleteness": 0,
@@ -448,16 +277,16 @@
       }
     },
     "selected": {
-      "id": "backlog-add-backlog-quality-filtering",
-      "title": "Add backlog quality filtering",
+      "id": "validation-no-script-was-detected-style-static-lint-coverage",
+      "title": "No `npm run lint` script was detected; style/static lint coverage",
       "rank": 1,
-      "priorityScore": 46,
+      "priorityScore": 42,
       "advancement": {
         "state": "eligible",
         "reason": "No implemented + worked outcome matched this recommendation."
       }
     },
     "classification": "Consistent",
-    "reason": "Add backlog quality filtering is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation."
+    "reason": "No `npm run lint` script was detected; style/static lint coverage is ranked #1 with priority 42 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation."
   }
 }
