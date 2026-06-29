@@ -61,6 +61,7 @@ The following documents depend on this specification:
 |---|---|---|
 | Evidence Specification | `./evidence-specification.md` | Confidence model, universal edge types, graph invariants — extended with IP-specific rules |
 | Repository Intelligence Specification | `./repository-intelligence-specification.md` | All Layer 0 node types, edge types, confidence scale, and graph invariants — extended with Layer 1A signal, recommendation, task, and validation-finding concepts |
+| Responsibility Matrix | `./responsibility-matrix.md` | All Layer 0 concept definitions — referenced for canonical ownership records |
 | Architecture Review | `./architecture-review-2026-06-28.md` | Dependency graph and refactoring recommendations |
 
 ---
