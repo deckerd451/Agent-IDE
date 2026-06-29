@@ -509,7 +509,7 @@ async function collectRepositoryFiles(repositoryPath) {
       if (entry.isDirectory()) {
         if (relativePath === 'node_modules' || relativePath.endsWith('/node_modules') || relativePath === '.git' || relativePath.endsWith('/.git')) continue;
         await walk(relativePath);
-      } else if (entry.isFile() && /\.(?:md|json|mjs|js|ts|tsx|css)$/.test(entry.name)) {
+      } else if (entry.isFile() && (/\.(?:md|json|mjs|js|ts|tsx|css)$/.test(entry.name) || /\.(?:xcodeproj|xcworkspace)$/.test(entry.name))) {
         files.push(relativePath);
       }
     }

@@ -131,3 +131,41 @@ test('missing implementation-location guidance is shown when inferred Agent IDE 
   assert.equal(result.source, 'missing');
   assert.match(result.note, /No existing implementation or test file/);
 });
+
+test('validation-experiment guidance for Xcode gaps prefers project and validation artifacts over canonical goals', () => {
+  const candidate = {
+    rank: 1,
+    id: 'xcode-validation-gap',
+    title: 'Full simulator/device build: Not run by default; no full xcodebuild',
+    category: 'validation gap',
+    severity: 'medium',
+    actionability: 'validation-experiment',
+    priorityScore: 82,
+    expectedImprovement: { total: 1, repositoryHealth: 1, canonicalCompleteness: 0, quality: 1, verification: 1, handoffReadiness: 1 },
+    reason: 'Nearify has an Xcode validation gap. Manual intent lives in `.ai/goals.md`, and validation notes live in `.ai/validation.md`.',
+    evidence: 'Full simulator/device build was not run by default; no full xcodebuild.',
+    selected: true,
+  };
+  const recommendation = {
+    title: 'Full simulator/device build: Not run by default; no full xcodebuild',
+    explanation: 'Validate the Xcode project locally before claiming full build readiness.',
+    whyItMatters: 'Xcode build validation proves the handoff can be executed locally.',
+    actionability: 'validation-experiment',
+    packageType: 'validation-experiment',
+    evidenceSource: '.ai/validation.md',
+    prompt: 'Validation gap cites `.ai/goals.md` and `.ai/validation.md` but does not require canonical edits.',
+  };
+
+  const result = selectPrimaryFiles(candidate, recommendation, {
+    existingFiles: ['Beacon.xcodeproj', '.ai/validation.md', '.ai/goals.md', 'Nearify/App.swift'],
+  });
+
+  assert.equal(result.primaryFile, 'Beacon.xcodeproj');
+  assert.notEqual(result.primaryFile, '.ai/goals.md');
+  assert.ok(result.supportingFiles.includes('.ai/validation.md'));
+  assert.deepEqual(result.validationCommands, [
+    'xcodebuild -list -project Beacon.xcodeproj',
+    "xcodebuild -project Beacon.xcodeproj -scheme <scheme-from-list> -destination '<platform-destination>' build",
+  ]);
+  assert.match(result.note, /validation guidance/i);
+});
