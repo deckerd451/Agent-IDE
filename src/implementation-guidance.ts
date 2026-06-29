@@ -1,11 +1,13 @@
 const canonicalManualIntelligenceFiles = new Set(['.ai/goals.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/context-package.md']);
 const preferredCanonicalIntelligenceFiles = ['.ai/goals.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/context-package.md'];
+const preferredValidationArtifactFiles = ['.ai/validation.md', '.ai/ai-handoff-validation.md', '.ai/intelligence-verification.md'];
 const generatedIntelligenceFilePattern = /^\.ai\/(?:context-package|recommendation-trace|architecture|strategy|backlog|decisions|validation|repository-health|execution-model|next-improvement-prompt|decision-ranking|repository-judgment|product-judgment|judgment-comparison|intelligence-|ai-handoff-validation|evidence-lineage|outcomes|prompts\/)/;
 const implementationFilePattern = /^(?:scripts|src)\/[^\s`'"),;]+\.(?:mjs|js|ts|tsx|css)$/;
+const xcodeProjectFilePattern = /[^\s`'"),;]+\.(?:xcodeproj|xcworkspace)$/;
 const testFilePattern = /^(?:tests\/[^\s`'"),;]+\.test\.mjs|(?:src|scripts)\/[^\s`'"),;]+\.(?:test|spec)\.(?:mjs|js|ts|tsx))$/;
-const repositoryFilePattern = /(?:^|[`\s(,])((?:\.ai|scripts|src|tests)\/[^`\s)'",;]+\.(?:md|json|mjs|js|ts|tsx|css))/g;
+const repositoryFilePattern = /(?:^|[`\s(,])((?:(?:\.ai|scripts|src|tests)\/[^`\s)'",;]+\.(?:md|json|mjs|js|ts|tsx|css))|(?:[^`\s)'",;]+\.(?:xcodeproj|xcworkspace)))/g;
 
-type PrimaryFileSelection = { primaryFile: string | null; supportingFiles: string[]; source: 'direct' | 'inferred' | 'missing'; note: string };
+type PrimaryFileSelection = { primaryFile: string | null; supportingFiles: string[]; source: 'direct' | 'inferred' | 'missing'; note: string; validationCommands?: string[] };
 type PrimaryFileSelectionOptions = { existingFiles?: string[] | Set<string> };
 
 export function uniqueFiles(files: Array<string | null | undefined>) {
@@ -26,14 +28,20 @@ function isManualProductDecision(recommendation: any, candidate: any) {
   return recommendation.packageType === 'product-decision' || recommendation.actionability === 'manual' || candidate?.actionability === 'manual';
 }
 
+function isValidationExperiment(recommendation: any, candidate: any) {
+  return recommendation.packageType === 'validation-experiment' || recommendation.actionability === 'validation-experiment' || candidate?.actionability === 'validation-experiment';
+}
+
 function isCodeFixable(recommendation: any, candidate: any) {
   return !isManualProductDecision(recommendation, candidate) && (recommendation.packageType === 'implementation' || recommendation.packageType === 'task-clarification' || recommendation.actionability === 'code-fixable' || candidate?.actionability === 'code-fixable');
 }
 
 function classifyRepositoryFile(file: string) {
   if (canonicalManualIntelligenceFiles.has(file)) return 'manual';
+  if (preferredValidationArtifactFiles.includes(file)) return 'validation-artifact';
   if (generatedIntelligenceFilePattern.test(file)) return 'generated';
   if (testFilePattern.test(file)) return 'test';
+  if (xcodeProjectFilePattern.test(file)) return file.endsWith('.xcworkspace') ? 'xcode-workspace' : 'xcode-project';
   if (implementationFilePattern.test(file)) return 'implementation';
   return 'other';
 }
@@ -69,6 +77,23 @@ function isCanonicalOrContradictionTask(candidate: any, recommendation: any) {
   return /intelligence[-\s]?contradiction|contradiction|canonical|manual|repository intent|goals|strategy|architecture|context package/i.test(text);
 }
 
+function preferredExistingValidationFiles(existingFiles: Set<string> | null, directFiles: string[]) {
+  const repositoryFiles = existingFiles ? [...existingFiles] : [];
+  const projectFiles = filterExistingFiles(uniqueFiles([...directFiles, ...repositoryFiles]).filter((file) => ['xcode-workspace', 'xcode-project'].includes(classifyRepositoryFile(file))).sort((a, b) => (classifyRepositoryFile(a) === 'xcode-workspace' ? 0 : 1) - (classifyRepositoryFile(b) === 'xcode-workspace' ? 0 : 1) || a.localeCompare(b)), existingFiles);
+  const artifactFiles = filterExistingFiles([...preferredValidationArtifactFiles.filter((file) => directFiles.includes(file)), ...preferredValidationArtifactFiles], existingFiles);
+  return uniqueFiles([...projectFiles, ...artifactFiles, ...directFiles.filter((file) => classifyRepositoryFile(file) === 'validation-artifact')]);
+}
+
+function validationCommandsFor(primaryFile: string | null, supportingFiles: string[]) {
+  const files = uniqueFiles([primaryFile, ...supportingFiles]);
+  const workspace = files.find((file) => file.endsWith('.xcworkspace'));
+  const project = files.find((file) => file.endsWith('.xcodeproj'));
+  const container = workspace ?? project;
+  if (!container) return [];
+  const flag = workspace ? '-workspace' : '-project';
+  return [`xcodebuild -list ${flag} ${container}`, `xcodebuild ${flag} ${container} -scheme <scheme-from-list> -destination '<platform-destination>' build`];
+}
+
 function preferredExistingCanonicalFiles(existingFiles: Set<string> | null, directFiles: string[]) {
   const preferred = preferredCanonicalIntelligenceFiles.filter((file) => directFiles.includes(file));
   return filterExistingFiles([...preferred, ...preferredCanonicalIntelligenceFiles], existingFiles);
@@ -78,6 +103,20 @@ export function selectPrimaryFiles(candidate: any, recommendation: any, options?
   const existingFiles = existingFileSet(options);
   const allDirectFiles = filePathCandidatesForTask(candidate, recommendation);
   const directFiles = filterExistingFiles(allDirectFiles, existingFiles);
+  const validationExperiment = isValidationExperiment(recommendation, candidate);
+  if (validationExperiment) {
+    const validationFiles = preferredExistingValidationFiles(existingFiles, directFiles);
+    const [primaryFile, ...supporting] = validationFiles;
+    const supportingFiles = uniqueFiles([...supporting, ...directFiles.filter((file) => file !== primaryFile && file !== '.ai/goals.md')]);
+    return {
+      primaryFile: primaryFile ?? null,
+      supportingFiles,
+      source: primaryFile ? (directFiles.includes(primaryFile) ? 'direct' : 'inferred') : 'missing',
+      note: primaryFile ? 'Primary file is validation guidance: project/workspace files and validation artifacts are preferred for validation experiments; canonical owner-intent files are not primary unless this is a manual/product-decision package.' : 'No existing validation command target, project/workspace, or validation artifact file could be identified from deterministic repository-local evidence.',
+      validationCommands: validationCommandsFor(primaryFile ?? null, supportingFiles),
+    };
+  }
+
   const codeFixable = isCodeFixable(recommendation, candidate);
   if (!codeFixable) {
     const canonical = preferredExistingCanonicalFiles(existingFiles, directFiles);

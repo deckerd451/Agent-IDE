@@ -590,8 +590,8 @@ function implementationReadiness(data: ControlPlane, task: DecisionCandidate | n
     primaryFileSource: primaryFileSelection.source,
     primaryFileNote: primaryFileSelection.note,
     supportingFiles: uniqueFiles([...primaryFileSelection.supportingFiles, '.ai/context-package.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/validation.md']),
-    validation,
-    expectedArtifacts: ['Updated implementation or canonical repository intent', 'Saved outcome evidence', 'Refreshed repository intelligence'],
+    validation: primaryFileSelection.validationCommands?.length ? primaryFileSelection.validationCommands.join(' · ') : validation,
+    expectedArtifacts: data.recommendation.packageType === 'validation-experiment' ? ['Validation command output', 'Validation artifact review', 'Saved outcome evidence'] : ['Updated implementation or canonical repository intent', 'Saved outcome evidence', 'Refreshed repository intelligence'],
     scope: data.recommendation.packageType === 'product-decision' ? 'Repository-owner decision' : data.recommendation.packageType === 'validation-experiment' ? 'Validation experiment' : 'Incremental implementation',
     missingIntelligence: primaryFile ? '' : 'No implementation or test file was identified from deterministic repository-local evidence.',
     deterministicAddition: primaryFile ? '' : 'Add a generated Primary Files field to the recommendation package by extracting implementation/test file paths from decision ranking, recommendation trace, context package, architecture, backlog, package scripts, and validation evidence.',
@@ -769,18 +769,18 @@ function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, user
       </section>
       <section className="decisionAnswerCard" aria-label="How do we execute it">
         <p className="kicker">4. How do we execute it?</p>
-        <h3>Implementation Guidance</h3>
+        <h3>{data.recommendation.packageType === 'validation-experiment' ? 'Validation Guidance' : 'Implementation Guidance'}</h3>
         <div className="workMetaGrid compact">
           <div><small>Primary files</small><strong>{readiness.primaryFile ? <><code>{readiness.primaryFile}</code> <span>({readiness.primaryFileSource})</span></> : 'Missing from repository intelligence'}</strong></div>
           <div><small>Scope</small><strong>{readiness.scope}</strong></div>
           <div><small>Validation</small><strong>{readiness.validation}</strong></div>
           <div><small>Expected artifacts</small><strong>{readiness.expectedArtifacts.join(', ')}</strong></div>
         </div>
-        <p><b>Implementation location evidence:</b> {readiness.primaryFileNote}</p>
+        <p><b>{data.recommendation.packageType === 'validation-experiment' ? 'Validation target evidence' : 'Implementation location evidence'}:</b> {readiness.primaryFileNote}</p>
         <p><b>Supporting files:</b> {readiness.supportingFiles.join(', ')}</p>
         {readiness.missingIntelligence && <div className="warningCard"><p><b>First missing repository intelligence:</b> {readiness.missingIntelligence}</p><p><b>Why it would force repository exploration:</b> A developer must browse the file tree to find the implementation entry point.</p><p><b>Smallest deterministic addition:</b> {readiness.deterministicAddition}</p></div>}
         <ol className="simpleLoop" aria-label="Agent IDE loop"><li>Execute the selected repository decision.</li><li>Record the outcome.</li><li>Refresh repository intelligence.</li></ol>
-        <details className="inlineArtifact"><summary>Preview implementation guidance</summary><TaskArtifact artifactType={userTask?.artifactType ?? 'implementation-prompt'} data={data} documents={documents} repositoryPath={repositoryPath} /></details>
+        <details className="inlineArtifact"><summary>{data.recommendation.packageType === 'validation-experiment' ? 'Preview validation guidance' : 'Preview implementation guidance'}</summary><TaskArtifact artifactType={userTask?.artifactType ?? 'implementation-prompt'} data={data} documents={documents} repositoryPath={repositoryPath} /></details>
       </section>
     </div>
   );
