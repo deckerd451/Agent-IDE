@@ -65,6 +65,8 @@ type ControlPlaneRecommendation = {
   promptHash?: string;
   previousOutcomeWarning?: string;
   advancementReason?: string;
+  canonicalIntelligenceState?: 'existing' | 'missing';
+  executionGuidanceType?: 'implementation' | 'repository-owner decision' | 'intelligence bootstrap';
 };
 
 type VerificationArtifact = { artifact: string; generatedAt: string | null; generatedHash: string | null; displayedHash: string | null; status: 'Verified' | 'Failed'; failures: string[] };
@@ -184,7 +186,7 @@ type ControlPlane = {
   } | null;
 };
 
-type CanonicalEditProposal = { filePath: string; section: string; fieldLabel: string; markdownBlock: string; supportingEvidence: string[]; ownerNotes?: string };
+type CanonicalEditProposal = { filePath: string; section: string; fieldLabel: string; markdownBlock: string; supportingEvidence: string[]; ownerNotes?: string; mode?: 'review-existing' | 'create-missing' };
 
 type CanonicalEditResponse = { success?: boolean; message?: string; changedFile?: string; insertedSection?: boolean; insertedField?: string; error?: string };
 
@@ -265,6 +267,9 @@ function codeBlockAfter(markdown: string, heading: string) {
 
 function buildCanonicalEditProposal(data: ControlPlane): CanonicalEditProposal | null {
   if (data.recommendation.packageType !== 'product-decision') return null;
+  if (data.recommendation.id === 'canonical-bootstrap') {
+    return { filePath: '.ai/goals.md', section: 'Canonical contract', fieldLabel: 'Initial canonical intelligence', markdownBlock: 'Refresh repository intelligence to create the deterministic `.ai/goals.md` bootstrap template, then review owner placeholders.', ownerNotes: 'Create Missing Canonical Intelligence is an intelligence bootstrap action. The template uses repository-local evidence only and leaves repository-owner decisions as placeholders.', supportingEvidence: ['Missing canonical intelligence: .ai/goals.md'], mode: 'create-missing' };
+  }
   const prompt = data.recommendation.prompt;
   const filePath = markdownSectionValue(prompt, 'File') || '.ai/goals.md';
   const section = markdownSectionValue(prompt, 'Section') || '## Manual Strategy Notes';
@@ -273,7 +278,7 @@ function buildCanonicalEditProposal(data: ControlPlane): CanonicalEditProposal |
   if (filePath !== '.ai/goals.md' || section !== '## Manual Strategy Notes' || !fieldLabel || !markdownBlock) return null;
   const evidence = markdownSectionValue(prompt, 'Supporting Repository Evidence').split('\n').map((line) => line.replace(/^[-*]\s+/, '').trim()).filter(Boolean);
   const ownerNotes = markdownSectionValue(prompt, 'Repository Owner Notes') || markdownSectionValue(prompt, 'Repository Owner Warning');
-  return { filePath, section, fieldLabel, markdownBlock, ownerNotes, supportingEvidence: evidence.length ? evidence : [data.recommendation.explanation] };
+  return { filePath, section, fieldLabel, markdownBlock, ownerNotes, supportingEvidence: evidence.length ? evidence : [data.recommendation.explanation], mode: 'review-existing' };
 }
 
 const sidebarGroups: Array<{ label: string; items: Section['id'][] }> = [
@@ -817,7 +822,7 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
 
 function workflowInputForTask(recommendation: ControlPlaneRecommendation, candidate?: DecisionCandidate | null) {
   const packageType = recommendation.packageType === 'task-clarification' ? 'implementation' : recommendation.packageType;
-  return { packageType, category: candidate?.category, title: candidate?.engineeringTask?.title ?? candidate?.title ?? recommendation.displayTitle, ownerAction: candidate?.ownerAction, recommendationTitle: recommendation.originalRecommendationTitle ?? recommendation.title };
+  return { packageType, category: candidate?.category, title: candidate?.engineeringTask?.title ?? candidate?.title ?? recommendation.displayTitle, ownerAction: candidate?.ownerAction, recommendationTitle: recommendation.originalRecommendationTitle ?? recommendation.title, canonicalIntelligenceState: (recommendation.id === 'canonical-bootstrap' ? 'missing' : recommendation.packageType === 'product-decision' ? 'existing' : undefined) as 'missing' | 'existing' | undefined };
 }
 
 function hasUsefulValue(value?: string | null) {
@@ -897,8 +902,8 @@ function CanonicalEditPanel({ proposal, repositoryPath }: { proposal: CanonicalE
 
   return (
     <section className="controlCard canonicalReviewPanel" aria-label="Review and Apply Canonical Edit">
-      <p className="kicker">Review and Apply Canonical Edit</p>
-      <h2>Repository-owner canonical decision</h2>
+      <p className="kicker">{proposal.mode === 'create-missing' ? 'Create Missing Canonical Intelligence' : 'Review Existing Canonical Intelligence'}</p>
+      <h2>{proposal.mode === 'create-missing' ? 'Intelligence bootstrap' : 'Repository-owner canonical decision'}</h2>
       <p><b>Warning:</b> Repository owner must review/edit before applying. Agent IDE only applies owner-approved text to canonical intent; generated artifacts remain regenerated, not manually edited.</p>
       <div className="workMetaGrid">
         <div><small>File</small><strong><code>{proposal.filePath}</code></strong></div>
@@ -911,7 +916,7 @@ function CanonicalEditPanel({ proposal, repositoryPath }: { proposal: CanonicalE
       <ul>{proposal.supportingEvidence.map((item) => <li key={item}>{item}</li>)}</ul>
       <h3>Repository Owner Notes</h3>
       <p>{proposal.ownerNotes || 'Repository owner reviews the deterministic first draft, edits it if desired, and approves the canonical change before Agent IDE writes .ai/goals.md.'}</p>
-      <button className="primaryCta" disabled={isApplyingCanonicalEdit || !repositoryPath || !canonicalEditText.trim()} onClick={() => void applyCanonicalEdit()} type="button">{isApplyingCanonicalEdit ? 'Applying…' : 'Apply Canonical Edit'}<span className="visuallyHidden">Apply Edit</span></button>
+      <button className="primaryCta" disabled={proposal.mode === 'create-missing' || isApplyingCanonicalEdit || !repositoryPath || !canonicalEditText.trim()} onClick={() => void applyCanonicalEdit()} type="button">{proposal.mode === 'create-missing' ? 'Refresh Creates Canonical Intelligence' : isApplyingCanonicalEdit ? 'Applying…' : 'Apply Canonical Edit'}<span className="visuallyHidden">Apply Edit</span></button>
       {canonicalEditStatus && <div className="summary success">{canonicalEditStatus}</div>}
     </section>
   );

@@ -7,6 +7,7 @@ import { analyzeImprovements, analyzeImprovementsWithTrace } from './improvement
 import { readOutcomeEvidence } from './outcomes.mjs';
 import { generateProductIntelligence } from './product-intelligence.mjs';
 import { generateExecutionModel } from './execution-model.mjs';
+import { bootstrapCanonicalIntelligence, canonicalStatus } from './canonical-bootstrap.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md','architecture.md','decisions.md','execution-model.md','validation.md','ai-handoff-validation.md','intelligence-verification.md'];
 
@@ -370,8 +371,9 @@ function severityRank(issue) {
 
 
 
-const basePriorityById = { 'consistency-cleanup': 98, 'missing-intelligence': 95, validation: 86, 'handoff-readiness': 84, 'backlog-noise': 82, 'missing-manual-goals': 74, 'strategy-quality': 72, 'stale-intelligence': 55, 'ai-handoff-validation': 10 };
+const basePriorityById = { 'canonical-bootstrap': 110, 'consistency-cleanup': 98, 'missing-intelligence': 95, validation: 86, 'handoff-readiness': 84, 'backlog-noise': 82, 'missing-manual-goals': 74, 'strategy-quality': 72, 'stale-intelligence': 55, 'ai-handoff-validation': 10 };
 const improvementById = {
+  'canonical-bootstrap': { repositoryHealth: 12, canonicalCompleteness: 18, quality: 10, verification: 6, handoffReadiness: 8 },
   'missing-manual-goals': { repositoryHealth: 8, canonicalCompleteness: 12, quality: 4, verification: 0, handoffReadiness: 4 },
   'missing-intelligence': { repositoryHealth: 10, canonicalCompleteness: 10, quality: 8, verification: 6, handoffReadiness: 6 },
   'consistency-cleanup': { repositoryHealth: 9, canonicalCompleteness: 0, quality: 10, verification: 5, handoffReadiness: 7 },
@@ -438,6 +440,11 @@ export function buildDecisionRanking(issues) {
 }
 
 const issueDetails = {
+  'canonical-bootstrap': {
+    problem: 'The repository is missing the canonical `.ai/goals.md` owner-intent contract, so generated intelligence cannot enter the repository-intelligence-first workflow safely.',
+    requirements: ['Create `.ai/goals.md` from deterministic repository-local evidence only.', 'Preserve placeholder/manual sections for repository-owner input.', 'Refresh generated intelligence after the canonical file is created.'],
+    acceptance: ['`.ai/goals.md` exists before any recommendation asks the owner to edit it.', 'The generated template contains manual placeholders where owner judgment is required.', 'Repository intelligence can be refreshed and the next recommendation targets existing canonical intelligence or implementation work.'],
+  },
   'missing-manual-goals': {
     problem: 'The repository has missing populated Manual Goals or incomplete Manual Goals fields, so generated intelligence cannot reliably identify all required product intent fields or the safest next implementation target.',
     requirements: ['Update only the incomplete Manual Goals fields identified by the deterministic evaluation.', 'Base the entry on repository-local evidence only.', 'Do not rewrite unrelated manual sections or generated intelligence artifacts.'],
@@ -506,12 +513,16 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
   const expandedCandidates = expandRecommendationCandidates({ backlog, strategy, health, validation, aiHandoffValidation, intelligenceVerification });
   const improvementCandidates = [...analyzerCandidates, ...expandedCandidates];
   const risks = healthRisks(health);
-  const coverage = quality?.coverage ?? {};
   const issues = [];
+  const canonicalGoalsMissing = Boolean(repositoryPath) && !goals?.trim() && quality?.coverage?.goalsPresent !== true;
+  if (canonicalGoalsMissing) {
+    issues.push(selectedIssue({ id: 'canonical-bootstrap', category: 'intelligence bootstrap', severity: 'critical', actionability: 'manual', source: 'Canonical intelligence file .ai/goals.md is missing.', title: 'Create Missing Canonical Intelligence', evidence: 'Canonical intelligence file .ai/goals.md does not exist.', reason: 'The Control Plane must bootstrap the canonical repository-intent contract before recommending edits to canonical intelligence.', recommendedAction: 'Create .ai/goals.md using the deterministic repository-local bootstrap template, then refresh repository intelligence.' }));
+  }
+  const coverage = quality?.coverage ?? {};
   const missingCanonical = ['goalsPresent','strategyPresent','architecturePresent','decisionsPresent','validationPresent','backlogPresent','repositoryHealthPresent','agentsPresent','codePresent'].find((key) => coverage[key] === false);
   const manualCompleteness = quality?.canonicalIntelligenceQuality?.fields?.manualGoals;
   const manualGoalsRisk = risks.find((r) => /manual goals.*(?:missing|partial|\d+%)/i.test(r));
-  const manualNeedsDecision = coverage.goalsPresent === false || (manualCompleteness && Number(manualCompleteness.percent) < 100) || manualGoalsRisk;
+  const manualNeedsDecision = !canonicalGoalsMissing && (coverage.goalsPresent === false || (manualCompleteness && Number(manualCompleteness.percent) < 100) || manualGoalsRisk);
   if (manualNeedsDecision) {
     const missing = manualCompleteness?.missing?.length ? ` Missing: ${manualCompleteness.missing.join(', ')}.` : '';
     const evidence = manualGoalsRisk ?? (manualCompleteness ? `Manual Goals are ${manualCompleteness.state} (${manualCompleteness.percent}%).${missing}` : 'Manual Goals are missing from \`.ai/goals.md\`.');
@@ -566,6 +577,7 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
 
 
 function suggestedManualUpdate(selected) {
+  if (selected.id === 'canonical-bootstrap') return 'Agent IDE creates the initial `.ai/goals.md` template deterministically from repository-local evidence. Repository owner placeholders remain bracketed for later review.';
   if (selected.id === 'missing-manual-goals') {
     const explanation = selected.completenessExplanation;
     if (!explanation) return 'Canonical completeness explanation unavailable. Regenerate repository intelligence before accepting a Manual Goals update so only deterministically missing fields are suggested.';
@@ -770,6 +782,30 @@ function renderImplementationPackage(selected, details, ranking, productIntellig
 }
 
 function renderProductDecisionPackage(selected, details, ranking, productIntelligence = null) {
+  if (selected.id === 'canonical-bootstrap') return `# ${selected.title}
+
+## Decision Instructions
+This is an intelligence bootstrap task, not implementation work.
+Agent IDE detected that the canonical owner-intent file is missing before rendering execution guidance.
+Create Missing Canonical Intelligence writes only a deterministic local template to \`.ai/goals.md\`; generated artifacts are refreshed afterward.
+
+## Selected Issue
+${renderSelectedIssue(selected)}
+
+${renderDecisionRanking(ranking)}## Execution Guidance
+- Recommended action type: intelligence bootstrap.
+- Existing canonical intelligence: Missing.
+- Missing canonical intelligence: \`.ai/goals.md\`.
+- Template source: repository-local files only. No LLM calls, cloud service, embeddings, or telemetry.
+- Repository-owner decision fields remain bracketed placeholders for later review.
+
+## Acceptance Criteria
+${details.acceptance.map((item) => `- ${item}`).join('\n')}
+- After creation, refresh repository intelligence and generate the next recommendation normally.
+
+## Constraints
+${constraints.map((item) => `- ${item}`).join('\n')}
+`;
   return `# ${selected.title}\n\n## Decision Instructions\nThis is a product-owner decision task, not a Codex implementation task.\nUse repository-local evidence to decide or record the missing product, strategy, or manual-intelligence information.\nDo not send this package to Codex as implementation work.\nDo not edit files automatically; the repository owner should review, accept, or edit the suggested manual update in \`.ai/goals.md\`.
 Repository owner edits: \`.ai/goals.md\`
 Everything else will be regenerated.\n\n${renderStrategicContext(productIntelligence)}## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}${renderManualGoalsDeterministicEvaluation(selected)}${renderStrategyDeterministicEvaluation(selected)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n${suggestedCanonicalWording(selected)}## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n${selected.id === 'missing-manual-goals' ? '- Suggested Manual Update exactly matches the canonical Deterministic Evaluation missing fields.\n' : ''}- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct manual section of \`.ai/goals.md\`.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
@@ -920,6 +956,8 @@ function renderRecommendationTrace({ stages, improvementCandidates, maintenanceI
 
 export async function generateNextImprovement(repositoryPath = process.cwd(), options = {}) {
   const resolved = resolve(repositoryPath);
+  const preBootstrapStatus = await canonicalStatus(resolved, '.ai/goals.md');
+  const bootstrap = await bootstrapCanonicalIntelligence(resolved, '.ai/goals.md');
   // Refresh execution-model.md immediately before recommendation analysis so stale
   // execution-model risks cannot be copied into decision-ranking, active
   // recommendation, or the implementation package after canonical docs changed.
@@ -955,7 +993,7 @@ export async function generateNextImprovement(repositoryPath = process.cwd(), op
   const trace = renderRecommendationTrace({ stages: refreshedStages, improvementCandidates: candidates.filter((c) => c.class === 'improvement'), maintenanceIssues, allCandidates: candidates, decisionRanking, filesRead: requiredFiles, docs, generatorFailures });
   await writeFile(join(resolved, '.ai', 'recommendation-trace.md'), trace);
 
-  return { choice: selectedIssue, selectedIssue, candidates, decisionRanking, explanation: selectedIssue.explanation, prompt, filesRead: requiredFiles, productIntelligence };
+  return { choice: selectedIssue, selectedIssue, candidates, decisionRanking, explanation: selectedIssue.explanation, prompt, filesRead: requiredFiles, productIntelligence, canonicalBootstrap: { requiredFile: '.ai/goals.md', before: preBootstrapStatus.state, created: bootstrap.bootstrapped } };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
