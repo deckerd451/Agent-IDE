@@ -54,6 +54,7 @@ export type WorkflowInput = {
   title?: string;
   ownerAction?: string;
   recommendationTitle?: string;
+  canonicalIntelligenceState?: 'existing' | 'missing';
 };
 
 type StepDefinition = Omit<WorkflowStep, 'status'>;
@@ -137,6 +138,8 @@ export function createWorkflow(input: WorkflowInput, state?: WorkflowState | nul
   const completedIds = new Set(stateMatches ? state.completedStepIds : definition.steps.slice(0, currentIndex).map((step) => step.id));
   const checklist = definition.steps.map((step, index) => ({
     ...step,
+    ...(type === 'Product Decision' && index === 0 && input.canonicalIntelligenceState === 'missing' ? { label: 'Create missing canonical intelligence', primaryAction: 'Create Canonical Intelligence' } : {}),
+    ...(type === 'Product Decision' && index === 0 && input.canonicalIntelligenceState === 'existing' ? { label: 'Review existing canonical intelligence', primaryAction: 'Review Existing Canonical Intelligence' } : {}),
     status: completedIds.has(step.id) || index < currentIndex ? 'Complete' : index === currentIndex ? status : 'Not Started',
   }));
   const currentStep = checklist[currentIndex] ?? checklist[0];
