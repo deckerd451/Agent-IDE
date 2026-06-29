@@ -91,7 +91,7 @@ function validationCommandsFor(primaryFile: string | null, supportingFiles: stri
   const container = workspace ?? project;
   if (!container) return [];
   const flag = workspace ? '-workspace' : '-project';
-  return [`xcodebuild -list ${flag} ${container}`, `xcodebuild ${flag} ${container} -scheme <scheme-from-list> -destination '<platform-destination>' build`];
+  return [`xcodebuild -list ${flag} ${container}`, `xcodebuild build ${flag} ${container} -scheme <Scheme> -destination 'platform=iOS Simulator,name=<Simulator Name>'`];
 }
 
 function preferredExistingCanonicalFiles(existingFiles: Set<string> | null, directFiles: string[]) {

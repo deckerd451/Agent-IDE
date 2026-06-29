@@ -771,10 +771,10 @@ function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, user
         <p className="kicker">4. How do we execute it?</p>
         <h3>{data.recommendation.packageType === 'validation-experiment' ? 'Validation Guidance' : 'Implementation Guidance'}</h3>
         <div className="workMetaGrid compact">
-          <div><small>Primary files</small><strong>{readiness.primaryFile ? <><code>{readiness.primaryFile}</code> <span>({readiness.primaryFileSource})</span></> : 'Missing from repository intelligence'}</strong></div>
+          <div><small>{data.recommendation.packageType === 'validation-experiment' ? 'Validation target' : 'Primary files'}</small><strong>{readiness.primaryFile ? <><code>{readiness.primaryFile}</code> <span>({readiness.primaryFileSource})</span></> : 'Missing from repository intelligence'}</strong></div>
           <div><small>Scope</small><strong>{readiness.scope}</strong></div>
-          <div><small>Validation</small><strong>{readiness.validation}</strong></div>
-          <div><small>Expected artifacts</small><strong>{readiness.expectedArtifacts.join(', ')}</strong></div>
+          <div><small>{data.recommendation.packageType === 'validation-experiment' ? 'Suggested commands' : 'Validation'}</small><strong>{readiness.validation}</strong></div>
+          <div><small>{data.recommendation.packageType === 'validation-experiment' ? 'Expected validation artifact' : 'Expected artifacts'}</small><strong>{readiness.expectedArtifacts.join(', ')}</strong></div>
         </div>
         <p><b>{data.recommendation.packageType === 'validation-experiment' ? 'Validation target evidence' : 'Implementation location evidence'}:</b> {readiness.primaryFileNote}</p>
         <p><b>Supporting files:</b> {readiness.supportingFiles.join(', ')}</p>

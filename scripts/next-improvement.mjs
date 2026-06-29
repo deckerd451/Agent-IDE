@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { explainDecisionRanking, explainRecommendation, renderExplanationMarkdown } from './intelligence-explanations.mjs';
 import { canonicalManualGoalsSuggestedUpdate, evaluateCanonicalStrategyCompleteness } from './canonical-completeness.mjs';
@@ -44,6 +44,75 @@ async function readJson(repositoryPath, file) {
   if (!text.trim()) return null;
   try { return JSON.parse(text); } catch { return null; }
 }
+
+async function collectValidationEvidence(repositoryPath) {
+  const evidence = { files: [], packageScripts: {}, validationMarkdown: '' };
+  async function walk(relativeDir = '') {
+    const absoluteDir = join(repositoryPath, relativeDir);
+    const entries = await readdir(absoluteDir, { withFileTypes: true }).catch((error) => {
+      if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') return [];
+      throw error;
+    });
+    for (const entry of entries) {
+      const relativePath = relativeDir ? `${relativeDir}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (['.git', 'node_modules', 'DerivedData'].includes(entry.name)) continue;
+        if (/\.(?:xcodeproj|xcworkspace)$/.test(entry.name)) evidence.files.push(relativePath.replaceAll('\\', '/'));
+        else if (relativePath === '.ai' || !relativePath.startsWith('.ai/')) await walk(relativePath);
+      } else if (entry.isFile()) {
+        if (relativePath === 'package.json') {
+          const parsed = await readFile(join(repositoryPath, relativePath), 'utf8').then((text) => JSON.parse(text)).catch(() => null);
+          evidence.packageScripts = parsed?.scripts && typeof parsed.scripts === 'object' ? parsed.scripts : {};
+        }
+      }
+    }
+  }
+  await walk('');
+  evidence.validationMarkdown = await readFile(join(repositoryPath, '.ai', 'validation.md'), 'utf8').catch(() => '');
+  if (evidence.validationMarkdown.trim()) evidence.files.push('.ai/validation.md');
+  return { ...evidence, files: [...new Set(evidence.files)].sort() };
+}
+
+function firstXcodeTarget(files = []) {
+  return files.find((file) => file.endsWith('.xcworkspace')) ?? files.find((file) => file.endsWith('.xcodeproj')) ?? null;
+}
+
+function schemeFromValidationMarkdown(validationMarkdown = '') {
+  return validationMarkdown.match(/\bScheme:\s*`?([^`\n]+?)`?\s*$/im)?.[1]?.trim()
+    ?? validationMarkdown.match(/\b-scheme\s+([A-Za-z0-9_.-]+)/)?.[1]
+    ?? null;
+}
+
+function validationGuidanceFromEvidence(evidence) {
+  const target = firstXcodeTarget(evidence.files);
+  const hasXcodeEvidence = Boolean(target) || /xcodebuild\s+-list|Xcode Project Validation|\.xcodeproj|\.xcworkspace/i.test(evidence.validationMarkdown || '');
+  const commands = [];
+  if (hasXcodeEvidence && target) {
+    const flag = target.endsWith('.xcworkspace') ? '-workspace' : '-project';
+    const scheme = schemeFromValidationMarkdown(evidence.validationMarkdown) ?? '<Scheme>';
+    commands.push(`xcodebuild -list ${flag} ${target}`);
+    commands.push(`xcodebuild build ${flag} ${target} -scheme ${scheme} -destination 'platform=iOS Simulator,name=<Simulator Name>'`);
+  }
+  if (!hasXcodeEvidence) {
+    if (typeof evidence.packageScripts?.test === 'string') commands.push('npm test');
+    if (typeof evidence.packageScripts?.build === 'string') commands.push('npm run build');
+  }
+  return {
+    target: target ?? (hasXcodeEvidence ? '<Xcode project or workspace>' : 'Repository validation scripts'),
+    commands,
+    supportingEvidence: evidence.files.filter((file) => file !== target),
+    expectedArtifact: hasXcodeEvidence ? '.ai/validation.md entry with xcodebuild -list output and the simulator/device build result or skipped reason.' : '.ai/validation.md entry with command output and pass/fail status.',
+    notes: hasXcodeEvidence && target ? [schemeFromValidationMarkdown(evidence.validationMarkdown) ? '' : 'Fill in <Scheme> from the xcodebuild -list output.', 'Fill in <Simulator Name> with an installed iOS Simulator name. Do not run xcodebuild automatically.'].filter(Boolean) : [],
+  };
+}
+
+function renderValidationGuidance(guidance = {}) {
+  const commands = guidance.commands?.length ? guidance.commands.map((command) => `- ${command}`).join('\n') : '- No deterministic repository-native validation command was detected.';
+  const supportingEvidence = guidance.supportingEvidence?.length ? guidance.supportingEvidence.map((file) => `- ${file}`).join('\n') : '- None detected.';
+  const notes = guidance.notes?.length ? `\n\n### Placeholders\n${guidance.notes.map((note) => `- ${note}`).join('\n')}` : '';
+  return `## Validation Guidance\n- Validation target: ${guidance.target ?? 'Repository validation target not detected.'}\n- Expected validation artifact: ${guidance.expectedArtifact ?? '.ai/validation.md entry with local validation results.'}\n\n### Suggested Commands\n${commands}\n\n### Supporting Evidence\n${supportingEvidence}${notes}\n`;
+}
+
 function manualGoalsCompletenessExplanation(quality) {
   return quality?.explanations?.completeness?.fields?.manualGoals ?? null;
 }
@@ -835,7 +904,7 @@ Everything else will be regenerated.\n\n${renderStrategicContext(productIntellig
 }
 
 function renderValidationPackage(selected, details, ranking, productIntelligence = null) {
-  return `# ${selected.title}\n\n## Validation Instructions\nRun this Validation Experiment as a deterministic local check.\nUse the cited repository evidence to validate handoff quality without broadening scope.\nDo not make product-owner decisions, LLM calls, cloud calls, or telemetry changes.\n\n${renderStrategicContext(productIntelligence)}## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Experiment\n${details.problem}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The validation result is deterministic, local-first, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## After Validation\n- Refresh Repository Intelligence.\n- Record any gaps in the appropriate manual section of \`.ai/goals.md\`.\n- Generate the next correctly typed package.\n`;
+  return `# ${selected.title}\n\n## Validation Instructions\nRun this Validation Experiment as a deterministic local check.\nUse the cited repository evidence to validate handoff quality without broadening scope.\nDo not make product-owner decisions, LLM calls, cloud calls, or telemetry changes.\n\n${renderStrategicContext(productIntelligence)}## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Experiment\n${details.problem}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The validation result is deterministic, local-first, and reviewable.\n\n${renderValidationGuidance(selected.validationGuidance)}\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## After Validation\n- Refresh Repository Intelligence.\n- Record any gaps in the appropriate manual section of \`.ai/goals.md\`.\n- Generate the next correctly typed package.\n`;
 }
 
 export function renderPrompt(choice, productIntelligence = null) {
@@ -992,6 +1061,11 @@ export async function generateNextImprovement(repositoryPath = process.cwd(), op
   const outcomeEntries = options.outcomeEntries ?? (await readOutcomeEvidence(resolved)).entries;
   const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, validation, aiHandoffValidation, intelligenceVerification, repositoryPath: resolved, validationCompletions: options.validationCompletions ?? [], outcomeEntries });
   selectedIssue.explanation = explainRecommendation(selectedIssue, candidates);
+  if ((selectedIssue.packageType ?? packageTypeForActionability(selectedIssue.actionability)) === 'validation-experiment') {
+    selectedIssue.validationGuidance = validationGuidanceFromEvidence(await collectValidationEvidence(resolved));
+    if (decisionRanking?.selectedIssue) decisionRanking.selectedIssue.validationGuidance = selectedIssue.validationGuidance;
+    if (decisionRanking?.candidates?.[0]) decisionRanking.candidates[0].validationGuidance = selectedIssue.validationGuidance;
+  }
   decisionRanking.explanation = explainDecisionRanking(decisionRanking);
   await mkdir(join(resolved, '.ai'), { recursive: true });
   await writeFile(join(resolved, '.ai', 'decision-ranking.json'), `${JSON.stringify(decisionRanking, null, 2)}\n`);
