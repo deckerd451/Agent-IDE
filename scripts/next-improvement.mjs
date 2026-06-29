@@ -6,6 +6,7 @@ import { renderSynthesisMarkdown } from './evidence-synthesis.mjs';
 import { analyzeImprovements, analyzeImprovementsWithTrace } from './improvement-analyzer.mjs';
 import { readOutcomeEvidence } from './outcomes.mjs';
 import { generateProductIntelligence } from './product-intelligence.mjs';
+import { generateExecutionModel } from './execution-model.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md','architecture.md','decisions.md','execution-model.md','validation.md','ai-handoff-validation.md','intelligence-verification.md'];
 
@@ -919,10 +920,11 @@ function renderRecommendationTrace({ stages, improvementCandidates, maintenanceI
 
 export async function generateNextImprovement(repositoryPath = process.cwd(), options = {}) {
   const resolved = resolve(repositoryPath);
+  // Refresh execution-model.md immediately before recommendation analysis so stale
+  // execution-model risks cannot be copied into decision-ranking, active
+  // recommendation, or the implementation package after canonical docs changed.
+  await generateExecutionModel(resolved);
   const [goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, validation, aiHandoffValidation, intelligenceVerification] = await Promise.all([readText(resolved, 'goals.md'), readText(resolved, 'repository-health.md'), readJson(resolved, 'intelligence-quality.json'), readText(resolved, 'intelligence-audit.md'), readText(resolved, 'backlog.md'), readText(resolved, 'strategy.md'), readText(resolved, 'context-package.md'), readText(resolved, 'architecture.md'), readText(resolved, 'decisions.md'), readText(resolved, 'execution-model.md'), readText(resolved, 'validation.md'), readText(resolved, 'ai-handoff-validation.md'), readText(resolved, 'intelligence-verification.md')]);
-
-  // Run improvement analysis with per-stage trace diagnostics.
-  const { candidates: improvementCandidates, stages } = analyzeImprovementsWithTrace({ architecture, decisions, executionModel, backlog, strategy });
 
   const outcomeEntries = options.outcomeEntries ?? (await readOutcomeEvidence(resolved)).entries;
   const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, validation, aiHandoffValidation, intelligenceVerification, repositoryPath: resolved, validationCompletions: options.validationCompletions ?? [], outcomeEntries });
@@ -939,11 +941,18 @@ export async function generateNextImprovement(repositoryPath = process.cwd(), op
   const prompt = renderPrompt({ selectedIssue, decisionRanking }, productIntelligence);
   await writeFile(join(resolved, '.ai', 'next-improvement-prompt.md'), prompt);
 
+  // Refresh execution-model.md again after decision-ranking and prompt artifacts are
+  // written so recommendation traces describe the final refreshed artifact set, not
+  // a pre-ranking intermediate state.
+  await generateExecutionModel(resolved);
+  const refreshedExecutionModel = await readText(resolved, 'execution-model.md');
+  const { stages: refreshedStages } = analyzeImprovementsWithTrace({ architecture, decisions, executionModel: refreshedExecutionModel, backlog, strategy });
+
   // Write the deterministic recommendation trace.
   const maintenanceIssues = candidates.filter((c) => c.class === 'maintenance');
-  const docs = { goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, validation, aiHandoffValidation, intelligenceVerification };
+  const docs = { goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel: refreshedExecutionModel, validation, aiHandoffValidation, intelligenceVerification };
   const generatorFailures = options.generatorFailures ?? [];
-  const trace = renderRecommendationTrace({ stages, improvementCandidates: candidates.filter((c) => c.class === 'improvement'), maintenanceIssues, allCandidates: candidates, decisionRanking, filesRead: requiredFiles, docs, generatorFailures });
+  const trace = renderRecommendationTrace({ stages: refreshedStages, improvementCandidates: candidates.filter((c) => c.class === 'improvement'), maintenanceIssues, allCandidates: candidates, decisionRanking, filesRead: requiredFiles, docs, generatorFailures });
   await writeFile(join(resolved, '.ai', 'recommendation-trace.md'), trace);
 
   return { choice: selectedIssue, selectedIssue, candidates, decisionRanking, explanation: selectedIssue.explanation, prompt, filesRead: requiredFiles, productIntelligence };
