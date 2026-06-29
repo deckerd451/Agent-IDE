@@ -496,7 +496,7 @@ function decorateRecommendationForControlPlane(recommendation, decisionRanking, 
 
 
 async function collectRepositoryFiles(repositoryPath) {
-  const roots = ['.ai', 'scripts', 'src', 'tests'];
+  const roots = [''];
   const files = [];
   async function walk(relativeDir) {
     const absoluteDir = join(repositoryPath, relativeDir);
@@ -505,10 +505,12 @@ async function collectRepositoryFiles(repositoryPath) {
       throw error;
     });
     for (const entry of entries) {
-      const relativePath = `${relativeDir}/${entry.name}`.replaceAll('\\', '/');
+      const relativePath = (relativeDir ? `${relativeDir}/${entry.name}` : entry.name).replaceAll('\\', '/');
       if (entry.isDirectory()) {
         if (relativePath === 'node_modules' || relativePath.endsWith('/node_modules') || relativePath === '.git' || relativePath.endsWith('/.git')) continue;
-        await walk(relativePath);
+        if (/\.(?:xcodeproj|xcworkspace)$/.test(entry.name)) files.push(relativePath);
+        else if (relativeDir === '' && !['.ai', 'scripts', 'src', 'tests'].includes(entry.name)) continue;
+        else await walk(relativePath);
       } else if (entry.isFile() && (/\.(?:md|json|mjs|js|ts|tsx|css)$/.test(entry.name) || /\.(?:xcodeproj|xcworkspace)$/.test(entry.name))) {
         files.push(relativePath);
       }

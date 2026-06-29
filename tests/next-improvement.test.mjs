@@ -590,3 +590,38 @@ ${focus}
     await rm(repo, { recursive: true, force: true });
   }
 });
+
+test('validation experiment for Xcode repository uses repository-native validation guidance', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'agent-ide-nearify-xcode-'));
+  try {
+    await mkdir(join(dir, '.ai'), { recursive: true });
+    await mkdir(join(dir, 'Beacon.xcodeproj'), { recursive: true });
+    await writeFile(join(dir, '.ai/goals.md'), '# Goals\n\n## Product Thesis\nNearify helps people discover nearby events.\n\n## Current Product Bet\nValidate the iOS app handoff.\n\n## North Star Metric\nSuccessful local event discovery.\n');
+    await writeFile(join(dir, '.ai/repository-health.md'), '# Repository Health\n\nOverall Health: Healthy\nConfidence: High\n\n## Risks\n- No repository health risks detected.\n');
+    await writeFile(join(dir, '.ai/intelligence-quality.json'), JSON.stringify(healthyQuality));
+    await writeFile(join(dir, '.ai/intelligence-audit.md'), '# Intelligence Audit\n');
+    await writeFile(join(dir, '.ai/backlog.md'), '# Backlog\n\n## Prioritized Backlog\n- Useful work.\n');
+    await writeFile(join(dir, '.ai/strategy.md'), '# Strategy\n\n## Strategy Confidence\nHigh\n');
+    await writeFile(join(dir, '.ai/context-package.md'), '# Context Package\nReady.\n');
+    await writeFile(join(dir, '.ai/architecture.md'), '# Architecture\n\n## Core Systems\nBeacon.xcodeproj iOS app.\n');
+    await writeFile(join(dir, '.ai/decisions.md'), '# Decisions\n');
+    await writeFile(join(dir, '.ai/execution-model.md'), '# Execution Model\n');
+    await writeFile(join(dir, '.ai/validation.md'), '# Validation\n\n## Xcode Project Validation\n- Xcode project validation metadata detected.\n- `xcodebuild -list -project Beacon.xcodeproj`\n- Full simulator/device build: Not run by default; no full xcodebuild.\n');
+    await writeFile(join(dir, '.ai/ai-handoff-validation.md'), '# AI Handoff Validation\nReady.\n');
+    await writeFile(join(dir, '.ai/intelligence-verification.md'), '# Intelligence Verification\n');
+
+    const result = await generateNextImprovement(dir, { outcomeEntries: [] });
+    assert.equal(result.selectedIssue.packageType, 'validation-experiment');
+    assert.match(result.prompt, /## Validation Guidance/);
+    assert.match(result.prompt, /Validation target: Beacon\.xcodeproj/);
+    assert.match(result.prompt, /xcodebuild -list -project Beacon\.xcodeproj/);
+    assert.match(result.prompt, /xcodebuild build -project Beacon\.xcodeproj -scheme <Scheme> -destination 'platform=iOS Simulator,name=<Simulator Name>'/);
+    assert.match(result.prompt, /\.ai\/validation\.md/);
+    assert.doesNotMatch(result.prompt, /- npm test/);
+    assert.doesNotMatch(result.prompt, /- npm run build/);
+    assert.equal(result.selectedIssue.validationGuidance.target, 'Beacon.xcodeproj');
+    assert.ok(result.selectedIssue.validationGuidance.supportingEvidence.includes('.ai/validation.md'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

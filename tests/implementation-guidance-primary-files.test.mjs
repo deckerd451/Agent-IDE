@@ -165,7 +165,7 @@ test('validation-experiment guidance for Xcode gaps prefers project and validati
   assert.ok(result.supportingFiles.includes('.ai/validation.md'));
   assert.deepEqual(result.validationCommands, [
     'xcodebuild -list -project Beacon.xcodeproj',
-    "xcodebuild -project Beacon.xcodeproj -scheme <scheme-from-list> -destination '<platform-destination>' build",
+    "xcodebuild build -project Beacon.xcodeproj -scheme <Scheme> -destination 'platform=iOS Simulator,name=<Simulator Name>'",
   ]);
   assert.match(result.note, /validation guidance/i);
 });
