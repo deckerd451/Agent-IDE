@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { persistQuality } from './intelligence-quality.mjs';
 import { validateAIHandoff } from './ai-handoff-validation.mjs';
@@ -494,8 +494,33 @@ function decorateRecommendationForControlPlane(recommendation, decisionRanking, 
   return recommendation;
 }
 
+
+async function collectRepositoryFiles(repositoryPath) {
+  const roots = ['.ai', 'scripts', 'src', 'tests'];
+  const files = [];
+  async function walk(relativeDir) {
+    const absoluteDir = join(repositoryPath, relativeDir);
+    const entries = await readdir(absoluteDir, { withFileTypes: true }).catch((error) => {
+      if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') return [];
+      throw error;
+    });
+    for (const entry of entries) {
+      const relativePath = `${relativeDir}/${entry.name}`.replaceAll('\\', '/');
+      if (entry.isDirectory()) {
+        if (relativePath === 'node_modules' || relativePath.endsWith('/node_modules') || relativePath === '.git' || relativePath.endsWith('/.git')) continue;
+        await walk(relativePath);
+      } else if (entry.isFile() && /\.(?:md|json|mjs|js|ts|tsx|css)$/.test(entry.name)) {
+        files.push(relativePath);
+      }
+    }
+  }
+  for (const root of roots) await walk(root);
+  return [...new Set(files)].sort();
+}
+
 async function readControlPlane(repositoryPath) {
   const docs = Object.fromEntries(await Promise.all(controlFiles.map(async (file) => [file, await readAiText(repositoryPath, file)])));
+  const repositoryFiles = await collectRepositoryFiles(repositoryPath);
   const aiDir = join(repositoryPath, '.ai');
   const snapshot = summarizeSnapshot(docs, repositoryPath);
   const savedDiff = JSON.parse(await readFile(join(aiDir, 'intelligence-diff.json'), 'utf8').catch(() => 'null'));
@@ -544,7 +569,7 @@ async function readControlPlane(repositoryPath) {
   recommendation.promptHash = hashPrompt(recommendation.prompt);
   const packages = handoffPackages(docs);
   packages.builder = recommendation.implementationPrompt;
-  return { status: snapshot, outcomeEvidence, aiHandoffValidation, decisionRanking, evidenceLineage, repositoryJudgment, repositoryJudgmentReadiness, activeRecommendationSource, legacyRecommendation, productJudgment, judgmentComparison, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages, timeline };
+  return { repositoryFiles, status: snapshot, outcomeEvidence, aiHandoffValidation, decisionRanking, evidenceLineage, repositoryJudgment, repositoryJudgmentReadiness, activeRecommendationSource, legacyRecommendation, productJudgment, judgmentComparison, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages, timeline };
 }
 
 async function persistControlPlane(repositoryPath, previousSnapshot, refreshStartedAt = new Date(), options = {}) {

@@ -1,13 +1,25 @@
-const canonicalManualIntelligenceFiles = new Set(['.ai/goals.md']);
+const canonicalManualIntelligenceFiles = new Set(['.ai/goals.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/context-package.md']);
+const preferredCanonicalIntelligenceFiles = ['.ai/goals.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/context-package.md'];
 const generatedIntelligenceFilePattern = /^\.ai\/(?:context-package|recommendation-trace|architecture|strategy|backlog|decisions|validation|repository-health|execution-model|next-improvement-prompt|decision-ranking|repository-judgment|product-judgment|judgment-comparison|intelligence-|ai-handoff-validation|evidence-lineage|outcomes|prompts\/)/;
 const implementationFilePattern = /^(?:scripts|src)\/[^\s`'"),;]+\.(?:mjs|js|ts|tsx|css)$/;
 const testFilePattern = /^(?:tests\/[^\s`'"),;]+\.test\.mjs|(?:src|scripts)\/[^\s`'"),;]+\.(?:test|spec)\.(?:mjs|js|ts|tsx))$/;
 const repositoryFilePattern = /(?:^|[`\s(,])((?:\.ai|scripts|src|tests)\/[^`\s)'",;]+\.(?:md|json|mjs|js|ts|tsx|css))/g;
 
 type PrimaryFileSelection = { primaryFile: string | null; supportingFiles: string[]; source: 'direct' | 'inferred' | 'missing'; note: string };
+type PrimaryFileSelectionOptions = { existingFiles?: string[] | Set<string> };
 
 export function uniqueFiles(files: Array<string | null | undefined>) {
   return [...new Set(files.filter((file): file is string => Boolean(file)).map((file) => file.replace(/[.,;:)]+$/, '')))];
+}
+
+function existingFileSet(options?: PrimaryFileSelectionOptions) {
+  if (!options?.existingFiles) return null;
+  return options.existingFiles instanceof Set ? options.existingFiles : new Set(options.existingFiles);
+}
+
+function filterExistingFiles(files: string[], existingFiles: Set<string> | null) {
+  if (!existingFiles) return uniqueFiles(files);
+  return uniqueFiles(files).filter((file) => existingFiles.has(file));
 }
 
 function isManualProductDecision(recommendation: any, candidate: any) {
@@ -52,30 +64,51 @@ function inferredFilesForTask(candidate: any, recommendation: any) {
   return [];
 }
 
-export function selectPrimaryFiles(candidate: any, recommendation: any): PrimaryFileSelection {
-  const directFiles = filePathCandidatesForTask(candidate, recommendation);
+function isCanonicalOrContradictionTask(candidate: any, recommendation: any) {
+  const text = [candidate?.id, candidate?.title, candidate?.category, candidate?.reason, candidate?.evidence, recommendation.id, recommendation.title, recommendation.originalRecommendationTitle, recommendation.displayTitle, recommendation.displaySummary, recommendation.explanation, recommendation.whyItMatters, recommendation.prompt, recommendation.implementationPrompt].filter(Boolean).join(' ');
+  return /intelligence[-\s]?contradiction|contradiction|canonical|manual|repository intent|goals|strategy|architecture|context package/i.test(text);
+}
+
+function preferredExistingCanonicalFiles(existingFiles: Set<string> | null, directFiles: string[]) {
+  const preferred = preferredCanonicalIntelligenceFiles.filter((file) => directFiles.includes(file));
+  return filterExistingFiles([...preferred, ...preferredCanonicalIntelligenceFiles], existingFiles);
+}
+
+export function selectPrimaryFiles(candidate: any, recommendation: any, options?: PrimaryFileSelectionOptions): PrimaryFileSelection {
+  const existingFiles = existingFileSet(options);
+  const allDirectFiles = filePathCandidatesForTask(candidate, recommendation);
+  const directFiles = filterExistingFiles(allDirectFiles, existingFiles);
   const codeFixable = isCodeFixable(recommendation, candidate);
   if (!codeFixable) {
-    const primaryFile = directFiles.find((file) => classifyRepositoryFile(file) === 'manual') ?? directFiles[0] ?? (isManualProductDecision(recommendation, candidate) ? '.ai/goals.md' : null);
-    return { primaryFile, supportingFiles: uniqueFiles(directFiles.filter((file) => file !== primaryFile)), source: primaryFile ? 'direct' : 'missing', note: primaryFile ? 'Primary file is directly evidenced by the selected manual/product-decision package.' : 'No primary file is named by repository intelligence.' };
+    const canonical = preferredExistingCanonicalFiles(existingFiles, directFiles);
+    const primaryFile = directFiles.find((file) => classifyRepositoryFile(file) === 'manual') ?? canonical[0] ?? directFiles[0] ?? null;
+    return { primaryFile, supportingFiles: uniqueFiles(directFiles.filter((file) => file !== primaryFile)), source: primaryFile ? 'direct' : 'missing', note: primaryFile ? 'Primary file is directly evidenced by the selected manual/product-decision package and exists in the connected repository.' : 'No existing primary file is named by repository intelligence.' };
   }
 
   const implementationOrTest = directFiles.filter((file) => ['implementation', 'test'].includes(classifyRepositoryFile(file))).sort((a, b) => (classifyRepositoryFile(a) === 'implementation' ? 0 : 1) - (classifyRepositoryFile(b) === 'implementation' ? 0 : 1));
   if (implementationOrTest.length) {
     const [primaryFile, ...supporting] = implementationOrTest;
-    return { primaryFile, supportingFiles: uniqueFiles([...supporting, ...directFiles.filter((file) => file !== primaryFile)]), source: 'direct', note: 'Primary file is directly evidenced by likely files, package text, or decision-ranking evidence.' };
+    return { primaryFile, supportingFiles: uniqueFiles([...supporting, ...directFiles.filter((file) => file !== primaryFile)]), source: 'direct', note: 'Primary file is directly evidenced by likely files, package text, or decision-ranking evidence and exists in the connected repository.' };
   }
 
-  const inferred = inferredFilesForTask(candidate, recommendation);
+  if (isCanonicalOrContradictionTask(candidate, recommendation)) {
+    const canonical = preferredExistingCanonicalFiles(existingFiles, directFiles);
+    if (canonical.length) {
+      const [primaryFile, ...supporting] = canonical;
+      return { primaryFile, supportingFiles: uniqueFiles([...supporting, ...directFiles.filter((file) => file !== primaryFile)]), source: 'direct', note: 'Primary file uses existing target-repository intelligence because the selected recommendation concerns canonical/manual intelligence.' };
+    }
+  }
+
+  const inferred = filterExistingFiles(inferredFilesForTask(candidate, recommendation), existingFiles);
   if (inferred.length) {
     const [primaryFile, ...supporting] = inferred;
-    return { primaryFile, supportingFiles: supporting, source: 'inferred', note: 'Primary file is inferred from recommendation category, package type, and known local repository structure.' };
+    return { primaryFile, supportingFiles: supporting, source: 'inferred', note: 'Primary file is inferred from recommendation category, package type, and existing target-repository files.' };
   }
 
   const nonManual = directFiles.filter((file) => classifyRepositoryFile(file) !== 'manual');
-  return { primaryFile: null, supportingFiles: nonManual, source: 'missing', note: 'No implementation or test file could be identified from deterministic repository-local evidence.' };
+  return { primaryFile: null, supportingFiles: nonManual, source: 'missing', note: 'No existing implementation or test file could be identified from deterministic repository-local evidence.' };
 }
 
-export function filePathForTask(candidate: any, recommendation: any) {
-  return selectPrimaryFiles(candidate, recommendation).primaryFile;
+export function filePathForTask(candidate: any, recommendation: any, options?: PrimaryFileSelectionOptions) {
+  return selectPrimaryFiles(candidate, recommendation, options).primaryFile;
 }

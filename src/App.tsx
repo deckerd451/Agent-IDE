@@ -129,6 +129,7 @@ type ProgressSummary = {
 type OutcomeEntry = { timestamp: string; repository: string; recommendationId: string; recommendationTitle: string; promptHash: string; outcome: 'implemented' | 'partial' | 'skipped' | 'failed'; promptQuality: 'worked' | 'needed_clarification' | 'missing_context' | 'too_broad' | 'wrong_recommendation'; userNote: string; testsRun: string[]; refreshAfterCompletion: boolean };
 
 type ControlPlane = {
+  repositoryFiles?: string[];
   outcomeEvidence?: { entries: OutcomeEntry[]; summary: { lastOutcome: OutcomeEntry | null; successRate: number | null; recentCount: number; qualityTrend: string | null } };
   activeRecommendationSource?: 'Repository Judgment' | 'Legacy' | string;
   legacyRecommendation?: ControlPlaneRecommendation;
@@ -581,7 +582,7 @@ function invalidationEvidence(data: ControlPlane) {
 }
 
 function implementationReadiness(data: ControlPlane, task: DecisionCandidate | null | undefined) {
-  const primaryFileSelection = selectPrimaryFiles(task, data.recommendation);
+  const primaryFileSelection = selectPrimaryFiles(task, data.recommendation, { existingFiles: data.repositoryFiles });
   const primaryFile = primaryFileSelection.primaryFile;
   const validation = data.status.repositoryHandoffReadiness === 'Ready' ? 'Refresh repository intelligence and review generated validation status.' : 'Refresh repository intelligence; repository handoff readiness is not yet Ready.';
   return {
