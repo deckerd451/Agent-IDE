@@ -89,3 +89,39 @@ test('Preview Prompt heading uses the normalized title, not the diagnostic prefi
   assert.ok(!prompt.startsWith(`# ${diagnosticPrefix}`), 'prompt heading must not start with diagnostic prefix');
   assert.match(prompt, /^# \S/m, 'prompt must have a non-empty H1 heading');
 });
+
+const nearifyVagueBacklog = [
+  '# Backlog',
+  '',
+  '## Prioritized Backlog',
+  '- Suggested Next Step: Inspect the referenced code path, decide whether the comment still applies...',
+].join('\n');
+
+test('vague Nearify backlog suggested next step is not selected over concrete validation gaps', () => {
+  const result = chooseNextImprovementWithCandidates({
+    health,
+    quality: { ...healthyQuality, confidence: { score: 40, validationConfidence: 'Low' } },
+    backlog: nearifyVagueBacklog,
+    strategy: '# Strategy\n\n## Strategy Confidence\nHigh\n',
+    contextPackage,
+  });
+
+  assert.notEqual(result.selectedIssue.title, 'Inspect the referenced code path, decide whether the comment still applies...');
+  assert.equal(result.selectedIssue.id, 'validation');
+  const vague = result.candidates.find((candidate) => candidate.vagueBacklogFragment);
+  assert.ok(vague, 'expected downgraded vague backlog fragment to remain visible in ranking history');
+  assert.match(vague.evidence, /Original backlog text preserved for comparison: Suggested Next Step: Inspect the referenced code path/);
+  assert.ok(vague.rank > result.selectedIssue.rank, 'vague backlog fragment must rank below the primary validation gap');
+});
+
+test('concrete backlog quality filtering item remains selectable', () => {
+  const result = chooseNextImprovementWithCandidates({
+    health,
+    quality: healthyQuality,
+    backlog: '# Backlog\n\n## Prioritized Backlog\n- Add backlog quality filtering.\n',
+    strategy: '# Strategy\n\n## Strategy Confidence\nHigh\n',
+    contextPackage,
+  });
+
+  assert.equal(result.selectedIssue.title, 'Add backlog quality filtering');
+});
