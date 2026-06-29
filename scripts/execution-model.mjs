@@ -437,6 +437,41 @@ function renderOwnershipRisks(sourceFindings) {
   ].join('\n')).join('\n');
 }
 
+
+const cyclicRiskPattern = /\b(?:circular|cyclic)\s+(?:dependenc(?:y|ies)|reference|coupling)|\b(?:dependenc(?:y|ies)|reference|coupling|graph)\s+(?:cycle|cycles|circular|cyclic)\b|\bcycle(?:s)?\s+in\s+(?:the\s+)?(?:dependenc(?:y|ies)|graph|coupling)\b/i;
+
+const nonActiveCyclicContextPatterns = [
+  /\bresolved\b/i,
+  /\bfixed\b/i,
+  /\bmitigated\b/i,
+  /\baccepted\b/i,
+  /\bpreviously\b/i,
+  /\bhistorical\b/i,
+  /\bno\s+(?:longer\s+)?(?:circular|cyclic|cycle|cycles)\b/i,
+  /\bacyclic\s+invariant\b/i,
+  /\binvariant\b[\s\S]{0,120}\bacyclic\b/i,
+  /\bacyclic\b[\s\S]{0,120}\binvariant\b/i,
+  /\bmust\s+not\s+hold\s+a\s+direct\s+reference\b/i,
+  /\bself-manage\s+by\s+observing\b/i,
+  /\bkeeps?\s+the\s+dependency\s+graph\s+acyclic\b/i,
+];
+
+function cyclicRiskContexts(text) {
+  const lines = text.split('\n');
+  const contexts = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!cyclicRiskPattern.test(lines[i])) continue;
+    const start = Math.max(0, i - 2);
+    const end = Math.min(lines.length, i + 3);
+    contexts.push(lines.slice(start, end).join('\n'));
+  }
+  return contexts;
+}
+
+function hasActiveCyclicRisk(text) {
+  return cyclicRiskContexts(text).some((context) => !nonActiveCyclicContextPatterns.some((pat) => pat.test(context)));
+}
+
 // ---------------------------------------------------------------------------
 // Architectural Risks
 // ---------------------------------------------------------------------------
@@ -507,11 +542,17 @@ function inferRisks(docs, entityRows, ownershipResult, sourceFindings) {
     }
   }
 
-  // Detect cyclic dependency hints
-  if (/circular|cyclic|cycle/i.test(docs.architecture) || /circular|cyclic|cycle/i.test(docs.decisions)) {
+  // Detect active cyclic dependency hints. Resolved issues, historical notes,
+  // accepted tradeoffs, and acyclic invariants are documentation context rather
+  // than active risk evidence.
+  const cyclicEvidence = [
+    hasActiveCyclicRisk(docs.architecture) && '.ai/architecture.md',
+    hasActiveCyclicRisk(docs.decisions) && '.ai/decisions.md',
+  ].filter(Boolean);
+  if (cyclicEvidence.length > 0) {
     risks.push({
       observation: 'Cyclic dependency language detected in architecture or decisions',
-      evidence: [/circular|cyclic|cycle/i.test(docs.architecture) && '.ai/architecture.md', /circular|cyclic|cycle/i.test(docs.decisions) && '.ai/decisions.md'].filter(Boolean).join(', '),
+      evidence: cyclicEvidence.join(', '),
       category: 'Coupling',
     });
   }
