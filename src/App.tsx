@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { sections, type Section } from './sections';
+import { filePathForTask, selectPrimaryFiles, uniqueFiles } from './implementation-guidance';
 import { advanceWorkflow, contextSnapshotHash, createWorkflow, workflowKey, workflowStateStorageKey, type Workflow, type WorkflowState } from './workflow';
 
 type WorkflowDiagnostics = {
@@ -43,7 +44,7 @@ type StepState = {
 
 type IntelligenceState = string;
 
-type EngineeringTask = { status: 'compiled' | 'preserved' | 'blocked' | string; title: string; rootCause?: string; implementationTarget?: string; clarification?: string; originalRecommendation?: { title?: string } };
+type EngineeringTask = { status: 'compiled' | 'preserved' | 'blocked' | string; title: string; rootCause?: string; implementationTarget?: string; likelyFiles?: string[]; clarification?: string; originalRecommendation?: { title?: string } };
 
 type ControlPlaneRecommendation = {
   title: string;
@@ -520,10 +521,7 @@ function missingFieldsForTask(candidate?: DecisionCandidate | null) {
   return explicit.split(/,| and /).map((field) => field.trim()).filter(Boolean);
 }
 
-function filePathForTask(candidate: DecisionCandidate | null | undefined, recommendation: ControlPlaneRecommendation) {
-  const text = `${candidate?.ownerAction ?? ''} ${candidate?.reason ?? ''} ${candidate?.evidence ?? ''} ${recommendation.explanation} ${recommendation.prompt}`;
-  return text.match(/`([^`]+\.(?:md|json|mjs|js|ts|tsx|css))`/)?.[1] ?? null;
-}
+
 
 function actionForTask(candidate: DecisionCandidate | null | undefined, recommendation: ControlPlaneRecommendation, quality?: QualitySnapshot | null) {
   const filePath = filePathForTask(candidate, recommendation);
@@ -578,16 +576,19 @@ function invalidationEvidence(data: ControlPlane) {
 }
 
 function implementationReadiness(data: ControlPlane, task: DecisionCandidate | null | undefined) {
-  const primaryFile = filePathForTask(task, data.recommendation);
+  const primaryFileSelection = selectPrimaryFiles(task, data.recommendation);
+  const primaryFile = primaryFileSelection.primaryFile;
   const validation = data.status.repositoryHandoffReadiness === 'Ready' ? 'Refresh repository intelligence and review generated validation status.' : 'Refresh repository intelligence; repository handoff readiness is not yet Ready.';
   return {
     primaryFile,
-    supportingFiles: ['.ai/context-package.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/validation.md'],
+    primaryFileSource: primaryFileSelection.source,
+    primaryFileNote: primaryFileSelection.note,
+    supportingFiles: uniqueFiles([...primaryFileSelection.supportingFiles, '.ai/context-package.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/validation.md']),
     validation,
     expectedArtifacts: ['Updated implementation or canonical repository intent', 'Saved outcome evidence', 'Refreshed repository intelligence'],
     scope: data.recommendation.packageType === 'product-decision' ? 'Repository-owner decision' : data.recommendation.packageType === 'validation-experiment' ? 'Validation experiment' : 'Incremental implementation',
-    missingIntelligence: primaryFile ? '' : 'Primary implementation file is not explicit in the selected recommendation.',
-    deterministicAddition: primaryFile ? '' : 'Add a generated Primary Files field to the recommendation package by extracting cited file paths from decision ranking, architecture, backlog, and validation evidence.',
+    missingIntelligence: primaryFile ? '' : 'No implementation or test file was identified from deterministic repository-local evidence.',
+    deterministicAddition: primaryFile ? '' : 'Add a generated Primary Files field to the recommendation package by extracting implementation/test file paths from decision ranking, recommendation trace, context package, architecture, backlog, package scripts, and validation evidence.',
   };
 }
 
@@ -764,11 +765,12 @@ function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, user
         <p className="kicker">4. How do we execute it?</p>
         <h3>Implementation Guidance</h3>
         <div className="workMetaGrid compact">
-          <div><small>Primary files</small><strong>{readiness.primaryFile ? <code>{readiness.primaryFile}</code> : 'Missing from repository intelligence'}</strong></div>
+          <div><small>Primary files</small><strong>{readiness.primaryFile ? <><code>{readiness.primaryFile}</code> <span>({readiness.primaryFileSource})</span></> : 'Missing from repository intelligence'}</strong></div>
           <div><small>Scope</small><strong>{readiness.scope}</strong></div>
           <div><small>Validation</small><strong>{readiness.validation}</strong></div>
           <div><small>Expected artifacts</small><strong>{readiness.expectedArtifacts.join(', ')}</strong></div>
         </div>
+        <p><b>Implementation location evidence:</b> {readiness.primaryFileNote}</p>
         <p><b>Supporting files:</b> {readiness.supportingFiles.join(', ')}</p>
         {readiness.missingIntelligence && <div className="warningCard"><p><b>First missing repository intelligence:</b> {readiness.missingIntelligence}</p><p><b>Why it would force repository exploration:</b> A developer must browse the file tree to find the implementation entry point.</p><p><b>Smallest deterministic addition:</b> {readiness.deterministicAddition}</p></div>}
         <ol className="simpleLoop" aria-label="Agent IDE loop"><li>Execute the selected repository decision.</li><li>Record the outcome.</li><li>Refresh repository intelligence.</li></ol>
