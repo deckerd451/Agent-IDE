@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
-import { nonCriticalStepIds } from '../scripts/server.mjs';
+import { nonCriticalStepIds, persistControlPlane, readControlPlane } from '../scripts/server.mjs';
 import { generateNextImprovement } from '../scripts/next-improvement.mjs';
 
 async function makeRepo(aiFiles = {}) {
@@ -127,6 +127,35 @@ test('decision-ranking.json and next-improvement-prompt.md are written alongside
     const prompt = await readFile(join(dir, '.ai', 'next-improvement-prompt.md'), 'utf8');
     assert.ok(ranking.length > 0, 'decision-ranking.json must be written');
     assert.ok(prompt.length > 0, 'next-improvement-prompt.md must be written');
+  } finally {
+    await cleanup();
+  }
+});
+
+
+test('refresh persists Product Intelligence Strategic Context into active recommendation prompt', async () => {
+  const { dir, cleanup } = await makeRepo({
+    ...minimalAi,
+    'goals.md': '# Goals\n\n## Product Thesis\nAgent IDE helps local-first teams turn repository intelligence into safe next implementation work.\n\n## Current Focus\nMake prompt previews consistently reflect generated intelligence.\n\n## Success Criteria\n- Preview Prompt includes strategic context.\n\n## Manual Goals\n- Product intent: Local-first AI coding assistant.\n- Current focus: Deterministic Product Intelligence propagation.\n- Success criteria: Preview Prompt includes Strategic Context.\n- Long-term vision: Reliable repository control plane.\n',
+    'strategy.md': '# Strategy\n\n## Current Product Bet\nPrompt previews consistently reflect generated Product Intelligence context.\n\n## Current Experiment\nPreview Prompt includes Strategic Context after refresh.\n',
+    'repository-health.md': '# Repository Health\n\n## Risks\n- Preview Prompt can omit strategic context after refresh.\n\n## Intelligence Completeness\n- Product thesis present.\n',
+    'backlog.md': '# Backlog\n\n## Prioritized Backlog\n- Propagate Product Intelligence Strategic Context into active recommendation prompt.\n',
+    'decisions.md': '# Decisions\n\n## Active Decisions\n- All generators must be deterministic, local-first, and make no LLM calls.\n',
+    'intelligence-quality.json': JSON.stringify({ overallScore: 85, canonicalIntelligenceQuality: { completenessState: 'Complete', score: 100 } }, null, 2),
+  });
+  try {
+    await persistControlPlane(dir, null, new Date('2026-06-29T00:00:00.000Z'));
+
+    const nextPrompt = await readFile(join(dir, '.ai', 'next-improvement-prompt.md'), 'utf8');
+    const activeRecommendation = JSON.parse(await readFile(join(dir, '.ai', 'active-recommendation.json'), 'utf8'));
+    const controlPlane = await readControlPlane(dir);
+
+    assert.match(nextPrompt, /## Strategic Context/, 'next improvement prompt must contain Product Intelligence Strategic Context');
+    assert.match(activeRecommendation.implementationPrompt, /## Strategic Context/, 'active recommendation implementationPrompt must contain Strategic Context');
+    assert.equal(activeRecommendation.implementationPrompt, nextPrompt, 'active recommendation must persist the exact generated prompt body');
+    assert.match(controlPlane.recommendation.implementationPrompt, /## Strategic Context/, 'Control Plane Preview Prompt source must include Strategic Context');
+    assert.equal(controlPlane.recommendation.implementationPrompt, nextPrompt, 'Control Plane must expose the same generated prompt body');
+    assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt, 'Copy/Open Codex builder prompt must use the same source body');
   } finally {
     await cleanup();
   }
