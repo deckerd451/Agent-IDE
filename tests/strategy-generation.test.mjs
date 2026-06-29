@@ -94,3 +94,26 @@ const duplicateStrategy = await readFile(join(duplicateDir, '.ai/strategy.md'), 
 assert.equal([...duplicateStrategy.matchAll(/^## Success Definition$/gm)].length, 1);
 assert.doesNotMatch(duplicateStrategy, /Nested manual heading should be demoted\./);
 assert.doesNotMatch(duplicateStrategy, /## Manual Strategy Notes/);
+
+const nearifyFocusDir = await mkdtemp(join(tmpdir(), 'agent-ide-strategy-current-focus-'));
+await mkdir(join(nearifyFocusDir, '.ai'), { recursive: true });
+await writeFile(join(nearifyFocusDir, '.ai/goals.md'), `# Goals
+
+## Product Thesis
+Nearify helps people maintain real-world relationships.
+
+## Current Focus
+Between Events experience: helping users know who to reach out to today when they are not currently at an event.
+`);
+await writeFile(join(nearifyFocusDir, '.ai/architecture.md'), `# Architecture
+
+## Current Focus
+Between Events experience: helping users know who to reach out to today when they are not currently at an event.
+
+Current Focus Evidence:
+.ai/goals.md
+`);
+const nearifyFocusResult = spawnSync(process.execPath, [script], { cwd: nearifyFocusDir, encoding: 'utf8' });
+assert.equal(nearifyFocusResult.status, 0, nearifyFocusResult.stderr);
+const nearifyFocusStrategy = await readFile(join(nearifyFocusDir, '.ai/strategy.md'), 'utf8');
+assert.match(nearifyFocusStrategy, /## Current Focus\nBetween Events experience: helping users know who to reach out to today when they are not currently at an event\./);

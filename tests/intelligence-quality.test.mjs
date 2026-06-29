@@ -85,8 +85,6 @@ test('Product Thesis comparison ignores generated exports', async () => {
   assert.ok(!snapshot.recentRegressions.some((item) => /Product Thesis differs/.test(item)));
 });
 
-
-
 test('equivalent Product Thesis wording is not flagged as a contradiction', async () => {
   const docs = {
     ...baseDocs,
@@ -115,6 +113,31 @@ Current Focus Evidence:
   const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
   assert.equal(snapshot.consistency.currentFocusConsistent, true);
   assert.ok(!snapshot.recentRegressions.some((item) => /Current Focus differs/.test(item)));
+});
+
+test('Nearify missing generated strategy Current Focus is not a contradiction', async () => {
+  const docs = {
+    ...baseDocs,
+    'goals.md': '# Goals\n\n## Product Thesis\nNearify helps people maintain real-world relationships.\n\n## Current Focus\nBetween Events experience: helping users know who to reach out to today when they are not currently at an event.\n',
+    'architecture.md': '# Architecture\n\n## Product Thesis\nNearify helps people maintain real-world relationships.\n\n## Current Focus\nBetween Events experience: helping users know who to reach out to today when they are not currently at an event.\n\nCurrent Focus Evidence:\n.ai/goals.md\n',
+    'strategy.md': '# Strategy\n\n## Product Thesis\nNearify helps people maintain real-world relationships.\n\n## Strategy Confidence\nHigh\n\n## Strategy Evidence Sources\n- .ai/goals.md\n',
+  };
+  const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
+  assert.ok(!snapshot.consistency.contradictions.some((item) => /Current Focus differs/.test(item)));
+  assert.ok(snapshot.consistency.missingGeneratedFields.includes('strategy.md: Current Focus'));
+  assert.notEqual(snapshot.recommendedAction, 'Resolve contradiction: Current Focus differs across Goals, Strategy, and Architecture.');
+});
+
+test('different goals and architecture Current Focus values are contradictions', async () => {
+  const docs = {
+    ...baseDocs,
+    'goals.md': baseDocs['goals.md'].replace('Quality loop', 'Between-events relationship follow-ups'),
+    'strategy.md': baseDocs['strategy.md'].replace('Quality loop', 'Between-events relationship follow-ups'),
+    'architecture.md': baseDocs['architecture.md'].replace('Quality loop', 'Event discovery and ticketing'),
+  };
+  const snapshot = await computeQualitySnapshot(await repoWithDocs(docs), docs);
+  assert.ok(snapshot.consistency.contradictions.some((item) => /Current Focus differs/.test(item)));
+  assert.equal(snapshot.consistency.currentFocusConsistent, false);
 });
 
 test('repository health validation confidence signal is compared before overall health confidence', async () => {

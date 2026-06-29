@@ -7,6 +7,7 @@ const outputPath = join(aiDir, 'strategy.md');
 const headings = [
   'Product Thesis',
   'North Star Metric',
+  'Current Focus',
   'Strategic Differentiator',
   'Current Product Bet',
   'Current Experiment',
@@ -220,6 +221,11 @@ function inferField(field, sources) {
     if (success) return success;
   }
 
+  if (field === 'Current Focus') {
+    const currentFocus = explicitValue(sources, 'Current Focus', { allowImplementation: true });
+    if (currentFocus) return currentFocus;
+  }
+
   if (field === 'Strategic Differentiator') {
     const productThesis = explicitValue(sources, 'Product Thesis', { allowImplementation: true }) ?? explicitValue(sources, 'Product Purpose', { allowImplementation: true });
     const differentiator = inferStrategicDifferentiator(sources, productThesis);
@@ -241,6 +247,7 @@ function inferField(field, sources) {
 
   const patterns = {
     'North Star Metric': [/north star/i, /follow[- ]?ups? completed/i, /primary metric/i],
+    'Current Focus': [/current focus/i],
     'Strategic Differentiator': [/strategic differentiator/i, /differentiator/i, /relationship memory/i],
     'Current Product Bet': [/current product bet/i, /strategic bet/i, /belief/i, /hypothesis/i, /between events/i],
     'Current Experiment': [/current experiment/i, /experiment/i],
