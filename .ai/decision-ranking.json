@@ -5,14 +5,14 @@
     "schemaVersion": 1,
     "status": "preserved",
     "originalRecommendation": {
-      "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-      "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+      "id": "backlog-add-backlog-quality-filtering",
+      "title": "Add backlog quality filtering",
       "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
       "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
       "recommendedAction": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
       "source": ".ai/backlog.md Medium Priority"
     },
-    "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+    "title": "Add backlog quality filtering",
     "rootCause": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
     "implementationTarget": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
     "likelyFiles": [
@@ -34,8 +34,8 @@
     "clarification": null
   },
   "originalSelectedRecommendation": {
-    "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-    "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+    "id": "backlog-add-backlog-quality-filtering",
+    "title": "Add backlog quality filtering",
     "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
     "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
     "recommendedAction": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
@@ -56,15 +56,15 @@
   ],
   "candidates": [
     {
-      "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-      "kind": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
+      "id": "backlog-add-backlog-quality-filtering",
+      "kind": "backlog-add-backlog-quality-filtering",
       "class": "maintenance",
       "category": ".ai/backlog.md candidate expansion",
       "severity": "medium",
       "actionability": "code-fixable",
       "packageType": "implementation",
       "source": ".ai/backlog.md Medium Priority",
-      "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+      "title": "Add backlog quality filtering",
       "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
       "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
       "recommendedAction": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
@@ -95,14 +95,14 @@
         "schemaVersion": 1,
         "status": "preserved",
         "originalRecommendation": {
-          "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-          "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+          "id": "backlog-add-backlog-quality-filtering",
+          "title": "Add backlog quality filtering",
           "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
           "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
           "recommendedAction": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
           "source": ".ai/backlog.md Medium Priority"
         },
-        "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+        "title": "Add backlog quality filtering",
         "rootCause": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
         "implementationTarget": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
         "likelyFiles": [
@@ -124,8 +124,8 @@
         "clarification": null
       },
       "originalSelectedRecommendation": {
-        "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-        "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+        "id": "backlog-add-backlog-quality-filtering",
+        "title": "Add backlog quality filtering",
         "evidence": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
         "reason": "Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).",
         "recommendedAction": "Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering",
@@ -137,8 +137,8 @@
         "rule": "Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.",
         "candidateIssues": [
           {
-            "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-            "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+            "id": "backlog-add-backlog-quality-filtering",
+            "title": "Add backlog quality filtering",
             "category": ".ai/backlog.md candidate expansion",
             "priority": 46,
             "actionability": "code-fixable",
@@ -170,8 +170,8 @@
           }
         ],
         "selected": {
-          "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-          "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+          "id": "backlog-add-backlog-quality-filtering",
+          "title": "Add backlog quality filtering",
           "priority": 46
         },
         "computed": {
@@ -296,8 +296,8 @@
     }
   ],
   "selectedIssue": {
-    "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-    "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+    "id": "backlog-add-backlog-quality-filtering",
+    "title": "Add backlog quality filtering",
     "rank": 1,
     "priorityScore": 46,
     "advancement": {
@@ -333,7 +333,7 @@
       "reason": "No implemented + worked outcome matched this recommendation."
     }
   },
-  "selectionExplanation": "Repository documentation identifies actionable follow-up work from: Add backlog quality is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation.",
+  "selectionExplanation": "Add backlog quality filtering is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation.",
   "explanation": {
     "id": "decision-ranking",
     "title": "Decision Ranking Explanation",
@@ -354,8 +354,8 @@
     "candidateOrdering": [
       {
         "rank": 1,
-        "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-        "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+        "id": "backlog-add-backlog-quality-filtering",
+        "title": "Add backlog quality filtering",
         "priorityScore": 46,
         "expectedImprovement": {
           "repositoryHealth": 3,
@@ -414,7 +414,7 @@
       }
     ],
     "expectedImprovementCalculations": {
-      "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add": {
+      "backlog-add-backlog-quality-filtering": {
         "repositoryHealth": 3,
         "canonicalCompleteness": 0,
         "quality": 2,
@@ -448,8 +448,8 @@
       }
     },
     "selected": {
-      "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-      "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+      "id": "backlog-add-backlog-quality-filtering",
+      "title": "Add backlog quality filtering",
       "rank": 1,
       "priorityScore": 46,
       "advancement": {
@@ -458,6 +458,6 @@
       }
     },
     "classification": "Consistent",
-    "reason": "Repository documentation identifies actionable follow-up work from: Add backlog quality is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation."
+    "reason": "Add backlog quality filtering is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation."
   }
 }

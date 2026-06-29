@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-28T17:44:07.930Z",
+  "generatedAt": "2026-06-29T00:27:48.355Z",
   "aiHandoffValidation": {
     "schemaVersion": 1,
-    "generatedAt": "2026-06-28T17:44:07.874Z",
+    "generatedAt": "2026-06-29T00:27:48.303Z",
     "overallScore": 96,
     "status": "Ready",
     "categories": {
@@ -611,7 +611,7 @@
   "quality": {
     "id": "intelligence-quality",
     "title": "Intelligence Quality Evaluation",
-    "score": 92,
+    "score": 91,
     "components": {
       "canonicalCompleteness": {
         "score": 83,
@@ -644,7 +644,7 @@
         ]
       },
       "verification": {
-        "score": 95,
+        "score": 90,
         "rule": "Verification score is the percent of expected artifacts verified.",
         "evidence": ".ai/intelligence-verification.json"
       }
@@ -659,6 +659,11 @@
         "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
         "points": 15,
         "evidence": ".ai/intelligence-verification.json"
+      },
+      {
+        "rule": "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
+        "points": 15,
+        "evidence": ".ai/intelligence-verification.json"
       }
     ]
   },
@@ -668,8 +673,8 @@
     "rule": "Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.",
     "candidateIssues": [
       {
-        "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-        "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+        "id": "backlog-add-backlog-quality-filtering",
+        "title": "Add backlog quality filtering",
         "category": ".ai/backlog.md candidate expansion",
         "priority": 46,
         "actionability": "code-fixable",
@@ -701,8 +706,8 @@
       }
     ],
     "selected": {
-      "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-      "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+      "id": "backlog-add-backlog-quality-filtering",
+      "title": "Add backlog quality filtering",
       "priority": 46
     },
     "computed": {
@@ -733,8 +738,8 @@
     "candidateOrdering": [
       {
         "rank": 1,
-        "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-        "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+        "id": "backlog-add-backlog-quality-filtering",
+        "title": "Add backlog quality filtering",
         "priorityScore": 46,
         "expectedImprovement": {
           "repositoryHealth": 3,
@@ -793,7 +798,7 @@
       }
     ],
     "expectedImprovementCalculations": {
-      "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add": {
+      "backlog-add-backlog-quality-filtering": {
         "repositoryHealth": 3,
         "canonicalCompleteness": 0,
         "quality": 2,
@@ -827,8 +832,8 @@
       }
     },
     "selected": {
-      "id": "backlog-repository-documentation-identifies-actionable-follow-up-work-from-add",
-      "title": "Repository documentation identifies actionable follow-up work from: Add backlog quality",
+      "id": "backlog-add-backlog-quality-filtering",
+      "title": "Add backlog quality filtering",
       "rank": 1,
       "priorityScore": 46,
       "advancement": {
@@ -837,7 +842,7 @@
       }
     },
     "classification": "Consistent",
-    "reason": "Repository documentation identifies actionable follow-up work from: Add backlog quality is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation."
+    "reason": "Add backlog quality filtering is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation."
   },
   "completenessSynchronization": {
     "id": "completeness-synchronization",

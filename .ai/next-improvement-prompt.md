@@ -1,4 +1,4 @@
-# Repository documentation identifies actionable follow-up work from: Add backlog quality
+# Add backlog quality filtering
 
 ## Implementation Instructions
 Implement this Implementation Package exactly as written.
@@ -13,13 +13,13 @@ Do not make LLM calls, use cloud services, or add telemetry.
 Ensure execution and validation are fully reproducible.
 
 ## Selected Issue
-- ID: backlog-repository-documentation-identifies-actionable-follow-up-work-from-add
+- ID: backlog-add-backlog-quality-filtering
 - Category: .ai/backlog.md candidate expansion
 - Severity: medium
 - Actionability: code-fixable
 - Package Type: implementation
 - Source: .ai/backlog.md Medium Priority
-- Title: Repository documentation identifies actionable follow-up work from: Add backlog quality
+- Title: Add backlog quality filtering
 - Evidence: Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering
 - Reason: Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).
 - Recommended Action: Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering
@@ -31,21 +31,21 @@ Ensure execution and validation are fully reproducible.
 Rule: Select the highest deterministic priority issue that is actionable and backed by repository-local evidence.
 
 Candidate Issues
-- Repository documentation identifies actionable follow-up work from: Add backlog quality: Priority 46
+- Add backlog quality filtering: Priority 46
 - Suggested Next Step: Define the smallest local, deterministic change needed: Priority 46
 - No `npm run lint` script was detected; style/static lint coverage: Priority 42
 - No standalone typecheck script was detected; type validation is covered: Priority 42
 
-Selected: Repository documentation identifies actionable follow-up work from: Add backlog quality
+Selected: Add backlog quality filtering
 Reason: Highest deterministic priority requiring action.
 
 ## Decision Ranking
 
-Selected issue: Repository documentation identifies actionable follow-up work from: Add backlog quality
-Selection explanation: Repository documentation identifies actionable follow-up work from: Add backlog quality is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation.
+Selected issue: Add backlog quality filtering
+Selection explanation: Add backlog quality filtering is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation.
 
-1. Repository documentation identifies actionable follow-up work from: Add backlog quality (selected)
-   - ID: backlog-repository-documentation-identifies-actionable-follow-up-work-from-add
+1. Add backlog quality filtering (selected)
+   - ID: backlog-add-backlog-quality-filtering
    - Priority: 46
    - Expected Improvement: +8 total (+3 Repository Health, +0 Canonical Completeness, +2 Quality, +1 Verification, +2 Handoff Readiness)
    - Reason: Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).
@@ -82,7 +82,7 @@ Repository intelligence is missing, preventing generated prompts and handoffs fr
 Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).
 
 ## Goal
-Repository documentation identifies actionable follow-up work from: Add backlog quality
+Add backlog quality filtering
 
 ## Requirements
 - Restore only the missing intelligence named in Current Evidence.

@@ -7,7 +7,7 @@ Generated: 1970-01-01T00:00:00.000Z
 
 ## Active Repository Judgment Recommendation
 
-- Active: **Repository documentation identifies actionable follow-up work from: Add backlog quality**
+- Active: **Add backlog quality filtering**
 - Source: .ai/decision-ranking.json (Repository Judgment — unchanged)
 
 ## Top Product Judgment Recommendation

@@ -91,7 +91,7 @@ High
 
 # Architecture
 
-Last Audit: 2026-06-28T17:43:52.672Z
+Last Audit: 2026-06-29T00:27:33.031Z
 Confidence: 95%
 
 ## Product Thesis
@@ -173,7 +173,7 @@ Current Focus Evidence:
 
 # Backlog
 
-Last Audit: 2026-06-28T17:43:53.133Z
+Last Audit: 2026-06-29T00:27:33.549Z
 Confidence: 95%
 
 ## High Priority
@@ -211,7 +211,7 @@ Confidence: 95%
 # Validation
 
 ## Last Validation
-- 2026-06-28T17:44:01.876Z
+- 2026-06-29T00:27:42.511Z
 
 ## Confidence
 - Medium
@@ -226,7 +226,7 @@ Confidence: 95%
 ### npm run build
 - Status: PASS
 - Exit code: 0
-- Duration: 3.2s
+- Duration: 3.6s
 - Output summary:
 ```text
   > agent-ide@0.1.0 build
@@ -238,27 +238,27 @@ Confidence: 95%
   dist/index.html                   0.39 kB │ gzip:  0.26 kB
   dist/assets/index-C0PW3cF5.css   18.49 kB │ gzip:  4.22 kB
   dist/assets/index-Tk9N-uyp.js   279.82 kB │ gzip: 79.21 kB
-  ✓ built in 151ms
+  ✓ built in 258ms
 ```
 
 ### npm run test
 - Status: PASS
 - Exit code: 0
-- Duration: 5.1s
+- Duration: 4.9s
 - Output summary:
 ```text
-  ✔ auto-refresh triggers when workflow advances to refresh-repository state (0.297103ms)
-  ✔ implementation workflow first step is copy-implementation-prompt (0.283858ms)
-  ✔ implementation prompt is visible at both copy-implementation-prompt and open-codex steps (0.203537ms)
-  ✔ implementation prompt artifact renders recommendation implementationPrompt instead of builder package fallback (0.195929ms)
-  ℹ tests 240
+  ✔ auto-refresh triggers when workflow advances to refresh-repository state (0.285473ms)
+  ✔ implementation workflow first step is copy-implementation-prompt (0.276965ms)
+  ✔ implementation prompt is visible at both copy-implementation-prompt and open-codex steps (0.181371ms)
+  ✔ implementation prompt artifact renders recommendation implementationPrompt instead of builder package fallback (0.187893ms)
+  ℹ tests 243
   ℹ suites 0
-  ℹ pass 240
+  ℹ pass 243
   ℹ fail 0
   ℹ cancelled 0
   ℹ skipped 0
   ℹ todo 0
-  ℹ duration_ms 4223.213793
+  ℹ duration_ms 3972.402629
 ```
 
 ## Xcode Project Validation
@@ -277,7 +277,7 @@ Confidence: 95%
 
 # Repository Health
 
-Last Audit: 2026-06-28T13:23:36.244Z
+Last Audit: 2026-06-28T17:44:04.881Z
 Overall Health: Healthy
 Confidence: High
 
@@ -407,7 +407,7 @@ Keep the intelligence layer current by running Refresh Intelligence after meanin
 
 # Decisions
 
-Last Audit: 2026-06-28T17:44:02.316Z
+Last Audit: 2026-06-29T00:27:42.914Z
 Confidence: 95%
 
 ## Active Decisions
@@ -539,7 +539,7 @@ Do not build broad automation before repository understanding is consistently re
 ```markdown
 # Architecture
 
-Last Audit: 2026-06-28T17:43:52.672Z
+Last Audit: 2026-06-29T00:27:33.031Z
 Confidence: 95%
 
 ## Product Thesis
@@ -672,7 +672,7 @@ High
 ```markdown
 # Backlog
 
-Last Audit: 2026-06-28T17:43:53.133Z
+Last Audit: 2026-06-29T00:27:33.549Z
 Confidence: 95%
 
 ## High Priority
@@ -711,7 +711,7 @@ Confidence: 95%
 ```markdown
 # Decisions
 
-Last Audit: 2026-06-28T17:44:02.316Z
+Last Audit: 2026-06-29T00:27:42.914Z
 Confidence: 95%
 
 ## Active Decisions
@@ -791,7 +791,7 @@ Generated decision records should include context, reason, and consequences, and
 # Validation
 
 ## Last Validation
-- 2026-06-28T17:44:01.876Z
+- 2026-06-29T00:27:42.511Z
 
 ## Confidence
 - Medium
@@ -806,7 +806,7 @@ Generated decision records should include context, reason, and consequences, and
 ### npm run build
 - Status: PASS
 - Exit code: 0
-- Duration: 3.2s
+- Duration: 3.6s
 - Output summary:
 ```text
   > agent-ide@0.1.0 build
@@ -818,27 +818,27 @@ Generated decision records should include context, reason, and consequences, and
   dist/index.html                   0.39 kB │ gzip:  0.26 kB
   dist/assets/index-C0PW3cF5.css   18.49 kB │ gzip:  4.22 kB
   dist/assets/index-Tk9N-uyp.js   279.82 kB │ gzip: 79.21 kB
-  ✓ built in 151ms
+  ✓ built in 258ms
 ```
 
 ### npm run test
 - Status: PASS
 - Exit code: 0
-- Duration: 5.1s
+- Duration: 4.9s
 - Output summary:
 ```text
-  ✔ auto-refresh triggers when workflow advances to refresh-repository state (0.297103ms)
-  ✔ implementation workflow first step is copy-implementation-prompt (0.283858ms)
-  ✔ implementation prompt is visible at both copy-implementation-prompt and open-codex steps (0.203537ms)
-  ✔ implementation prompt artifact renders recommendation implementationPrompt instead of builder package fallback (0.195929ms)
-  ℹ tests 240
+  ✔ auto-refresh triggers when workflow advances to refresh-repository state (0.285473ms)
+  ✔ implementation workflow first step is copy-implementation-prompt (0.276965ms)
+  ✔ implementation prompt is visible at both copy-implementation-prompt and open-codex steps (0.181371ms)
+  ✔ implementation prompt artifact renders recommendation implementationPrompt instead of builder package fallback (0.187893ms)
+  ℹ tests 243
   ℹ suites 0
-  ℹ pass 240
+  ℹ pass 243
   ℹ fail 0
   ℹ cancelled 0
   ℹ skipped 0
   ℹ todo 0
-  ℹ duration_ms 4223.213793
+  ℹ duration_ms 3972.402629
 ```
 
 ## Xcode Project Validation
@@ -887,7 +887,7 @@ Generated decision records should include context, reason, and consequences, and
 ```markdown
 # Repository Health
 
-Last Audit: 2026-06-28T13:23:36.244Z
+Last Audit: 2026-06-28T17:44:04.881Z
 Overall Health: Healthy
 Confidence: High
 

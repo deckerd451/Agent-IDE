@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-06-28T17:44:07.903Z",
-  "overallScore": 92,
+  "timestamp": "2026-06-29T00:27:48.336Z",
+  "overallScore": 91,
   "canonicalIntelligenceQuality": {
     "score": 90,
     "completenessScore": 83,
@@ -214,7 +214,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T17:44:07.904Z",
+            "generatedAt": "2026-06-29T00:27:48.336Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -245,7 +245,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T17:44:07.904Z",
+            "generatedAt": "2026-06-29T00:27:48.337Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -338,7 +338,7 @@
           ],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T17:44:07.904Z",
+            "generatedAt": "2026-06-29T00:27:48.337Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -437,7 +437,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T17:44:07.904Z",
+            "generatedAt": "2026-06-29T00:27:48.337Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -530,7 +530,7 @@
           ],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T17:44:07.905Z",
+            "generatedAt": "2026-06-29T00:27:48.338Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -629,7 +629,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T17:44:07.905Z",
+            "generatedAt": "2026-06-29T00:27:48.338Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -660,7 +660,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T17:44:07.905Z",
+            "generatedAt": "2026-06-29T00:27:48.338Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -691,7 +691,7 @@
           "allEvidence": [],
           "lineage": {
             "schemaVersion": 1,
-            "generatedAt": "2026-06-28T17:44:07.905Z",
+            "generatedAt": "2026-06-29T00:27:48.338Z",
             "categories": {
               "Canonical": [],
               "Independent": [],
@@ -715,7 +715,7 @@
     },
     "evidenceLineage": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-28T17:44:07.905Z",
+      "generatedAt": "2026-06-29T00:27:48.338Z",
       "categories": {
         "Canonical": [
           {
@@ -1004,7 +1004,7 @@
     "aiHandoffReadinessScore": 96,
     "aiHandoffValidation": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-28T17:44:07.908Z",
+      "generatedAt": "2026-06-29T00:27:48.341Z",
       "overallScore": 96,
       "status": "Ready",
       "categories": {
@@ -1116,7 +1116,7 @@
   },
   "freshness": {
     "score": 100,
-    "lastRefresh": "2026-06-28T17:44:07.903Z",
+    "lastRefresh": "2026-06-29T00:27:48.336Z",
     "filesChanged": 0,
     "staleDocuments": [],
     "canonicalStaleDocuments": [],
@@ -1163,10 +1163,11 @@
     "overallRepositoryConfidence": "High"
   },
   "verification": {
-    "score": 95,
+    "score": 90,
     "status": "Failed",
     "failures": [
-      "intelligence-explanations.json: Artifact timestamp is older than refresh start."
+      "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
+      "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json."
     ]
   },
   "drift": {
@@ -1190,7 +1191,7 @@
   "explanations": {
     "aiHandoffValidation": {
       "schemaVersion": 1,
-      "generatedAt": "2026-06-28T17:44:07.908Z",
+      "generatedAt": "2026-06-29T00:27:48.341Z",
       "overallScore": 96,
       "status": "Ready",
       "categories": {
@@ -1798,7 +1799,7 @@
     "quality": {
       "id": "intelligence-quality",
       "title": "Intelligence Quality Evaluation",
-      "score": 92,
+      "score": 91,
       "components": {
         "canonicalCompleteness": {
           "score": 83,
@@ -1831,7 +1832,7 @@
           ]
         },
         "verification": {
-          "score": 95,
+          "score": 90,
           "rule": "Verification score is the percent of expected artifacts verified.",
           "evidence": ".ai/intelligence-verification.json"
         }
@@ -1844,6 +1845,11 @@
         },
         {
           "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
+          "points": 15,
+          "evidence": ".ai/intelligence-verification.json"
+        },
+        {
+          "rule": "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
           "points": 15,
           "evidence": ".ai/intelligence-verification.json"
         }

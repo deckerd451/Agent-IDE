@@ -1,6 +1,6 @@
 # Context Package
 
-Generated: 2026-06-28T17:44:07.843Z
+Generated: 2026-06-29T00:27:48.271Z
 
 ## Product Thesis
 Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
@@ -120,15 +120,15 @@ Consequences:
 Generated decision records should include context, reason, and consequences, and should not duplicate backlog items or suggested next steps.
 
 ## Decision Ranking
-Selected Issue: Repository documentation identifies actionable follow-up work from: Add backlog quality
-Selected Issue ID: backlog-repository-documentation-identifies-actionable-follow-up-work-from-add
+Selected Issue: Add backlog quality filtering
+Selected Issue ID: backlog-add-backlog-quality-filtering
 Package Type/Actionability: implementation
 Priority Score: 46
 Expected Improvement: repositoryHealth: 3, canonicalCompleteness: 0, quality: 2, verification: 1, handoffReadiness: 2, total: 8
-Deterministic Selection Explanation: Repository documentation identifies actionable follow-up work from: Add backlog quality is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation.
+Deterministic Selection Explanation: Add backlog quality filtering is ranked #1 with priority 46 and total expected improvement +8. Advancement: No implemented + worked outcome matched this recommendation.
 
 Ranked Candidates:
-1. Repository documentation identifies actionable follow-up work from: Add backlog quality (backlog-repository-documentation-identifies-actionable-follow-up-work-from-add)
+1. Add backlog quality filtering (backlog-add-backlog-quality-filtering)
   - selected: yes
   - package type/actionability: implementation
   - priority score: 46
@@ -171,19 +171,19 @@ Tie Breakers:
 - id asc
 
 ## Highest-Priority Issue
-- ID: backlog-repository-documentation-identifies-actionable-follow-up-work-from-add
+- ID: backlog-add-backlog-quality-filtering
 - Category: .ai/backlog.md candidate expansion
 - Severity: medium
 - Actionability: code-fixable
 - Package Type: implementation
 - Source: .ai/backlog.md Medium Priority
-- Title: Repository documentation identifies actionable follow-up work from: Add backlog quality
+- Title: Add backlog quality filtering
 - Evidence: Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering
 - Reason: Candidate expansion selected this actionable item from .ai/backlog.md (Medium Priority).
 - Recommended Action: Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering
 
 ## Next Implementation Step
-Repository documentation identifies actionable follow-up work from: Add backlog quality
+Add backlog quality filtering
 
 ## Validation Summary
 - Medium

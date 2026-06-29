@@ -1,6 +1,6 @@
 # Repository Judgment Evaluation
 
-Generated: 2026-06-28T17:44:07.919Z
+Generated: 2026-06-29T00:27:48.352Z
 
 Repository Judgment remains shadow-only. This evaluation compares the production recommendation engine with the shadow Repository Judgment engine without promoting Repository Judgment or changing the Work Queue.
 
@@ -8,7 +8,7 @@ Repository Judgment remains shadow-only. This evaluation compares the production
 
 ### Production recommendation
 
-- Title: Repository documentation identifies actionable follow-up work from: Add backlog quality
+- Title: Add backlog quality filtering
 - Evidence: .ai/next-improvement-prompt.md (Current Evidence): Reason: Repository documentation identifies actionable follow-up work from: Add backlog quality filtering
 
 ### Shadow recommendation
@@ -24,26 +24,26 @@ Repository Judgment remains shadow-only. This evaluation compares the production
 | expectedRepositoryImpact | 8 | 83 |
 | evidenceQuality | 64 | 64 |
 | determinism | 92 | 92 |
-| implementationSize | 36 | 30 |
+| implementationSize | 48 | 30 |
 | repositoryWideLeverage | 53 | 85 |
 | userValue | 41 | 78 |
-| total | 54 | 74 |
+| total | 55 | 74 |
 
 ## Overall Winner
 
 Shadow
 
-The winner is selected by comparing weighted deterministic totals. A difference under 3 points is a tie; otherwise the higher total wins. Current shadow delta: 20.
+The winner is selected by comparing weighted deterministic totals. A difference under 3 points is a tie; otherwise the higher total wins. Current shadow delta: 19.
 
 ## Repository Judgment Score
 
 Readiness score: 100/100
 
-- +20: 8 consecutive shadow win(s) at 5 points each, capped at 20.
+- +20: 10 consecutive shadow win(s) at 5 points each, capped at 20.
 - +15: Shadow recommendation has evidence for every cited claim.
 - +15: Shadow determinism score is 92.
 - +15: Current deterministic winner is Shadow.
-- +10: 8 historical refresh(es) checked for production-quality regression.
+- +10: 10 historical refresh(es) checked for production-quality regression.
 - +10: Shadow user value 78 versus production 41.
 
 ## Promotion Criteria
