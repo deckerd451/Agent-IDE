@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-29T01:44:14.389Z",
+  "generatedAt": "2026-06-29T03:03:51.229Z",
   "categories": {
     "Canonical": [
       {
@@ -42,18 +42,6 @@
         "ancestry": "Repository-local source."
       },
       {
-        "file": ".ai/intelligence-audit.md",
-        "category": "Independent",
-        "group": "Intelligence Audit",
-        "ancestry": "Repository-local source."
-      },
-      {
-        "file": ".ai/ai-handoff-validation.json",
-        "category": "Independent",
-        "group": "Validation",
-        "ancestry": "Repository-local source."
-      },
-      {
         "file": ".ai/validation.md",
         "category": "Independent",
         "group": "Validation",
@@ -86,39 +74,9 @@
         "ancestry": "Generated descendant of canonical and independent repository intelligence."
       },
       {
-        "file": ".ai/intelligence-diff.json",
-        "category": "Generated",
-        "group": "Intelligence Diff",
-        "ancestry": "Generated descendant of canonical and independent repository intelligence."
-      },
-      {
-        "file": ".ai/intelligence-history.json",
-        "category": "Generated",
-        "group": "Intelligence History",
-        "ancestry": "Generated descendant of canonical and independent repository intelligence."
-      },
-      {
-        "file": ".ai/intelligence-quality.json",
-        "category": "Generated",
-        "group": "Intelligence Quality",
-        "ancestry": "Generated descendant of canonical and independent repository intelligence."
-      },
-      {
-        "file": ".ai/intelligence-snapshot.json",
-        "category": "Generated",
-        "group": "Intelligence Snapshot",
-        "ancestry": "Generated descendant of canonical and independent repository intelligence."
-      },
-      {
         "file": ".ai/intelligence-verification.json",
         "category": "Generated",
         "group": "Intelligence Verification",
-        "ancestry": "Generated descendant of canonical and independent repository intelligence."
-      },
-      {
-        "file": ".ai/next-improvement-prompt.md",
-        "category": "Generated",
-        "group": "Next Improvement Prompt",
         "ancestry": "Generated descendant of canonical and independent repository intelligence."
       },
       {
@@ -173,39 +131,9 @@
       "ancestry": "Generated descendant of canonical and independent repository intelligence."
     },
     {
-      "file": ".ai/intelligence-diff.json",
-      "category": "Generated",
-      "group": "Intelligence Diff",
-      "ancestry": "Generated descendant of canonical and independent repository intelligence."
-    },
-    {
-      "file": ".ai/intelligence-history.json",
-      "category": "Generated",
-      "group": "Intelligence History",
-      "ancestry": "Generated descendant of canonical and independent repository intelligence."
-    },
-    {
-      "file": ".ai/intelligence-quality.json",
-      "category": "Generated",
-      "group": "Intelligence Quality",
-      "ancestry": "Generated descendant of canonical and independent repository intelligence."
-    },
-    {
-      "file": ".ai/intelligence-snapshot.json",
-      "category": "Generated",
-      "group": "Intelligence Snapshot",
-      "ancestry": "Generated descendant of canonical and independent repository intelligence."
-    },
-    {
       "file": ".ai/intelligence-verification.json",
       "category": "Generated",
       "group": "Intelligence Verification",
-      "ancestry": "Generated descendant of canonical and independent repository intelligence."
-    },
-    {
-      "file": ".ai/next-improvement-prompt.md",
-      "category": "Generated",
-      "group": "Next Improvement Prompt",
       "ancestry": "Generated descendant of canonical and independent repository intelligence."
     },
     {
@@ -254,18 +182,6 @@
       "file": ".ai/decisions.md",
       "category": "Independent",
       "group": "Decision Log",
-      "ancestry": "Repository-local source."
-    },
-    {
-      "file": ".ai/intelligence-audit.md",
-      "category": "Independent",
-      "group": "Intelligence Audit",
-      "ancestry": "Repository-local source."
-    },
-    {
-      "file": ".ai/ai-handoff-validation.json",
-      "category": "Independent",
-      "group": "Validation",
       "ancestry": "Repository-local source."
     },
     {

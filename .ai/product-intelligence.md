@@ -1,7 +1,7 @@
 # Product Intelligence
 
-Generated: 2026-06-29T01:44:13.939Z
-State: warning
+Generated: 2026-06-29T03:03:43.348Z
+State: ready
 
 ## Product Thesis
 
@@ -46,7 +46,7 @@ Source: .ai/goals.md §What Not To Build
 - What Not To Build: Complete (100%) *(.ai/repository-health.md §Intelligence Completeness)*
 - Evidence Synthesis: Strong *(.ai/repository-health.md §Intelligence Completeness)*
 - No repository health risks detected. *(.ai/repository-health.md §Risks)*
-- Intelligence quality score is 91/100 *(.ai/intelligence-quality.json)*
+- Intelligence quality score is 92/100 *(.ai/intelligence-quality.json)*
 - Implemented outcome worked: **Add Backlog Quality Filtering** *(.ai/outcomes.json)*
 - Architectural constraints (local-first, deterministic, no LLM) are in place *(.ai/decisions.md)*
 
@@ -74,9 +74,9 @@ Source: .ai/strategy.md §Current Experiment
 
 **Verdict:** Weak Alignment
 
-**Selected candidate:** Add backlog quality filtering
+**Selected candidate:** No `npm run lint` script was detected; style/static lint coverage
 
-**Explanation:** Selected candidate "Add backlog quality filtering" does not overlap with the Current Product Bet text.
+**Explanation:** Selected candidate "No `npm run lint` script was detected; style/static lint coverage" does not overlap with the Current Product Bet text.
 
 ---
 
@@ -93,4 +93,3 @@ No backlog or architecture gap with direct bet overlap found; review .ai/goals.m
 | Code | Severity | Field | Message |
 |---|---|---|---|
 | PI-V07 | INFO | repositoryAlignment | Selected candidate weakly aligns with Current Product Bet. |
-| PI-V09 | WARNING | inputTimestamps | One or more input files are older than 24 hours. |
