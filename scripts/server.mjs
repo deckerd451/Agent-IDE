@@ -569,6 +569,12 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
     advancementReason: nextImprovement.choice.advancement?.reason,
     previousOutcomeWarning: nextImprovement.choice.retentionReason,
   }, nextImprovement.decisionRanking, nextImprovement.prompt);
+  // `generateNextImprovement` owns the selected candidate and renders the canonical
+  // prompt body, including Product Intelligence Strategic Context when available.
+  // Decoration may normalize metadata for Control Plane display, but it must not
+  // re-render the implementation prompt from a lower-context source.
+  data.recommendation.implementationPrompt = nextImprovement.prompt;
+  data.recommendation.prompt = nextImprovement.prompt;
   data.packages.builder = data.recommendation.implementationPrompt;
   await runStep({ id: 'context-package', label: 'Context Package', command: ['node', [join(appRoot, 'scripts/context-package.mjs')]] }, repositoryPath);
   data.packages.context = await readAiText(repositoryPath, 'context-package.md');
