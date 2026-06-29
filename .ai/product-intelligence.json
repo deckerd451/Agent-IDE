@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-29T01:15:13.420Z",
+  "productIntelligenceState": "ready",
+  "productThesis": {
+    "text": "Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs",
+    "source": ".ai/goals.md §Product Thesis",
+    "characterCount": 104
+  },
+  "currentProductBet": {
+    "text": "making repository understanding the primary surface of Agent IDE",
+    "source": ".ai/strategy.md §Current Product Bet",
+    "normalized": true
+  },
+  "highestRiskAssumption": {
+    "text": "Do not build broad automation before repository understanding is consistently reliable for handoffs.",
+    "source": ".ai/goals.md §What Not To Build",
+    "evidenceBacked": true
+  },
+  "currentEvidence": {
+    "supports": [
+      {
+        "text": "Goals: Present",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Architecture: Present",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Strategy: Present",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Backlog: Present",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Decisions: Present",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Validation: Present",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Agents: Present",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Code: Present",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Architect Prompt: Present",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Manual Goals: Complete (100%)",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Product Thesis: Complete (100%)",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Current Focus: Complete (100%)",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Success Criteria: Strong (100%)",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "What Not To Build: Complete (100%)",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "Evidence Synthesis: Strong",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "supports"
+      },
+      {
+        "text": "No repository health risks detected.",
+        "source": ".ai/repository-health.md §Risks",
+        "direction": "supports"
+      },
+      {
+        "text": "Intelligence quality score is 91/100",
+        "direction": "supports",
+        "source": ".ai/intelligence-quality.json"
+      },
+      {
+        "text": "Implemented outcome worked: **Add Backlog Quality Filtering**",
+        "direction": "supports",
+        "source": ".ai/outcomes.json"
+      },
+      {
+        "text": "Architectural constraints (local-first, deterministic, no LLM) are in place",
+        "direction": "supports",
+        "source": ".ai/decisions.md"
+      }
+    ],
+    "weakens": [
+      {
+        "text": "Overall: Partial (83%)",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "weakens"
+      },
+      {
+        "text": "Current Product Bet: Missing (0%)",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "weakens"
+      },
+      {
+        "text": "Missing: Current Product Bet",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "weakens"
+      },
+      {
+        "text": "Canonical intelligence completeness state is Partial",
+        "direction": "weakens",
+        "source": ".ai/intelligence-quality.json"
+      }
+    ],
+    "unknown": [
+      {
+        "text": "Canonical fields supported by repository evidence: 2 / 2",
+        "source": ".ai/repository-health.md §Intelligence Completeness",
+        "direction": "unknown"
+      }
+    ]
+  },
+  "highestLeverageMilestone": {
+    "text": "Can the system reliably deliver the current focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE?",
+    "source": ".ai/strategy.md §Current Experiment",
+    "milestoneIsTaskWarning": false
+  },
+  "repositoryAlignment": {
+    "verdict": "Weak Alignment",
+    "explanation": "Selected candidate \"Add backlog quality filtering\" does not overlap with the Current Product Bet text.",
+    "selectedCandidateId": "backlog-add-backlog-quality-filtering",
+    "selectedCandidateTitle": "Add backlog quality filtering",
+    "betOverlapStems": 0
+  },
+  "strategicRecommendation": {
+    "gap": "The selected candidate does not directly advance the Current Product Bet.",
+    "alternativeDirection": "No backlog or architecture gap with direct bet overlap found; review .ai/goals.md §Current Focus for strategic candidates.",
+    "evidenceSource": ".ai/goals.md §Current Focus"
+  },
+  "validationFindings": [
+    {
+      "code": "PI-V07",
+      "severity": "INFO",
+      "message": "Selected candidate weakly aligns with Current Product Bet.",
+      "field": "repositoryAlignment"
+    }
+  ],
+  "inputTimestamps": {
+    ".ai/goals.md": "2026-06-28T19:12:03.120Z",
+    ".ai/strategy.md": "2026-06-28T19:12:03.124Z",
+    ".ai/repository-health.md": "2026-06-29T01:07:34.045Z",
+    ".ai/decision-ranking.json": "2026-06-29T01:15:13.415Z",
+    ".ai/architecture.md": "2026-06-29T01:07:34.041Z",
+    ".ai/decisions.md": "2026-06-29T01:07:34.041Z",
+    ".ai/backlog.md": "2026-06-29T01:07:34.041Z",
+    ".ai/outcomes.json": "2026-06-28T19:12:03.124Z"
+  }
+}

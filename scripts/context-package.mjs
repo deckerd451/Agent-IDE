@@ -77,6 +77,20 @@ export function renderDecisionRanking(ranking) {
   return lines.join('\n');
 }
 
+
+function renderProductIntelligenceSection(pi) {
+  if (!pi || pi.productIntelligenceState === 'blocked') {
+    return 'Product Intelligence not available. Run `node scripts/product-intelligence.mjs`.';
+  }
+  return [
+    `**Product Thesis:** ${pi.productThesis?.text ?? 'Not defined'}`,
+    `**Current Product Bet:** ${pi.currentProductBet?.text ?? 'Not defined'}`,
+    `**Repository Alignment:** ${pi.repositoryAlignment?.verdict}`,
+    `**Highest-Leverage Milestone:** ${pi.highestLeverageMilestone?.text ?? 'Not derived'}`,
+    pi.strategicRecommendation ? `**Strategic Gap:** ${pi.strategicRecommendation.gap}` : '',
+  ].filter(Boolean).join('\n');
+}
+
 export async function generateContextPackage(repositoryPath = process.cwd()) {
   const aiDir = join(repositoryPath, '.ai');
   const outputPath = join(aiDir, 'context-package.md');
@@ -84,6 +98,7 @@ export async function generateContextPackage(repositoryPath = process.cwd()) {
     await Promise.all(Object.entries(sourceFiles).map(async ([key, fileName]) => [key, await readAiFile(aiDir, fileName)])),
   );
   const ranking = await readAiJson(aiDir, 'decision-ranking.json');
+  const pi = await readAiJson(aiDir, 'product-intelligence.json');
   const outcomes = await readAiFile(aiDir, 'outcomes.md');
 
   const content = [
@@ -119,6 +134,9 @@ export async function generateContextPackage(repositoryPath = process.cwd()) {
     '',
     '## Decision Ranking',
     renderDecisionRanking(ranking),
+    '',
+    '## Product Intelligence',
+    renderProductIntelligenceSection(pi),
     '',
     '## Highest-Priority Issue',
     firstMatchingSection(docs.next, ['Selected Issue']),

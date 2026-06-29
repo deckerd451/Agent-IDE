@@ -5,6 +5,7 @@ import { canonicalManualGoalsSuggestedUpdate, evaluateCanonicalStrategyCompleten
 import { renderSynthesisMarkdown } from './evidence-synthesis.mjs';
 import { analyzeImprovements, analyzeImprovementsWithTrace } from './improvement-analyzer.mjs';
 import { readOutcomeEvidence } from './outcomes.mjs';
+import { generateProductIntelligence } from './product-intelligence.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md','architecture.md','decisions.md','execution-model.md','validation.md','ai-handoff-validation.md','intelligence-verification.md'];
 
@@ -716,6 +717,29 @@ ${task.clarification ? `- Clarification: ${task.clarification}\n` : ''}
 - Title: ${task.originalRecommendation?.title ?? 'Unknown'}`;
 }
 
+
+function renderStrategicContext(pi) {
+  if (!pi || pi.productIntelligenceState === 'blocked') return '';
+  const lines = [
+    '## Strategic Context',
+    '',
+    `**Product Thesis:** ${pi.productThesis?.text ?? 'Not defined'}`,
+    `**Current Product Bet:** ${pi.currentProductBet?.text ?? 'Not defined'}`,
+    `**Repository Alignment:** ${pi.repositoryAlignment?.verdict} — ${pi.repositoryAlignment?.explanation}`,
+    `**Highest-Leverage Milestone:** ${pi.highestLeverageMilestone?.text ?? 'Not derived'}`,
+  ];
+  if (pi.strategicRecommendation) {
+    lines.push('');
+    lines.push('## Strategic Gap');
+    lines.push('');
+    lines.push(pi.strategicRecommendation.gap);
+    lines.push('');
+    lines.push(`Alternative direction: ${pi.strategicRecommendation.alternativeDirection}`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
 function renderTaskClarificationPackage(selected, ranking) {
   const task = selected.engineeringTask;
   return `# Recommendation requires task clarification.
@@ -738,31 +762,31 @@ ${task?.clarification ?? 'Missing deterministic evidence for a concrete implemen
 `;
 }
 
-function renderImplementationPackage(selected, details, ranking) {
+function renderImplementationPackage(selected, details, ranking, productIntelligence = null) {
   const isArchitecturalImprovement = selected.class === 'improvement';
   const traceRef = isArchitecturalImprovement ? '\n\n> Trace: `.ai/recommendation-trace.md` — full reasoning pipeline for this recommendation.' : '';
-  return `# ${selected.title}\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written.\nUse the cited repository evidence to identify the root cause before making changes.\nKeep the implementation narrowly scoped.\nDo not broaden scope beyond the selected issue.\nPreserve deterministic, local-first behavior.\nPreserve manual intelligence sections.\nAvoid unrelated refactoring.\nUse only repository-local evidence.\nDo not make LLM calls, use cloud services, or add telemetry.\nEnsure execution and validation are fully reproducible.${traceRef}\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderEngineeringTask(selected.engineeringTask)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}## Motivation\nAgent IDE should close the loop from repository intelligence to one safe next builder task. This Implementation Package was generated deterministically from the selected issue above.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n${renderAffectedFiles(selected)}\n## Problem\n${details.problem}\n\n## Why This Helps\n${selected.engineeringTask?.rootCause || selected.engineeringTask?.implementationTarget || details.problem}\n\n## Goal\n${selected.engineeringTask?.title || selected.title || selected.recommendedAction}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The final diff is small, deterministic, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## Expected Repository Improvement\n- Repository Health should improve.\n- Intelligence Quality should improve.\n- The selected issue should disappear or downgrade.\n- No new contradictions with \`.ai/goals.md\` should be introduced.\n\n## After Implementation\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected issue was resolved.\n- Summarize any newly discovered issues.\n- Generate the next Implementation Package.\n`;
+  return `# ${selected.title}\n\n## Implementation Instructions\nImplement this Implementation Package exactly as written.\nUse the cited repository evidence to identify the root cause before making changes.\nKeep the implementation narrowly scoped.\nDo not broaden scope beyond the selected issue.\nPreserve deterministic, local-first behavior.\nPreserve manual intelligence sections.\nAvoid unrelated refactoring.\nUse only repository-local evidence.\nDo not make LLM calls, use cloud services, or add telemetry.\nEnsure execution and validation are fully reproducible.${traceRef}\n\n${renderStrategicContext(productIntelligence)}## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderEngineeringTask(selected.engineeringTask)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}## Motivation\nAgent IDE should close the loop from repository intelligence to one safe next builder task. This Implementation Package was generated deterministically from the selected issue above.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n${renderAffectedFiles(selected)}\n## Problem\n${details.problem}\n\n## Why This Helps\n${selected.engineeringTask?.rootCause || selected.engineeringTask?.implementationTarget || details.problem}\n\n## Goal\n${selected.engineeringTask?.title || selected.title || selected.recommendedAction}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The final diff is small, deterministic, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## Expected Repository Improvement\n- Repository Health should improve.\n- Intelligence Quality should improve.\n- The selected issue should disappear or downgrade.\n- No new contradictions with \`.ai/goals.md\` should be introduced.\n\n## After Implementation\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected issue was resolved.\n- Summarize any newly discovered issues.\n- Generate the next Implementation Package.\n`;
 }
 
-function renderProductDecisionPackage(selected, details, ranking) {
+function renderProductDecisionPackage(selected, details, ranking, productIntelligence = null) {
   return `# ${selected.title}\n\n## Decision Instructions\nThis is a product-owner decision task, not a Codex implementation task.\nUse repository-local evidence to decide or record the missing product, strategy, or manual-intelligence information.\nDo not send this package to Codex as implementation work.\nDo not edit files automatically; the repository owner should review, accept, or edit the suggested manual update in \`.ai/goals.md\`.
 Repository owner edits: \`.ai/goals.md\`
-Everything else will be regenerated.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}${renderManualGoalsDeterministicEvaluation(selected)}${renderStrategyDeterministicEvaluation(selected)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n${suggestedCanonicalWording(selected)}## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n${selected.id === 'missing-manual-goals' ? '- Suggested Manual Update exactly matches the canonical Deterministic Evaluation missing fields.\n' : ''}- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct manual section of \`.ai/goals.md\`.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
+Everything else will be regenerated.\n\n${renderStrategicContext(productIntelligence)}## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}${renderManualGoalsDeterministicEvaluation(selected)}${renderStrategyDeterministicEvaluation(selected)}\n\n## Why Human Judgment Is Required\n${details.problem}\n\n${selected.reason} This requires repository-owner judgment about intent, strategy, priorities, or manual notes rather than a deterministic code fix.\n\n## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Decision Needed\n${selected.recommendedAction}\n\n## Suggested Manual Update\n${suggestedManualUpdate(selected)}\n\n${suggestedCanonicalWording(selected)}## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n${selected.id === 'missing-manual-goals' ? '- Suggested Manual Update exactly matches the canonical Deterministic Evaluation missing fields.\n' : ''}- The repository owner reviews the suggested manual text.\n- The repository owner accepts, edits, or rejects the suggested text based on actual product intent.\n- Any accepted decision is recorded in the correct manual section of \`.ai/goals.md\`.\n- No manual work is labeled as Codex implementation work.\n\n## After Decision\n- Refresh Repository Intelligence.\n- Compare Repository Health before and after.\n- Compare Intelligence Quality before and after.\n- Verify whether the selected manual issue was resolved or downgraded.\n- Generate the next correctly typed package.\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n`;
 }
 
-function renderValidationPackage(selected, details, ranking) {
-  return `# ${selected.title}\n\n## Validation Instructions\nRun this Validation Experiment as a deterministic local check.\nUse the cited repository evidence to validate handoff quality without broadening scope.\nDo not make product-owner decisions, LLM calls, cloud calls, or telemetry changes.\n\n## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Experiment\n${details.problem}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The validation result is deterministic, local-first, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## After Validation\n- Refresh Repository Intelligence.\n- Record any gaps in the appropriate manual section of \`.ai/goals.md\`.\n- Generate the next correctly typed package.\n`;
+function renderValidationPackage(selected, details, ranking, productIntelligence = null) {
+  return `# ${selected.title}\n\n## Validation Instructions\nRun this Validation Experiment as a deterministic local check.\nUse the cited repository evidence to validate handoff quality without broadening scope.\nDo not make product-owner decisions, LLM calls, cloud calls, or telemetry changes.\n\n${renderStrategicContext(productIntelligence)}## Selected Issue\n${renderSelectedIssue(selected)}\n\n${renderExplanationMarkdown(selected.explanation)}\n\n${renderDecisionRanking(ranking)}## Current Evidence\n- Source risk/recommendation: ${selected.evidence}\n- Reason: ${selected.reason}\n\n## Experiment\n${details.problem}\n\n## Requirements\n${details.requirements.map((item) => `- ${item}`).join('\n')}\n\n## Acceptance Criteria\n${details.acceptance.map((item) => `- ${item}`).join('\n')}\n- The validation result is deterministic, local-first, and reviewable.\n\n## Testing Commands\n- npm test\n- npm run build\n\n## Constraints\n${constraints.map((item) => `- ${item}`).join('\n')}\n\n## After Validation\n- Refresh Repository Intelligence.\n- Record any gaps in the appropriate manual section of \`.ai/goals.md\`.\n- Generate the next correctly typed package.\n`;
 }
 
-export function renderPrompt(choice) {
+export function renderPrompt(choice, productIntelligence = null) {
   const selected = choice.selectedIssue ?? choice;
   selected.packageType ??= packageTypeForActionability(selected.actionability);
   const details = selected.details ?? issueDetails[selected.id] ?? issueDetails[selected.kind] ?? issueDetails['missing-intelligence'];
   const ranking = choice.decisionRanking ?? selected.decisionRanking;
   if (selected.packageType === 'task-clarification') return renderTaskClarificationPackage(selected, ranking);
-  if (selected.packageType === 'product-decision') return renderProductDecisionPackage(selected, details, ranking);
-  if (selected.packageType === 'validation-experiment') return renderValidationPackage(selected, details, ranking);
-  return renderImplementationPackage(selected, details, ranking);
+  if (selected.packageType === 'product-decision') return renderProductDecisionPackage(selected, details, ranking, productIntelligence);
+  if (selected.packageType === 'validation-experiment') return renderValidationPackage(selected, details, ranking, productIntelligence);
+  return renderImplementationPackage(selected, details, ranking, productIntelligence);
 }
 
 function renderRecommendationTrace({ stages, improvementCandidates, maintenanceIssues, allCandidates, decisionRanking, filesRead, docs, generatorFailures = [] }) {
@@ -904,10 +928,16 @@ export async function generateNextImprovement(repositoryPath = process.cwd(), op
   const { selectedIssue, candidates, decisionRanking } = chooseNextImprovementWithCandidates({ goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, validation, aiHandoffValidation, intelligenceVerification, repositoryPath: resolved, validationCompletions: options.validationCompletions ?? [], outcomeEntries });
   selectedIssue.explanation = explainRecommendation(selectedIssue, candidates);
   decisionRanking.explanation = explainDecisionRanking(decisionRanking);
-  const prompt = renderPrompt({ selectedIssue, decisionRanking });
   await mkdir(join(resolved, '.ai'), { recursive: true });
-  await writeFile(join(resolved, '.ai', 'next-improvement-prompt.md'), prompt);
   await writeFile(join(resolved, '.ai', 'decision-ranking.json'), `${JSON.stringify(decisionRanking, null, 2)}\n`);
+  let productIntelligence = null;
+  try {
+    productIntelligence = await generateProductIntelligence(resolved, { generatedAt: options.generatedAt });
+  } catch (error) {
+    console.error('[product-intelligence] Generation failed (non-blocking):', error.message);
+  }
+  const prompt = renderPrompt({ selectedIssue, decisionRanking }, productIntelligence);
+  await writeFile(join(resolved, '.ai', 'next-improvement-prompt.md'), prompt);
 
   // Write the deterministic recommendation trace.
   const maintenanceIssues = candidates.filter((c) => c.class === 'maintenance');
@@ -916,7 +946,7 @@ export async function generateNextImprovement(repositoryPath = process.cwd(), op
   const trace = renderRecommendationTrace({ stages, improvementCandidates: candidates.filter((c) => c.class === 'improvement'), maintenanceIssues, allCandidates: candidates, decisionRanking, filesRead: requiredFiles, docs, generatorFailures });
   await writeFile(join(resolved, '.ai', 'recommendation-trace.md'), trace);
 
-  return { choice: selectedIssue, selectedIssue, candidates, decisionRanking, explanation: selectedIssue.explanation, prompt, filesRead: requiredFiles };
+  return { choice: selectedIssue, selectedIssue, candidates, decisionRanking, explanation: selectedIssue.explanation, prompt, filesRead: requiredFiles, productIntelligence };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
