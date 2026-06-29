@@ -210,3 +210,45 @@ test('empty repository produces a valid skeleton with all section headings', asy
     await cleanup();
   }
 });
+
+test('resolved cyclic dependency documentation does not produce active architectural risk', async () => {
+  const { dir, cleanup } = await makeRepo({
+    ...minimalAi,
+    'architecture.md': `# Architecture\n\n## Core Systems\n- BLECoordinator: observes BLE state\n\n## Primary Flows\n- BLEPeripheral -> BLECoordinator\n\n## Notes\n- The cyclic dependency was resolved by removing the direct reference.\n`,
+  });
+  try {
+    await generateExecutionModel(dir);
+    const output = await readFile(join(dir, '.ai', 'execution-model.md'), 'utf8');
+    assert.doesNotMatch(output, /Cyclic dependency language detected in architecture or decisions/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('active cyclic dependency documentation still produces architectural risk', async () => {
+  const { dir, cleanup } = await makeRepo({
+    ...minimalAi,
+    'architecture.md': `# Architecture\n\n## Core Systems\n- BLECoordinator: observes BLE state\n\n## Primary Flows\n- BLEPeripheral -> BLECoordinator\n\n## Notes\n- A cyclic dependency exists between BLEPeripheral and BLECoordinator.\n`,
+  });
+  try {
+    await generateExecutionModel(dir);
+    const output = await readFile(join(dir, '.ai', 'execution-model.md'), 'utf8');
+    assert.match(output, /Cyclic dependency language detected in architecture or decisions/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('Nearify-style acyclic invariant documentation does not produce cyclic dependency risk', async () => {
+  const { dir, cleanup } = await makeRepo({
+    ...minimalAi,
+    'architecture.md': `# Architecture\n\n## Core Systems\n- BLEPeripheral: self-manages by observing coordinator events\n- BLECoordinator: owns scan orchestration\n\n## Primary Flows\n- BLECoordinator -> BLEPeripheral\n\n## Invariant\n- BLEPeripheral must not hold a direct reference to BLECoordinator.\n- The BLE subsystem keeps the dependency graph acyclic.\n- This acyclic invariant prevents previously fixed cyclic dependency behavior from returning.\n`,
+  });
+  try {
+    await generateExecutionModel(dir);
+    const output = await readFile(join(dir, '.ai', 'execution-model.md'), 'utf8');
+    assert.doesNotMatch(output, /Cyclic dependency language detected in architecture or decisions/);
+  } finally {
+    await cleanup();
+  }
+});
