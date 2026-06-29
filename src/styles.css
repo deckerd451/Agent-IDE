@@ -1406,3 +1406,24 @@ h1 {
   gap: 0.5rem;
   font-weight: 500;
 }
+
+.decisionAnswerStack {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.decisionAnswerCard {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.54);
+  padding: 1rem;
+}
+
+.decisionAnswerCard h3 {
+  margin: 0 0 0.6rem;
+}
+
+.decisionAnswerCard p {
+  margin: 0.45rem 0;
+}
