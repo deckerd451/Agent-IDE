@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-29T00:27:48.355Z",
+  "generatedAt": "2026-06-29T01:44:14.409Z",
   "aiHandoffValidation": {
     "schemaVersion": 1,
-    "generatedAt": "2026-06-29T00:27:48.303Z",
+    "generatedAt": "2026-06-29T01:44:14.357Z",
     "overallScore": 96,
     "status": "Ready",
     "categories": {
@@ -611,7 +611,7 @@
   "quality": {
     "id": "intelligence-quality",
     "title": "Intelligence Quality Evaluation",
-    "score": 91,
+    "score": 92,
     "components": {
       "canonicalCompleteness": {
         "score": 83,
@@ -644,7 +644,7 @@
         ]
       },
       "verification": {
-        "score": 90,
+        "score": 95,
         "rule": "Verification score is the percent of expected artifacts verified.",
         "evidence": ".ai/intelligence-verification.json"
       }
@@ -657,11 +657,6 @@
       },
       {
         "rule": "intelligence-explanations.json: Artifact timestamp is older than refresh start.",
-        "points": 15,
-        "evidence": ".ai/intelligence-verification.json"
-      },
-      {
-        "rule": "Explanation contradiction: decision ranking explanation selected issue differs from decision-ranking.json.",
         "points": 15,
         "evidence": ".ai/intelligence-verification.json"
       }

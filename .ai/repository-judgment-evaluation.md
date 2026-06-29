@@ -1,6 +1,6 @@
 # Repository Judgment Evaluation
 
-Generated: 2026-06-29T00:27:48.352Z
+Generated: 2026-06-29T01:44:14.405Z
 
 Repository Judgment remains shadow-only. This evaluation compares the production recommendation engine with the shadow Repository Judgment engine without promoting Repository Judgment or changing the Work Queue.
 
@@ -39,7 +39,7 @@ The winner is selected by comparing weighted deterministic totals. A difference 
 
 Readiness score: 100/100
 
-- +20: 10 consecutive shadow win(s) at 5 points each, capped at 20.
+- +20: 12 consecutive shadow win(s) at 5 points each, capped at 20.
 - +15: Shadow recommendation has evidence for every cited claim.
 - +15: Shadow determinism score is 92.
 - +15: Current deterministic winner is Shadow.

@@ -1,7 +1,7 @@
 # Product Intelligence
 
-Generated: 2026-06-29T01:15:13.420Z
-State: ready
+Generated: 2026-06-29T01:44:13.939Z
+State: warning
 
 ## Product Thesis
 
@@ -93,3 +93,4 @@ No backlog or architecture gap with direct bet overlap found; review .ai/goals.m
 | Code | Severity | Field | Message |
 |---|---|---|---|
 | PI-V07 | INFO | repositoryAlignment | Selected candidate weakly aligns with Current Product Bet. |
+| PI-V09 | WARNING | inputTimestamps | One or more input files are older than 24 hours. |

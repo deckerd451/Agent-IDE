@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-29T01:15:13.420Z",
-  "productIntelligenceState": "ready",
+  "generatedAt": "2026-06-29T01:44:13.939Z",
+  "productIntelligenceState": "warning",
   "productThesis": {
     "text": "Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs",
     "source": ".ai/goals.md §Product Thesis",
@@ -168,16 +168,22 @@
       "severity": "INFO",
       "message": "Selected candidate weakly aligns with Current Product Bet.",
       "field": "repositoryAlignment"
+    },
+    {
+      "code": "PI-V09",
+      "severity": "WARNING",
+      "message": "One or more input files are older than 24 hours.",
+      "field": "inputTimestamps"
     }
   ],
   "inputTimestamps": {
-    ".ai/goals.md": "2026-06-28T19:12:03.120Z",
-    ".ai/strategy.md": "2026-06-28T19:12:03.124Z",
-    ".ai/repository-health.md": "2026-06-29T01:07:34.045Z",
-    ".ai/decision-ranking.json": "2026-06-29T01:15:13.415Z",
-    ".ai/architecture.md": "2026-06-29T01:07:34.041Z",
-    ".ai/decisions.md": "2026-06-29T01:07:34.041Z",
-    ".ai/backlog.md": "2026-06-29T01:07:34.041Z",
-    ".ai/outcomes.json": "2026-06-28T19:12:03.124Z"
+    ".ai/goals.md": "2026-06-26T14:07:30.733Z",
+    ".ai/strategy.md": "2026-06-29T01:44:09.302Z",
+    ".ai/repository-health.md": "2026-06-29T01:44:11.377Z",
+    ".ai/decision-ranking.json": "2026-06-29T01:44:13.937Z",
+    ".ai/architecture.md": "2026-06-29T01:43:54.912Z",
+    ".ai/decisions.md": "2026-06-29T01:44:08.884Z",
+    ".ai/backlog.md": "2026-06-29T01:43:55.374Z",
+    ".ai/outcomes.json": "2026-06-28T12:17:38.683Z"
   }
 }
