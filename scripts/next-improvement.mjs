@@ -151,7 +151,8 @@ function actionFromText(text = '') {
 
 function titleFromCandidateText(text = '', fallback = 'Improve Repository Intelligence') {
   const cleaned = actionFromText(text).replace(/^\[[ x-]\]\s*/i, '').replace(/^\w+\s*:\s*/, '');
-  const withoutPrefix = cleaned.replace(/^(?:todo|action|next|gap|weakness|remediation|failed|missing|partial)\s*[:—-]\s*/i, '');
+  const withoutDiagnostic = cleaned.replace(/^Repository documentation identifies actionable follow-up work from:\s*/i, '');
+  const withoutPrefix = withoutDiagnostic.replace(/^(?:todo|action|next|gap|weakness|remediation|failed|missing|partial)\s*[:—-]\s*/i, '');
   const words = withoutPrefix.split(/\s+/).slice(0, 10).join(' ');
   return words ? words.replace(/^./, (c) => c.toUpperCase()) : fallback;
 }
