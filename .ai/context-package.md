@@ -1,6 +1,6 @@
 # Context Package
 
-Generated: 2026-06-29T00:27:48.271Z
+Generated: 2026-06-29T01:15:13.582Z
 
 ## Product Thesis
 Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs.
@@ -169,6 +169,13 @@ Tie Breakers:
 - severity rank asc
 - title asc
 - id asc
+
+## Product Intelligence
+**Product Thesis:** Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs
+**Current Product Bet:** making repository understanding the primary surface of Agent IDE
+**Repository Alignment:** Weak Alignment
+**Highest-Leverage Milestone:** Can the system reliably deliver the current focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE?
+**Strategic Gap:** The selected candidate does not directly advance the Current Product Bet.
 
 ## Highest-Priority Issue
 - ID: backlog-add-backlog-quality-filtering

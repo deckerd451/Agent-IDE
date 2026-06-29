@@ -18,9 +18,10 @@
     "health": "node scripts/health.mjs",
     "context:package": "node scripts/context-package.mjs",
     "next:improvement": "node scripts/next-improvement.mjs",
+    "product:intelligence": "node scripts/product-intelligence.mjs",
     "strategy": "node scripts/strategy.mjs",
     "evidence:lineage": "node scripts/evidence-lineage.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --loader ./scripts/ts-loader.mjs --test tests/*.test.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

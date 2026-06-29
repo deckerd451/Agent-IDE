@@ -12,6 +12,18 @@ Use only repository-local evidence.
 Do not make LLM calls, use cloud services, or add telemetry.
 Ensure execution and validation are fully reproducible.
 
+## Strategic Context
+
+**Product Thesis:** Agent IDE makes repository understanding the primary developer interface for AI-ready developer handoffs
+**Current Product Bet:** making repository understanding the primary surface of Agent IDE
+**Repository Alignment:** Weak Alignment — Selected candidate "Add backlog quality filtering" does not overlap with the Current Product Bet text.
+**Highest-Leverage Milestone:** Can the system reliably deliver the current focus: The repository is currently focused on making repository understanding the primary surface of Agent IDE?
+
+## Strategic Gap
+
+The selected candidate does not directly advance the Current Product Bet.
+
+Alternative direction: No backlog or architecture gap with direct bet overlap found; review .ai/goals.md §Current Focus for strategic candidates.
 ## Selected Issue
 - ID: backlog-add-backlog-quality-filtering
 - Category: .ai/backlog.md candidate expansion
