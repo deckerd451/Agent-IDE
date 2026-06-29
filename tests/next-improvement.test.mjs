@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -324,6 +324,60 @@ test('generated Product Decision Package keeps manual strategy edits on canonica
   assert.match(prompt, /## Missing Field\n\nCurrent Product Bet/);
   assert.match(prompt, /## Section\n\n## Manual Strategy Notes/);
   assert.doesNotMatch(prompt, /\.ai\/strategy\.md/);
+});
+
+test('Nearify acyclic architecture refresh removes stale cyclic dependency recommendation', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'agent-ide-nearify-cyclic-refresh-'));
+  try {
+    await mkdir(join(dir, '.ai'), { recursive: true });
+    const nearifyArchitecture = `# Architecture
+
+## Product Thesis
+Nearify helps people find nearby friends and events.
+
+## Current Focus
+Keep BLE discovery reliable without reintroducing coordinator/peripheral ownership cycles.
+
+## Core Systems
+- BLEPeripheral: self-manages by observing coordinator events.
+- BLECoordinator: owns scan orchestration and publishes events.
+- NearbyDiscovery: turns BLE observations into nearby-person suggestions.
+
+## Primary Flows
+- BLECoordinator -> BLEPeripheral
+- BLEPeripheral -> NearbyDiscovery
+
+## Invariant
+- BLEPeripheral must not hold a direct reference to BLECoordinator.
+- The BLE subsystem keeps the dependency graph acyclic.
+- This acyclic invariant prevents previously fixed cyclic dependency behavior from returning.
+`;
+    await writeFile(join(dir, '.ai/goals.md'), '# Goals\n\n## Product Thesis\nNearify helps users discover nearby people and events.\n\n## Current Focus\nKeep nearby discovery reliable.\n\n## Success Criteria\n- Discovery remains reliable.\n\n## Manual Goals\n- Product intent: Nearby social discovery.\n- Current focus: Reliable BLE discovery.\n- Success criteria: Discovery remains reliable.\n- Long-term vision: Safer nearby social coordination.\n');
+    await writeFile(join(dir, '.ai/architecture.md'), nearifyArchitecture);
+    await writeFile(join(dir, '.ai/decisions.md'), '# Decisions\n\n## Active Decisions\n- BLEPeripheral observes coordinator events instead of storing a coordinator reference.\n- All generated intelligence remains deterministic and local-first.\n');
+    await writeFile(join(dir, '.ai/repository-health.md'), '# Repository Health\n\n## Risks\n- No repository health risks detected.\n');
+    await writeFile(join(dir, '.ai/intelligence-quality.json'), JSON.stringify(healthyQuality, null, 2));
+    await writeFile(join(dir, '.ai/intelligence-audit.md'), '# Intelligence Audit\n');
+    await writeFile(join(dir, '.ai/backlog.md'), '# Backlog\n\n## Prioritized Backlog\n- Add deterministic refresh regression coverage.\n');
+    await writeFile(join(dir, '.ai/strategy.md'), '# Strategy\n\n## Strategy Confidence\nHigh\n\n## Current Product Bet\nReliable nearby discovery without coordinator/peripheral ownership cycles.\n');
+    await writeFile(join(dir, '.ai/context-package.md'), '# Context Package\nReady.\n');
+    await writeFile(join(dir, '.ai/validation.md'), '# Validation\n\n## Commands Run\n- `npm test`\n\n## Confidence\n- High\n');
+    await writeFile(join(dir, '.ai/execution-model.md'), '# Execution Model\n\n## Architectural Risks\n- **Cyclic dependency language detected in architecture or decisions**\n  - Category: Coupling\n  - Evidence: .ai/architecture.md\n');
+
+    const result = await generateNextImprovement(dir);
+    const executionModel = await readFile(join(dir, '.ai/execution-model.md'), 'utf8');
+    const ranking = await readFile(join(dir, '.ai/decision-ranking.json'), 'utf8');
+    const prompt = await readFile(join(dir, '.ai/next-improvement-prompt.md'), 'utf8');
+    const trace = await readFile(join(dir, '.ai/recommendation-trace.md'), 'utf8');
+
+    assert.doesNotMatch(executionModel, /Cyclic dependency language detected in architecture or decisions/);
+    assert.doesNotMatch(ranking, /Resolve Architectural Risk: Cyclic dependency language detected in architecture or decisions/);
+    assert.doesNotMatch(prompt, /Resolve Architectural Risk: Cyclic dependency language detected in architecture or decisions/);
+    assert.doesNotMatch(trace, /Resolve Architectural Risk: Cyclic dependency language detected in architecture or decisions/);
+    assert.notEqual(result.selectedIssue.title, 'Resolve Architectural Risk: Cyclic dependency language detected in architecture or decisions');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test('code-fixable issue still generates Implementation Package', () => {
