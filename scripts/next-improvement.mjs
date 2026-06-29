@@ -145,7 +145,26 @@ function isActionableCandidateLine(line = '') {
   const text = line.replace(/^[-*]\s+/, '').replace(/^\d+[.)]\s+/, '').trim();
   if (text.length < 8) return false;
   if (/^(none|no\s+(?:current|known|eligible|failed|missing)|n\/a)\b/i.test(text)) return false;
+  if (/^Suggested Next Step\s*:/i.test(text)) return true;
   return /\b(?:add|build|fix|improve|implement|restore|reduce|remove|merge|downgrade|update|refresh|validate|document|complete|resolve|remediate|address|create|wire|surface|extract|rank|filter|select|test|run|missing|failed|incomplete|partial|gap|weakness|risk|todo|action)\b/i.test(text);
+}
+
+
+function hasRepositoryLocalActionEvidence(text = '') {
+  const value = String(text);
+  return /`[^`]+`/.test(value)
+    || /(?:^|[\s(])(?:\.?[\w-]+\/)+(?:[\w.-]+)(?=$|[\s),.;:])/.test(value)
+    || /\b[\w.-]+\.(?:mjs|js|ts|tsx|jsx|json|md|yml|yaml|toml|rs|py|go|java|kt|swift|css|html)\b/.test(value)
+    || (/\b(?:[A-Za-z_$][\w$]*\.)?[A-Za-z_$][\w$]*(?:\(\)|#\w+|::\w+)\b/.test(value) && /\b(?:function|method|class|symbol|component|hook|script|command)\b/i.test(value))
+    || /\b(?:npm|pnpm|yarn|node|python|pytest|cargo|go test|make)\s+(?:run\s+)?[\w:./-]+\b/i.test(value)
+    || /\b(?:manual field|manual section|owner field|product thesis|current product bet|highest-risk assumption|success criteria|what not to build)\b/i.test(value);
+}
+
+function isVagueSuggestedNextStep(text = '') {
+  const value = String(text).trim();
+  if (!/^Suggested Next Step\s*:/i.test(value)) return false;
+  if (hasRepositoryLocalActionEvidence(value)) return false;
+  return /\b(?:inspect|review|decide|determine|consider|clarify|investigate|assess)\b/i.test(value);
 }
 
 function actionFromText(text = '') {
@@ -164,18 +183,20 @@ function titleFromCandidateText(text = '', fallback = 'Improve Repository Intell
 function candidateExpansionIssue({ sourceKey, sourceFile, index, text, section, priorityOffset = 0 }) {
   const action = actionFromText(text);
   const title = titleFromCandidateText(action);
-  const priority = (expansionSourcePriority[sourceKey] ?? 40) - index + priorityOffset;
-  return selectedIssue({
+  const vagueSuggestedNextStep = isVagueSuggestedNextStep(action);
+  const priority = vagueSuggestedNextStep ? 5 : (expansionSourcePriority[sourceKey] ?? 40) - index + priorityOffset;
+  const issue = selectedIssue({
     id: `${sourceKey}-${slugify(title)}`,
-    category: `${sourceFile} candidate expansion`,
-    severity: /\b(?:failed|missing|critical|blocker|broken)\b/i.test(action) ? 'high' : 'medium',
-    actionability: /\b(?:decide|product bet|strategy|owner)\b/i.test(`${section} ${action}`) ? 'manual' : /\b(?:validate|validation|test|dry run|failed|missing)\b/i.test(`${sourceKey} ${section} ${action}`) ? 'validation-experiment' : 'code-fixable',
+    category: vagueSuggestedNextStep ? `${sourceFile} needs clarification` : `${sourceFile} candidate expansion`,
+    severity: vagueSuggestedNextStep ? 'low' : /\b(?:failed|missing|critical|blocker|broken)\b/i.test(action) ? 'high' : 'medium',
+    actionability: vagueSuggestedNextStep ? 'manual' : /\b(?:decide|product bet|strategy|owner)\b/i.test(`${section} ${action}`) ? 'manual' : /\b(?:validate|validation|test|dry run|failed|missing)\b/i.test(`${sourceKey} ${section} ${action}`) ? 'validation-experiment' : 'code-fixable',
     source: `${sourceFile}${section ? ` ${section}` : ''}`,
     title,
-    evidence: action,
-    reason: `Candidate expansion selected this actionable item from ${sourceFile}${section ? ` (${section})` : ''}.`,
-    recommendedAction: action,
-  },);
+    evidence: vagueSuggestedNextStep ? `Original backlog text preserved for comparison: ${action}` : action,
+    reason: vagueSuggestedNextStep ? `Candidate expansion downgraded this ${sourceFile} fragment because it lacks a concrete target, file path, symbol, validation command, or explicit manual field.` : `Candidate expansion selected this actionable item from ${sourceFile}${section ? ` (${section})` : ''}.`,
+    recommendedAction: vagueSuggestedNextStep ? 'Clarify the missing repository-local evidence before promoting this backlog fragment.' : action,
+  });
+  return vagueSuggestedNextStep ? { ...issue, priority, vagueBacklogFragment: true, nonActionableReason: 'Missing concrete target, file path, symbol, validation command, or explicit manual field.', packageType: 'task-clarification' } : { ...issue, priority };
 }
 
 function linesFromMarkdown(markdown = '') {
