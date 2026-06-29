@@ -8,6 +8,7 @@ import { readOutcomeEvidence } from './outcomes.mjs';
 import { generateProductIntelligence } from './product-intelligence.mjs';
 import { generateExecutionModel } from './execution-model.mjs';
 import { bootstrapCanonicalIntelligence, canonicalStatus } from './canonical-bootstrap.mjs';
+import { persistQuality } from './intelligence-quality.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md','architecture.md','decisions.md','execution-model.md','validation.md','ai-handoff-validation.md','intelligence-verification.md'];
 
@@ -534,8 +535,9 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
   }
   const contradictions = quality?.consistency?.contradictions ?? [];
   const duplicates = quality?.consistency?.duplicatedSections ?? [];
-  if (contradictions.length || duplicates.length || /contradiction|duplicate canonical/i.test(audit)) {
-    const source = contradictions[0] ?? duplicates[0] ?? firstLine(audit.match(/.*(?:contradiction|duplicate canonical).*/i)?.[0] ?? audit);
+  const auditContradictionLine = audit.split('\n').find((line) => /(?:contradiction|duplicate canonical)/i.test(line) && !/\bno\s+(?:known\s+)?contradictions?\b|no duplicate/i.test(line));
+  if (contradictions.length || duplicates.length || auditContradictionLine) {
+    const source = contradictions[0] ?? duplicates[0] ?? firstLine(auditContradictionLine ?? audit);
     issues.push(selectedIssue({ id: 'consistency-cleanup', category: contradictions.length || /contradiction/i.test(source) ? 'contradiction normalization' : 'duplicate generated sections', severity: 'high', actionability: 'code-fixable', source, title: 'Clean Up Intelligence Contradictions', evidence: source, reason: 'Conflicting repository intelligence makes the next implementation package unsafe and ambiguous.', recommendedAction: 'Resolve only the contradiction or duplicate intelligence section cited in Current Evidence.' }));
   }
   const strategyCompleteness = strategyCompletenessExplanation(quality, goals);
@@ -962,6 +964,8 @@ export async function generateNextImprovement(repositoryPath = process.cwd(), op
   // execution-model risks cannot be copied into decision-ranking, active
   // recommendation, or the implementation package after canonical docs changed.
   await generateExecutionModel(resolved);
+  const staleQuality = await readJson(resolved, 'intelligence-quality.json');
+  if (staleQuality?.consistency?.contradictions?.length) await persistQuality(resolved);
   const [goals, health, quality, audit, backlog, strategy, contextPackage, architecture, decisions, executionModel, validation, aiHandoffValidation, intelligenceVerification] = await Promise.all([readText(resolved, 'goals.md'), readText(resolved, 'repository-health.md'), readJson(resolved, 'intelligence-quality.json'), readText(resolved, 'intelligence-audit.md'), readText(resolved, 'backlog.md'), readText(resolved, 'strategy.md'), readText(resolved, 'context-package.md'), readText(resolved, 'architecture.md'), readText(resolved, 'decisions.md'), readText(resolved, 'execution-model.md'), readText(resolved, 'validation.md'), readText(resolved, 'ai-handoff-validation.md'), readText(resolved, 'intelligence-verification.md')]);
 
   const outcomeEntries = options.outcomeEntries ?? (await readOutcomeEvidence(resolved)).entries;

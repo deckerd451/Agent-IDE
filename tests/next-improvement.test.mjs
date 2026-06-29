@@ -481,3 +481,112 @@ test('generated package and artifact include shared decision ranking', async () 
   assert.match(result.prompt, /1\. Reduce Backlog Noise \(selected\)/);
   assert.match(result.prompt, /Expected Improvement: \+19 total/);
 });
+
+test('regenerating recommendations consumes refreshed intelligence quality and drops stale current-focus contradiction', async () => {
+  const { persistControlPlane } = await import('../scripts/server.mjs');
+  const repo = await mkdtemp(join(tmpdir(), 'agent-ide-stale-contradiction-'));
+  try {
+    const ai = join(repo, '.ai');
+    await mkdir(join(ai, 'prompts'), { recursive: true });
+    const focus = 'Between Events experience: helping users know who to reach out to today when they are not currently at an event.';
+    const goals = `# Goals
+
+## Manual Goals
+- Product intent: Nearify helps people maintain real-world relationships.
+- Current focus: ${focus}
+- Success criteria: Users complete timely follow-ups.
+- Long-term vision: Become the local-first relationship operating system.
+
+## Manual Strategy Notes
+- Current Product Bet: Event-aware follow-up workflows.
+- Strategic Differentiator: Local-first recommendations grounded in personal context.
+- What Not To Build: Cloud telemetry or broad social networking.
+- Strategy Evidence: Repository-local Nearify intelligence fixtures.
+
+## Product Thesis
+Nearify helps people maintain real-world relationships.
+
+## Current Focus
+${focus}
+
+## Success Criteria
+Users complete timely follow-ups.
+
+## Current Product Bet
+Event-aware follow-up workflows.
+
+## What Not To Build
+Cloud telemetry or broad social networking.
+`;
+    const strategy = `# Strategy
+
+## Product Thesis
+Nearify helps people maintain real-world relationships.
+
+## Current Focus
+${focus}
+
+## Current Product Bet
+Event-aware follow-up workflows.
+
+## Primary Flows
+- Review people to contact today.
+
+## Strategy Confidence
+High
+
+Strategy Evidence: Repository-local Nearify intelligence fixtures.
+`;
+    const architecture = `# Architecture
+
+## Product Thesis
+Nearify helps people maintain real-world relationships.
+
+## Current Focus
+${focus}
+
+## Core Systems
+- Local recommendation engine.
+
+## Primary Flows
+- Review people to contact today.
+`;
+    await Promise.all([
+      writeFile(join(ai, 'goals.md'), goals),
+      writeFile(join(ai, 'strategy.md'), strategy),
+      writeFile(join(ai, 'architecture.md'), architecture),
+      writeFile(join(ai, 'repository-health.md'), '# Repository Health\n\n## Risks\n- No repository health risks detected.\n\n## Recommended Next Step\nRun AI Handoff Validation.\n\nConfidence: High\n'),
+      writeFile(join(ai, 'context-package.md'), '# Context Package\n\n## Strategy\nStrategy confidence is High because evidence is repository-local.\n\n## Decision Ranking\n- Run AI Handoff Validation\n'),
+      writeFile(join(ai, 'backlog.md'), '# Backlog\n\n## Prioritized Backlog\n- Validate local follow-up recommendation quality.\n'),
+      writeFile(join(ai, 'decisions.md'), '# Decisions\n\n- Keep Nearify local-first.\n'),
+      writeFile(join(ai, 'validation.md'), '# Validation\n\n## Confidence\nHigh\n'),
+      writeFile(join(ai, 'agents.md'), '# Agents\n\n- Builder.\n'),
+      writeFile(join(ai, 'code.md'), '# Code\n\n- Local app.\n'),
+      writeFile(join(ai, 'intelligence-audit.md'), '# Audit\n\nNo contradictions detected.\n'),
+      writeFile(join(ai, 'intelligence-verification.json'), JSON.stringify({ score: 100, status: 'Pass', failures: [] })),
+      writeFile(join(ai, 'ai-handoff-validation.md'), '# AI Handoff Validation\n\nReady.\n'),
+      writeFile(join(ai, 'ai-handoff-validation.json'), JSON.stringify({ overallScore: 100, status: 'Ready', contradictions: [], missingExplanations: [] })),
+      writeFile(join(ai, 'decision-ranking.json'), JSON.stringify({ selectedIssue: { id: 'consistency-cleanup', title: 'Clean Up Intelligence Contradictions' }, candidates: [{ id: 'consistency-cleanup', title: 'Clean Up Intelligence Contradictions', rank: 1 }] })),
+      writeFile(join(ai, 'active-recommendation.json'), JSON.stringify({ id: 'consistency-cleanup', title: 'Clean Up Intelligence Contradictions' })),
+      writeFile(join(ai, 'intelligence-quality.json'), JSON.stringify({ coverage: { goalsPresent: true, strategyPresent: true, architecturePresent: true, decisionsPresent: true, validationPresent: true, backlogPresent: true, repositoryHealthPresent: true, agentsPresent: true, codePresent: true }, canonicalIntelligenceQuality: { score: 92, fields: { manualGoals: { state: 'Complete', percent: 100, missing: [] } }, strategyFields: { classification: 'Present', percent: 100, requiredFields: [] } }, generatedExportQuality: { score: 94 }, consistency: { contradictions: ['Current Focus differs across Goals, Strategy, and Architecture.'], duplicatedSections: [] }, confidence: { score: 88, validationConfidence: 'High' }, freshness: { canonicalStaleDocuments: [] } })),
+    ]);
+    for (const promptName of ['architect.md', 'builder.md', 'reviewer.md', 'debugger.md']) await writeFile(join(ai, 'prompts', promptName), `# ${promptName}\nReady.\n`);
+
+    const data = await persistControlPlane(repo, null, new Date('2026-06-29T00:00:00.000Z'));
+    const quality = JSON.parse(await readFile(join(ai, 'intelligence-quality.json'), 'utf8'));
+    const ranking = JSON.parse(await readFile(join(ai, 'decision-ranking.json'), 'utf8'));
+    const prompt = await readFile(join(ai, 'next-improvement-prompt.md'), 'utf8');
+    const trace = await readFile(join(ai, 'recommendation-trace.md'), 'utf8');
+    const active = JSON.parse(await readFile(join(ai, 'active-recommendation.json'), 'utf8'));
+
+    assert.deepEqual(quality.consistency.contradictions, []);
+    assert.notEqual(ranking.selectedIssue.id, 'consistency-cleanup');
+    assert.doesNotMatch(JSON.stringify(ranking), /Current Focus differs across Goals, Strategy, and Architecture/);
+    assert.doesNotMatch(prompt, /Current Focus differs across Goals, Strategy, and Architecture|Clean Up Intelligence Contradictions/);
+    assert.doesNotMatch(trace, /Current Focus differs across Goals, Strategy, and Architecture|Clean Up Intelligence Contradictions/);
+    assert.equal(active.id, data.recommendation.id);
+    assert.notEqual(active.id, 'consistency-cleanup');
+  } finally {
+    await rm(repo, { recursive: true, force: true });
+  }
+});

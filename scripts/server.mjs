@@ -581,6 +581,7 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   await writeFile(join(repositoryPath, '.ai', 'intelligence-snapshot.json'), JSON.stringify(data.status, null, 2));
   await writeFile(join(repositoryPath, '.ai', 'intelligence-diff.json'), JSON.stringify(data.diff, null, 2));
   await writeFile(timelinePath, JSON.stringify(timeline.slice(-100), null, 2));
+  await persistQuality(repositoryPath);
   const nextImprovement = await generateNextImprovement(repositoryPath, { validationCompletions: options.validationCompletions ?? [], generatorFailures: options.generatorFailures ?? [] });
   data.recommendation = decorateRecommendationForControlPlane({
     title: nextImprovement.choice.title,
