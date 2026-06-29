@@ -294,3 +294,42 @@ Intentionally not included:
 - Improve markdown rendering.
 - Add cross-links between `.ai` documents.
 - Expand repository health checks as more intelligence artifacts are added.
+
+## Repository-intelligence-first primary workflow
+
+Agent IDE's primary workflow is now a continuous repository decision loop rather than a task-first prompt browser. At every refresh, the Control Plane should answer one question: **Given everything the repository currently knows, what single decision most increases confidence in the current Product Bet?**
+
+The primary Control Plane surface is intentionally limited to four answers:
+
+1. **Where are we?** Current repository state, current experiment, health, confidence, and evidence readiness.
+2. **Why are we here?** Product Thesis, Current Product Bet, strategic context, and repository alignment.
+3. **What decision should we make next?** Exactly one repository decision, with evidence, tradeoffs, expected outcome, confidence, and invalidation evidence.
+4. **How do we execute it?** Implementation guidance, primary files, supporting files, validation, expected artifacts, and estimated scope.
+
+The execution loop is:
+
+```text
+Repository State
+↓
+Current Product Thesis
+↓
+Current Product Bet
+↓
+Current Experiment
+↓
+Current Repository Decision
+↓
+Implementation Guidance
+↓
+Outcome
+↓
+Refresh Repository Intelligence
+↓
+Repeat
+```
+
+Existing deterministic generators and recommendation selection semantics remain intact. The redesign is an incremental developer-experience projection over existing repository-local intelligence; it does not add LLM calls, cloud services, telemetry, or new generated-intelligence ownership rules. Advanced artifacts such as raw prompts, Context Package, Strategy, Architecture, Repository Health, Decision Ranking, Repository Judgment, Product Judgment, and Recommendation Trace remain available as Library/Advanced evidence instead of driving the primary workflow.
+
+If an implementation recommendation does not identify enough information to begin without browsing the file tree, the Control Plane must identify the first missing repository intelligence, explain why that gap forced exploration, and propose the smallest deterministic intelligence addition that would avoid the same exploration in a future refresh.
+
+See `docs/repository-intelligence-first-workflow.md` for the architectural migration plan and deterministic validation strategy.

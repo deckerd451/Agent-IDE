@@ -288,7 +288,7 @@ function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section
         <span className="brandMark">AI</span>
         <div>
           <strong>Agent IDE</strong>
-          <small>Copy prompt. Ship. Refresh.</small>
+          <small>Decide. Execute. Refresh.</small>
         </div>
       </div>
 
@@ -307,7 +307,7 @@ function Sidebar({ selected, onSelect }: { selected: Section; onSelect: (section
                   type="button"
                 >
                   <span>{section.id === 'Control Plane' ? 'Do Next' : section.id}</span>
-                  <small>{section.id === 'Control Plane' ? 'One prompt workflow' : section.eyebrow}</small>
+                  <small>{section.id === 'Control Plane' ? 'Repository decision' : section.eyebrow}</small>
                 </button>
               );
             })}
@@ -455,14 +455,14 @@ function PromptCenter({ connectedPath, documents, loadFile }: { connectedPath: s
 
 
 function WelcomeDashboard() {
-  const steps = ['1. Paste repository path', '2. Copy one prompt', '3. Implement in Claude Code or Codex', '4. Refresh and repeat'];
+  const steps = ['Repository State', 'Current Product Thesis', 'Current Product Bet', 'Current Experiment', 'Current Repository Decision', 'Implementation Guidance', 'Outcome', 'Refresh Repository Intelligence'];
   return (
     <div className="controlPlane welcomeDashboard">
       <section className="heroCard" aria-label="Agent IDE workflow welcome">
         <div>
           <p className="kicker">Welcome to Agent IDE</p>
-          <h2>One prompt to the next improvement</h2>
-          <p>Paste a repository path. Agent IDE picks the safest next improvement, gives you one implementation prompt for Claude Code or Codex, then refreshes after you ship.</p>
+          <h2>One repository decision per refresh</h2>
+          <p>Paste a repository path. Agent IDE uses local repository intelligence to decide what single repository decision most increases confidence in the current Product Bet, then guides execution, outcome capture, and refresh.</p>
         </div>
         <div className="trustGrid" aria-label="Local-first guarantees">
           {['Local-only', 'Deterministic', 'No LLM', 'No Cloud'].map((item) => <span key={item}>{item}</span>)}
@@ -556,6 +556,39 @@ function stepToUserTask(stepId: string, workflowType: string, data: ControlPlane
     case 'apply-canonical-edit': return { instruction: 'Apply the reviewed change to your repository.', why: data.recommendation.whyItMatters, buttonLabel: 'Apply and Refresh', artifactType: 'canonical-edit' };
     default: return { instruction: data.recommendation.title, why: data.recommendation.whyItMatters, buttonLabel: outcomeWorkflowText(data.recommendation.title) || 'Continue', artifactType: 'none' };
   }
+}
+
+
+function strategyValueFromContext(contextPackage: string, heading: string, fallback = 'Not available in loaded intelligence') {
+  return markdownSectionValue(contextPackage, heading).split('\n').filter((line) => line.trim() && !/^Evidence:/i.test(line.trim()))[0]?.trim() || fallback;
+}
+
+function productBetAdvancement(data: ControlPlane) {
+  const productJudgmentReason = data.productJudgment?.candidates?.[0]?.whyItMatters;
+  if (hasUsefulValue(productJudgmentReason)) return productJudgmentReason;
+  return data.recommendation.whyItMatters || 'This decision is selected by deterministic repository intelligence as the current highest-leverage confidence increase.';
+}
+
+function invalidationEvidence(data: ControlPlane) {
+  const hidden = data.aiHandoffValidation?.hiddenInformation?.[0];
+  const contradiction = data.aiHandoffValidation?.contradictions?.[0];
+  if (hidden) return `Invalidated if implementation still requires hidden information: ${hidden}`;
+  if (contradiction) return `Invalidated if this contradiction remains unresolved: ${contradiction}`;
+  return 'Invalidated if the next refresh does not improve repository handoff readiness, confidence, validation evidence, or implementation-start clarity.';
+}
+
+function implementationReadiness(data: ControlPlane, task: DecisionCandidate | null | undefined) {
+  const primaryFile = filePathForTask(task, data.recommendation);
+  const validation = data.status.repositoryHandoffReadiness === 'Ready' ? 'Refresh repository intelligence and review generated validation status.' : 'Refresh repository intelligence; repository handoff readiness is not yet Ready.';
+  return {
+    primaryFile,
+    supportingFiles: ['.ai/context-package.md', '.ai/strategy.md', '.ai/architecture.md', '.ai/validation.md'],
+    validation,
+    expectedArtifacts: ['Updated implementation or canonical repository intent', 'Saved outcome evidence', 'Refreshed repository intelligence'],
+    scope: data.recommendation.packageType === 'product-decision' ? 'Repository-owner decision' : data.recommendation.packageType === 'validation-experiment' ? 'Validation experiment' : 'Incremental implementation',
+    missingIntelligence: primaryFile ? '' : 'Primary implementation file is not explicit in the selected recommendation.',
+    deterministicAddition: primaryFile ? '' : 'Add a generated Primary Files field to the recommendation package by extracting cited file paths from decision ranking, architecture, backlog, and validation evidence.',
+  };
 }
 
 function UpToDateCard({ repositoryName, confidence, recommendationSource }: { repositoryName: string; confidence: string; recommendationSource: string }) {
@@ -691,6 +724,60 @@ function activeRecommendationTask(_data: ControlPlane): DecisionCandidate | null
   return null;
 }
 
+
+function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, userTask }: { data: ControlPlane; task?: DecisionCandidate | null; documents: Record<string, DocumentState>; repositoryPath?: string; userTask: UserTask | null }) {
+  const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
+  const readiness = implementationReadiness(data, task);
+  const productThesis = strategyValueFromContext(contextPackage, 'Product Thesis', data.understanding.find((item) => item.label === 'Product Thesis')?.state ?? 'Not available');
+  const productBet = strategyValueFromContext(contextPackage, 'Current Product Bet', data.status.recommendedNextStep ?? 'Not available');
+  const currentExperiment = strategyValueFromContext(contextPackage, 'Current Experiment', 'Not available in loaded strategy intelligence');
+  const confidence = data.status.currentConfidence || `${data.quality?.confidence.score ?? 0}%`;
+  return (
+    <div className="decisionAnswerStack" aria-label="Repository intelligence first workflow">
+      <section className="decisionAnswerCard" aria-label="Where are we">
+        <p className="kicker">1. Where are we?</p>
+        <h3>Repository State</h3>
+        <div className="workMetaGrid compact">
+          <div><small>Health</small><strong>{data.status.overallHealth || 'Unknown'}</strong></div>
+          <div><small>Current experiment</small><strong>{currentExperiment}</strong></div>
+          <div><small>Handoff readiness</small><strong>{data.status.repositoryHandoffReadiness || 'Unknown'}</strong></div>
+          <div><small>Confidence</small><strong>{confidence}</strong></div>
+        </div>
+      </section>
+      <section className="decisionAnswerCard" aria-label="Why are we here">
+        <p className="kicker">2. Why are we here?</p>
+        <h3>Product Thesis → Product Bet</h3>
+        <p><b>Product Thesis:</b> {productThesis}</p>
+        <p><b>Current Product Bet:</b> {productBet}</p>
+        <p><b>Strategic context:</b> {data.status.strategyQuality || 'Strategy quality is reported in repository health.'}</p>
+      </section>
+      <section className="decisionAnswerCard" aria-label="What decision should we make next">
+        <p className="kicker">3. What decision should we make next?</p>
+        <h3>{recommendationDisplayTitle(data, task)}</h3>
+        <p><b>Why this decision exists:</b> {data.recommendation.explanation}</p>
+        <p><b>Why it is highest leverage:</b> {data.decisionRanking?.selectionExplanation ?? data.recommendation.whyItMatters}</p>
+        <p><b>Product Bet effect:</b> {productBetAdvancement(data)}</p>
+        <p><b>Evidence:</b> {task?.evidence ?? data.recommendation.evidenceSource}</p>
+        <p><b>Invalidation evidence:</b> {invalidationEvidence(data)}</p>
+      </section>
+      <section className="decisionAnswerCard" aria-label="How do we execute it">
+        <p className="kicker">4. How do we execute it?</p>
+        <h3>Implementation Guidance</h3>
+        <div className="workMetaGrid compact">
+          <div><small>Primary files</small><strong>{readiness.primaryFile ? <code>{readiness.primaryFile}</code> : 'Missing from repository intelligence'}</strong></div>
+          <div><small>Scope</small><strong>{readiness.scope}</strong></div>
+          <div><small>Validation</small><strong>{readiness.validation}</strong></div>
+          <div><small>Expected artifacts</small><strong>{readiness.expectedArtifacts.join(', ')}</strong></div>
+        </div>
+        <p><b>Supporting files:</b> {readiness.supportingFiles.join(', ')}</p>
+        {readiness.missingIntelligence && <div className="warningCard"><p><b>First missing repository intelligence:</b> {readiness.missingIntelligence}</p><p><b>Why it would force repository exploration:</b> A developer must browse the file tree to find the implementation entry point.</p><p><b>Smallest deterministic addition:</b> {readiness.deterministicAddition}</p></div>}
+        <ol className="simpleLoop" aria-label="Agent IDE loop"><li>Execute the selected repository decision.</li><li>Record the outcome.</li><li>Refresh repository intelligence.</li></ol>
+        <details className="inlineArtifact"><summary>Preview implementation guidance</summary><TaskArtifact artifactType={userTask?.artifactType ?? 'implementation-prompt'} data={data} documents={documents} repositoryPath={repositoryPath} /></details>
+      </section>
+    </div>
+  );
+}
+
 function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryAction, onRefresh, onOutcomeSaved }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOutcomeSaved: () => Promise<void> }) {
   const recommendationSource = data.activeRecommendationSource ?? 'Legacy';
   const task = activeRecommendationTask(data);
@@ -715,15 +802,7 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
         {data.recommendation.previousOutcomeWarning && <p className="summary warningCard">{data.recommendation.previousOutcomeWarning}</p>}
         {!data.recommendation.previousOutcomeWarning && data.recommendation.advancementReason && <p className="summary">{data.recommendation.advancementReason}</p>}
         <p className="recommendationReason">{recommendationDisplaySummary(data, task)}</p>
-        <ol className="simpleLoop" aria-label="Agent IDE loop">
-          <li>Copy the implementation prompt.</li>
-          <li>Paste it into Claude Code or Codex and implement.</li>
-          <li>Refresh repository intelligence.</li>
-        </ol>
-        <details className="inlineArtifact">
-          <summary>Preview prompt</summary>
-          <TaskArtifact artifactType={userTask?.artifactType ?? 'implementation-prompt'} data={data} documents={documents} repositoryPath={repositoryPath} />
-        </details>
+        <RepositoryDecisionAnswers data={data} task={task} documents={documents} repositoryPath={repositoryPath} userTask={userTask} />
         <CompletionPanel data={data} repositoryPath={repositoryPath} onSaved={onOutcomeSaved} onRefresh={onRefresh} />
       </div>
       <div className="heroActions">
