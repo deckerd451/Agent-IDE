@@ -852,28 +852,37 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeed
 }
 
 function RepositoryDecisionActionSurface({ decisionFlow, executionPackages, workflow, repositoryPath, actionFeedback, onPrimaryAction, onRefresh }: { decisionFlow: DecisionFlow; executionPackages: ExecutionPackage[]; workflow: Workflow | null | undefined; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void }) {
+  const [copiedAgent, setCopiedAgent] = useState<ExecutionAgent | null>(null);
   const isRefreshDecision = decisionFlow.refresh.ready || !workflow;
-  const primaryLabel = isRefreshDecision ? 'Refresh Repository Intelligence' : decisionFlow.currentRequiredOwnerAction === 'Approve canonical intent' ? 'Review Repository Decision' : 'Start Repository Decision';
-  const helperText = decisionFlow.currentRequiredOwnerAction === 'Choose execution agent'
-    ? 'Choose an execution agent. One click copies the complete package; paste once into the selected AI.'
-    : decisionFlow.currentRequiredOwnerAction === 'Record outcome evidence'
-      ? 'Record what happened before refreshing so the next repository decision can advance.'
-      : decisionFlow.currentRequiredOwnerAction === 'Refresh repository intelligence'
-        ? 'Refresh after the repository decision has been executed or when intelligence is missing.'
-        : 'Use this action surface to advance the selected repository decision.';
+  const isAwaitingExternalAi = Boolean(copiedAgent) || decisionFlow.currentRequiredOwnerAction === 'Perform external work' || decisionFlow.currentRequiredOwnerAction === 'Record outcome evidence';
+  const actionTitle = isAwaitingExternalAi ? 'Waiting for AI' : isRefreshDecision ? 'Refresh Intelligence' : 'Execute With';
+  const helperText = isAwaitingExternalAi && copiedAgent
+    ? `Paste the package into ${copiedAgent}. When finished, record the outcome.`
+    : isAwaitingExternalAi
+      ? 'When the AI work is finished, record the outcome.'
+      : isRefreshDecision
+        ? 'Refresh repository intelligence when you need to regenerate the current decision.'
+        : 'Choose where to send this decision.';
+  const copiedFeedback = copiedAgent ? `${copiedAgent} package copied. Paste it into ${copiedAgent}, then return here to record the outcome.` : '';
+
   return (
     <aside className="heroActions repositoryDecisionActions" aria-label="Repository decision action surface">
-      <p className="kicker">Repository Decision Action</p>
-      <h3>{decisionFlow.currentRequiredOwnerAction}</h3>
+      <p className="kicker">Repository Decision</p>
+      <h3>{actionTitle}</h3>
       <p>{helperText}</p>
-      <button className="primaryCta" data-decision-flow-primary-action="true" disabled={isRefreshDecision && !repositoryPath} onClick={isRefreshDecision ? onRefresh : onPrimaryAction} type="button">{primaryLabel}</button>
-      {decisionFlow.currentRequiredOwnerAction === 'Choose execution agent' && (
+      {!isAwaitingExternalAi && !isRefreshDecision && (
         <div className="executionAgentGrid" aria-label="Available execution agents">
-          {decisionFlow.availableExecutionAgents.map((agent) => { const pkg = executionPackageForAgent(executionPackages, agent); return <button className="secondaryCta compactCta" disabled={!pkg?.packageBody} key={agent} onClick={() => { if (pkg) void copyText(pkg.packageBody, `Copied ${agent} execution package`); onPrimaryAction(); }} type="button">Copy {agent} Package</button>; })}
+          {decisionFlow.availableExecutionAgents.map((agent) => {
+            const pkg = executionPackageForAgent(executionPackages, agent);
+            const label = agent === 'Generic' ? 'Copy Package' : agent;
+            return <button className="primaryCta compactCta" disabled={!pkg?.packageBody} key={agent} onClick={() => { if (pkg) void copyText(pkg.packageBody, `${agent} package copied`).then(() => setCopiedAgent(agent)); onPrimaryAction(); }} type="button">{label}</button>;
+          })}
         </div>
       )}
-      <button className="secondaryCta" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Repository Intelligence</button>
-      {actionFeedback && <p className="summary workflowActionFeedback" role="status">{actionFeedback}</p>}
+      {isAwaitingExternalAi && <button className="primaryCta" data-decision-flow-primary-action="true" onClick={onPrimaryAction} type="button">Record Outcome</button>}
+      {isRefreshDecision && <button className="secondaryCta" data-decision-flow-primary-action="true" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Intelligence</button>}
+      {!isRefreshDecision && <button className="secondaryCta" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Intelligence</button>}
+      {(copiedFeedback || actionFeedback) && <p className="summary workflowActionFeedback" role="status">{copiedFeedback || actionFeedback}</p>}
     </aside>
   );
 }

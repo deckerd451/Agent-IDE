@@ -5,6 +5,8 @@ import { createExecutionPackage, defaultExecutionAgents } from '../src/decision-
 
 const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
 const workflowSource = await readFile(new URL('../src/workflow.ts', import.meta.url), 'utf8');
+const decisionFlowSource = await readFile(new URL('../src/decision-flow.ts', import.meta.url), 'utf8');
+const stylesSource = await readFile(new URL('../src/styles.css', import.meta.url), 'utf8');
 
 test('each execution agent receives one complete deterministic execution package', () => {
   for (const executionAgent of defaultExecutionAgents) {
@@ -29,12 +31,36 @@ test('each execution agent receives one complete deterministic execution package
   }
 });
 
-test('primary action surface exposes one package copy per supported agent', () => {
-  for (const agent of ['Claude', 'ChatGPT', 'Codex', 'Gemini', 'Generic']) {
-    assert.match(appSource, new RegExp(`Copy \\{agent\\} Package|Copy ${agent} Package`));
+test('repository decision action card uses decision-first labels and no normal start CTA', () => {
+  for (const label of ['Execute With', 'Choose where to send this decision.', 'Claude', 'Codex', 'ChatGPT', 'Gemini', 'Copy Package']) {
+    const source = ['Claude', 'Codex', 'ChatGPT', 'Gemini'].includes(label) ? decisionFlowSource : appSource;
+    assert.match(source, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+  assert.doesNotMatch(appSource, /Start Repository Decision/);
+  assert.doesNotMatch(appSource, /Repository Decision Action/);
+});
+
+test('primary action surface exposes one short package copy button per supported agent', () => {
   assert.match(appSource, /copyText\(pkg\.packageBody/);
-  assert.doesNotMatch(appSource, /Cursor|Copy Package/);
+  assert.match(appSource, /agent === 'Generic' \? 'Copy Package' : agent/);
+  for (const overflowProneLabel of ['Copy Claude Package', 'Copy ChatGPT Package', 'Copy Codex Package', 'Copy Gemini Package', 'Copy Generic Package']) {
+    assert.doesNotMatch(appSource, new RegExp(overflowProneLabel));
+  }
+  assert.doesNotMatch(appSource, /Cursor/);
+});
+
+test('post-copy state tells the user to paste into the selected AI and record outcome', () => {
+  assert.match(appSource, /Waiting for AI/);
+  assert.match(appSource, /Record Outcome/);
+  assert.match(appSource, /\$\{copiedAgent\} package copied\. Paste it into \$\{copiedAgent\}, then return here to record the outcome\./);
+  assert.match(appSource, /Paste the package into \$\{copiedAgent\}\. When finished, record the outcome\./);
+});
+
+test('action card css guards against overflow in the narrow sidebar', () => {
+  assert.match(stylesSource, /\.repositoryDecisionActions[\s\S]*overflow-wrap: anywhere/);
+  assert.match(stylesSource, /\.repositoryDecisionActions[\s\S]*min-width: 0/);
+  assert.match(stylesSource, /\.executionAgentGrid[\s\S]*repeat\(auto-fit, minmax\(88px, 1fr\)\)/);
+  assert.match(stylesSource, /\.compactCta[\s\S]*white-space: normal/);
 });
 
 test('workflow states represent repository decisions instead of clipboard logistics', () => {

@@ -62,7 +62,7 @@ test('clicking the visible repository-decision primary action routes through wor
   assert.match(appSource, /function WorkflowPrimaryButton\(\{ workflow, onPrimaryAction \}: \{ workflow: Workflow; onPrimaryAction: \(\) => void \}\)/);
   assert.match(appSource, /data-workflow-primary-action="true" onClick=\{onPrimaryAction\}/);
   assert.match(appSource, /function RepositoryDecisionActionSurface/);
-  assert.match(appSource, /data-decision-flow-primary-action="true"[^>]*onClick=\{isRefreshDecision \? onRefresh : onPrimaryAction\}/);
+  assert.match(appSource, /data-decision-flow-primary-action="true"[^>]*onClick=\{onPrimaryAction\}/);
   assert.match(appSource, /\{workflow && <WorkflowProgress workflow=\{workflow\} onPrimaryAction=\{onPrimaryAction\} actionFeedback=\{actionFeedback\} \/>\}/);
   assert.match(appSource, /await performWorkflowStepAction\(currentWorkflow, controlPlane\);[\s\S]*const next = advanceWorkflow\(workflowInputForTask\(controlPlane\.recommendation, task\), workflowState\);[\s\S]*window\.localStorage\.setItem\(workflowStateStorageKey, JSON\.stringify\(next\)\);[\s\S]*setWorkflowState\(next\);/);
   assert.match(workflowSource, /\{ id: 'prepare-execution-package', label: 'Execution Package Ready', primaryAction: 'Choose Execution Agent', state: 'Repository Decision Ready', nextState: 'Execution Package Ready' \}/);
