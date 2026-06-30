@@ -150,6 +150,20 @@ test('auto-refresh triggers when workflow advances to refresh-repository state',
   assert.match(appSource, /const previousTitle = controlPlane\.recommendation\.title/);
 });
 
+
+test('validation refresh-only steps auto-advance without an extra CTA click', () => {
+  assert.match(appSource, /function isDeterministicValidationRefreshStep\(workflow\?: Workflow \| null\) \{[\s\S]*workflow\?\.currentStep\.id === 'validate-result'[\s\S]*workflow\?\.currentStep\.id === 'run-validation'/);
+  assert.match(appSource, /useEffect\(\(\) => \{[\s\S]*isDeterministicValidationRefreshStep\(currentWorkflow\)[\s\S]*void refreshIntelligence\(\{ clearWorkflow: true, previousTitle \}\);[\s\S]*\}, \[controlPlane, currentWorkflow, isRefreshing, workflowState\?\.currentStepId\]\);/);
+  assert.match(appSource, /if \(isDeterministicValidationRefreshStep\(advancedWorkflow\)\) \{[\s\S]*Validation refresh started\. Next: wait for repository intelligence to finish updating\.[\s\S]*await refreshIntelligence\(\{ clearWorkflow: true, previousTitle \}\);[\s\S]*return;/);
+});
+
+test('validation auto-refresh preserves manual refresh fallback and visible diagnostics', () => {
+  assert.match(workflowSource, /\{ id: 'refresh-repository', label: 'Refresh repository intelligence', primaryAction: 'Refresh Repository Intelligence', state: 'Refresh Repository', nextState: 'Repository Analysis Running' \}/);
+  assert.match(appSource, /Refresh completed\. Next: review the updated Control Plane recommendation\./);
+  assert.match(appSource, /Refresh failed: \$\{msg\}\. Next: fix the error and refresh again\./);
+  assert.match(appSource, /lastStepActionResult: 'Auto-advanced validation refresh'/);
+});
+
 test('implementation workflow first step is copy-implementation-prompt', () => {
   const implementationBlock = workflowSource.match(/Implementation:\s*\{[\s\S]*?steps:\s*\[([\s\S]*?)\]/)?.[1] ?? '';
   const firstStep = implementationBlock.match(/\{\s*id:\s*'([^']+)'/)?.[1];
