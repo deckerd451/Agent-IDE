@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { advanceWorkflow, classifyWorkflowStep, createWorkflow, workflowStepRequiresUserClick } from '../src/workflow.ts';
 
 const workflowSource = await readFile(new URL('../src/workflow.ts', import.meta.url), 'utf8');
 const appSource = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
@@ -144,24 +145,49 @@ test('UX hides all FSM internals and exposes only user tasks', () => {
   assert.doesNotMatch(appSource, /Waiting for External Work/);
 });
 
-test('auto-refresh triggers when workflow advances to refresh-repository state', () => {
-  assert.match(appSource, /next\.repositoryState === 'Refresh Repository'/);
-  assert.match(appSource, /refreshIntelligence\(\{ clearWorkflow: true, previousTitle \}\)/);
-  assert.match(appSource, /const previousTitle = controlPlane\.recommendation\.title/);
+test('workflow step classification is deterministic and preserves required user clicks', () => {
+  assert.equal(classifyWorkflowStep({ id: 'validate-result' }), 'auto-advance');
+  assert.equal(classifyWorkflowStep({ id: 'run-validation' }), 'refresh-only');
+  assert.equal(classifyWorkflowStep({ id: 'refresh-repository' }), 'refresh-only');
+  for (const id of ['copy-context-package', 'copy-understanding-check', 'copy-implementation-prompt', 'apply-canonical-edit']) {
+    assert.equal(classifyWorkflowStep({ id }), 'user-action-required', `${id} must require user action`);
+    assert.equal(workflowStepRequiresUserClick({ id }), true, `${id} must require a click`);
+  }
+  for (const id of ['open-codex', 'open-chatgpt', 'paste-response', 'run-implementation']) {
+    assert.equal(classifyWorkflowStep({ id }), 'external-work-required', `${id} must wait for external/user completion`);
+    assert.equal(workflowStepRequiresUserClick({ id }), true, `${id} must require a click`);
+  }
 });
 
-
-test('validation refresh-only steps auto-advance without an extra CTA click', () => {
-  assert.match(appSource, /function isDeterministicValidationRefreshStep\(workflow\?: Workflow \| null\) \{[\s\S]*workflow\?\.currentStep\.id === 'validate-result'[\s\S]*workflow\?\.currentStep\.id === 'run-validation'/);
-  assert.match(appSource, /useEffect\(\(\) => \{[\s\S]*isDeterministicValidationRefreshStep\(currentWorkflow\)[\s\S]*void refreshIntelligence\(\{ clearWorkflow: true, previousTitle \}\);[\s\S]*\}, \[controlPlane, currentWorkflow, isRefreshing, workflowState\?\.currentStepId\]\);/);
-  assert.match(appSource, /if \(isDeterministicValidationRefreshStep\(advancedWorkflow\)\) \{[\s\S]*Validation refresh started\. Next: wait for repository intelligence to finish updating\.[\s\S]*await refreshIntelligence\(\{ clearWorkflow: true, previousTitle \}\);[\s\S]*return;/);
+test('auto-advance steps advance without requiring an action side effect', () => {
+  const input = { packageType: 'implementation', title: 'Auto advance validation bridge' };
+  let state = advanceWorkflow(input, null);
+  state = advanceWorkflow(input, state);
+  state = advanceWorkflow(input, state);
+  const workflow = createWorkflow(input, state);
+  assert.equal(workflow.currentStep.id, 'validate-result');
+  assert.equal(classifyWorkflowStep(workflow.currentStep), 'auto-advance');
+  const advanced = createWorkflow(input, advanceWorkflow(input, state));
+  assert.equal(advanced.currentStep.id, 'refresh-repository');
+  assert.equal(classifyWorkflowStep(advanced.currentStep), 'refresh-only');
 });
 
-test('validation auto-refresh preserves manual refresh fallback and visible diagnostics', () => {
-  assert.match(workflowSource, /\{ id: 'refresh-repository', label: 'Refresh repository intelligence', primaryAction: 'Refresh Repository Intelligence', state: 'Refresh Repository', nextState: 'Repository Analysis Running' \}/);
+test('automatic workflow effect advances bridge steps and triggers refresh-only once', () => {
+  assert.match(appSource, /function workflowStepClassification\(workflow\?: Workflow \| null\)/);
+  assert.match(appSource, /function isAutomaticWorkflowStep\(workflow\?: Workflow \| null\)/);
+  assert.match(appSource, /classification !== 'auto-advance' && classification !== 'refresh-only'/);
+  assert.match(appSource, /lastStepActionResult: 'Auto-advanced acknowledgement-only bridge step'/);
+  assert.match(appSource, /lastStepActionResult: 'Auto-started refresh-only workflow step'/);
+  assert.match(appSource, /void refreshIntelligence\(\{ clearWorkflow: true, previousTitle \}\)/);
+  assert.match(appSource, /autoWorkflowStepKeyRef\.current === autoKey/);
+});
+
+test('auto-advance preserves manual diagnostics fallback and visible refresh completion', () => {
+  assert.match(workflowSource, /export type WorkflowStepClassification = 'user-action-required' \| 'external-work-required' \| 'auto-advance' \| 'refresh-only'/);
+  assert.match(appSource, /data-workflow-manual-fallback="true"/);
+  assert.match(appSource, /current step classification/);
   assert.match(appSource, /Refresh completed\. Next: review the updated Control Plane recommendation\./);
-  assert.match(appSource, /Refresh failed: \$\{msg\}\. Next: fix the error and refresh again\./);
-  assert.match(appSource, /lastStepActionResult: 'Auto-advanced validation refresh'/);
+  assert.match(appSource, /window\.localStorage\.removeItem\(workflowStateStorageKey\)/);
 });
 
 test('implementation workflow first step is copy-implementation-prompt', () => {

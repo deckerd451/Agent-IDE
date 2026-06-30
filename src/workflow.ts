@@ -12,6 +12,7 @@ export type RepositoryWorkflowState =
 
 export type WorkflowType = 'Product Decision' | 'Implementation' | 'Validation' | 'Investigation' | 'Documentation';
 export type WorkflowStatus = 'Not Started' | 'In Progress' | 'Waiting For User' | 'Ready To Refresh' | 'Complete';
+export type WorkflowStepClassification = 'user-action-required' | 'external-work-required' | 'auto-advance' | 'refresh-only';
 
 export type WorkflowStep = {
   id: string;
@@ -58,6 +59,39 @@ export type WorkflowInput = {
 };
 
 type StepDefinition = Omit<WorkflowStep, 'status'>;
+
+
+const workflowStepClassifications: Record<string, WorkflowStepClassification> = {
+  'copy-context-package': 'user-action-required',
+  'copy-validation-prompt': 'user-action-required',
+  'copy-understanding-check': 'user-action-required',
+  'copy-implementation-prompt': 'user-action-required',
+  'review-canonical-edit': 'user-action-required',
+  'edit-proposal': 'user-action-required',
+  'apply-canonical-edit': 'user-action-required',
+  'review-question': 'user-action-required',
+  'inspect-evidence': 'user-action-required',
+  'record-finding': 'user-action-required',
+  'review-documentation-gap': 'user-action-required',
+  'edit-documentation': 'user-action-required',
+  'review-diff': 'user-action-required',
+  'open-codex': 'external-work-required',
+  'run-implementation': 'external-work-required',
+  'open-chatgpt': 'external-work-required',
+  'paste-response': 'external-work-required',
+  'validate-result': 'auto-advance',
+  'run-validation': 'refresh-only',
+  'refresh-repository': 'refresh-only',
+};
+
+export function classifyWorkflowStep(step: Pick<WorkflowStep, 'id'> | null | undefined): WorkflowStepClassification {
+  if (!step) return 'user-action-required';
+  return workflowStepClassifications[step.id] ?? 'user-action-required';
+}
+
+export function workflowStepRequiresUserClick(step: Pick<WorkflowStep, 'id'> | null | undefined) {
+  return classifyWorkflowStep(step) === 'user-action-required' || classifyWorkflowStep(step) === 'external-work-required';
+}
 
 const workflowDefinitions: Record<WorkflowType, { goal: string; steps: StepDefinition[] }> = {
   'Product Decision': {
