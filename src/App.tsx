@@ -805,6 +805,11 @@ function RepositoryDecisionActionSurface({ data, decisionFlow, executionPackages
   const [status, setStatus] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  async function handleExecutionAgentClick(agent: ExecutionAgent, packageBody: string) {
+    await copyText(packageBody, `${agent} package copied`);
+    setCopiedAgent(agent);
+  }
+
   async function saveOutcome() {
     if (!repositoryPath) return;
     setIsSaving(true);
@@ -861,7 +866,7 @@ function RepositoryDecisionActionSurface({ data, decisionFlow, executionPackages
           {decisionFlow.availableExecutionAgents.map((agent) => {
             const pkg = executionPackageForAgent(executionPackages, agent);
             const label = agent === 'Generic' ? 'Copy Package' : agent;
-            return <button className="primaryCta compactCta" disabled={!pkg?.packageBody} key={agent} onClick={() => { if (pkg) void copyText(pkg.packageBody, `${agent} package copied`).then(() => setCopiedAgent(agent)); onPrimaryAction(); }} type="button">{label}</button>;
+            return <button className="primaryCta compactCta" disabled={!pkg?.packageBody} key={agent} onClick={() => { if (pkg?.packageBody) void handleExecutionAgentClick(agent, pkg.packageBody); }} type="button">{label}</button>;
           })}
         </div>
       )}
