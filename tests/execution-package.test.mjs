@@ -13,14 +13,16 @@ test('each execution agent receives one complete deterministic execution package
       executionAgent,
       repositoryMetadata: { Repository: 'Agent IDE', Health: 'Ready' },
       repositoryContextPackage: 'Repository Context Package Body',
-      understandingPrompt: 'Understanding / Validation Prompt Body',
+      understandingPrompt: 'Understanding / Validation Prompt Body\n\n---\n\nRepository Context Package Body',
       implementationPrompt: 'Implementation Prompt Body',
       decisionTitle: 'Repository Decision Title',
       decisionReason: 'Decision reason',
     });
     assert.equal(pkg.executionAgent, executionAgent);
     assert.equal(pkg.packageVersion, 'execution-package/v1');
-    assert.match(pkg.packageBody, /## Repository Context\nRepository Context Package Body/);
+    assert.match(pkg.packageBody, /^## Task\nRepository Decision Title\n\nDecision reason/);
+    assert.match(pkg.packageBody, /## Context Package\nRepository Context Package Body/);
+    assert.equal((pkg.packageBody.match(/Repository Context Package Body/g) ?? []).length, 1);
     assert.match(pkg.packageBody, /## Understanding Check\nUnderstanding \/ Validation Prompt Body/);
     assert.match(pkg.packageBody, /## Implementation Instructions\nImplementation Prompt Body/);
     assert.match(pkg.packageBody, /Do not ask the repository owner for a second clipboard package/);
