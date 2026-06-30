@@ -42,7 +42,7 @@ test('adapter maps implementation packages into repository-decision language wit
   assert.equal(flow.whyThisDecisionExists, 'It removes handoff ambiguity.');
   assert.equal(flow.currentRequiredOwnerAction, 'Choose execution agent');
   assert.equal(flow.executionReadiness, 'ready');
-  assert.deepEqual(flow.availableExecutionAgents, ['Claude', 'Codex', 'ChatGPT', 'Gemini', 'Cursor', 'Copy Package']);
+  assert.deepEqual(flow.availableExecutionAgents, ['Claude', 'ChatGPT', 'Codex', 'Gemini', 'Generic']);
 });
 
 test('adapter maps validation-experiment packages into repository-decision states', () => {

@@ -24,10 +24,10 @@ test('finite state machine enumerates every repository state and forces state-ch
     'Repository Not Connected',
     'Refresh Repository Intelligence',
     'Repository Analysis Running',
-    'Recommendation Ready',
-    'Workflow In Progress',
-    'Waiting for External Work (Codex / ChatGPT / User)',
-    'Validate Result',
+    'Repository Decision Ready',
+    'Execution Package Ready',
+    'Waiting For External AI',
+    'Record Outcome',
     'Refresh Repository',
     'Complete',
     'Next Recommendation Ready',
@@ -65,7 +65,7 @@ test('clicking the visible repository-decision primary action routes through wor
   assert.match(appSource, /data-decision-flow-primary-action="true"[^>]*onClick=\{isRefreshDecision \? onRefresh : onPrimaryAction\}/);
   assert.match(appSource, /\{workflow && <WorkflowProgress workflow=\{workflow\} onPrimaryAction=\{onPrimaryAction\} actionFeedback=\{actionFeedback\} \/>\}/);
   assert.match(appSource, /await performWorkflowStepAction\(currentWorkflow, controlPlane\);[\s\S]*const next = advanceWorkflow\(workflowInputForTask\(controlPlane\.recommendation, task\), workflowState\);[\s\S]*window\.localStorage\.setItem\(workflowStateStorageKey, JSON\.stringify\(next\)\);[\s\S]*setWorkflowState\(next\);/);
-  assert.match(workflowSource, /\{ id: 'copy-context-package', label: 'Copy Context Package', primaryAction: 'Copy Context Package', state: 'Recommendation Ready', nextState: 'Workflow In Progress' \},\s*\{ id: 'copy-understanding-check', label: 'Copy Understanding Check', primaryAction: 'Copy Understanding Check', state: 'Workflow In Progress'/);
+  assert.match(workflowSource, /\{ id: 'prepare-execution-package', label: 'Execution Package Ready', primaryAction: 'Choose Execution Agent', state: 'Repository Decision Ready', nextState: 'Execution Package Ready' \}/);
   for (const expected of ['Development Diagnostics', 'lastPrimaryActionClicked', 'performWorkflowStepActionRan', 'advanceWorkflowRan', 'setWorkflowStateRan', 'localStoragePersistenceSucceeded', 'currentLocalStorageValue']) {
     assert.match(appSource, new RegExp(expected));
   }
@@ -122,7 +122,7 @@ test('terminal refresh step does not persist recommendation-affecting validation
 });
 
 test('repository intelligence, rankings, and prompts are preserved by workflow-layer refactor', () => {
-  assert.doesNotMatch(workflowSource, /writeFile|spawn|exec|fetch\(/);
+  assert.doesNotMatch(workflowSource, /writeFile|spawn|\bexec\(|fetch\(/);
   for (const expected of ['decisionRanking', 'data.recommendation.prompt', 'data.packages.builder', 'data.packages.reviewer', 'data.packages.debugger', 'buildValidationPrompt']) {
     assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
@@ -150,30 +150,26 @@ test('UX hides all FSM internals and exposes only user tasks', () => {
 });
 
 test('workflow step classification is deterministic and preserves required user clicks', () => {
-  assert.equal(classifyWorkflowStep({ id: 'validate-result' }), 'auto-advance');
-  assert.equal(classifyWorkflowStep({ id: 'run-validation' }), 'refresh-only');
+  assert.equal(classifyWorkflowStep({ id: 'prepare-execution-package' }), 'user-action-required');
   assert.equal(classifyWorkflowStep({ id: 'refresh-repository' }), 'refresh-only');
-  for (const id of ['copy-context-package', 'copy-understanding-check', 'copy-implementation-prompt', 'apply-canonical-edit']) {
+  for (const id of ['prepare-execution-package']) {
     assert.equal(classifyWorkflowStep({ id }), 'user-action-required', `${id} must require user action`);
     assert.equal(workflowStepRequiresUserClick({ id }), true, `${id} must require a click`);
   }
-  for (const id of ['open-codex', 'open-chatgpt', 'paste-response', 'run-implementation']) {
+  for (const id of ['waiting-for-external-ai', 'record-outcome']) {
     assert.equal(classifyWorkflowStep({ id }), 'external-work-required', `${id} must wait for external/user completion`);
     assert.equal(workflowStepRequiresUserClick({ id }), true, `${id} must require a click`);
   }
 });
 
-test('auto-advance steps advance without requiring an action side effect', () => {
-  const input = { packageType: 'implementation', title: 'Auto advance validation bridge' };
+test('repository-decision steps advance to refresh without clipboard-only states', () => {
+  const input = { packageType: 'implementation', title: 'Execution package bridge' };
   let state = advanceWorkflow(input, null);
   state = advanceWorkflow(input, state);
   state = advanceWorkflow(input, state);
   const workflow = createWorkflow(input, state);
-  assert.equal(workflow.currentStep.id, 'validate-result');
-  assert.equal(classifyWorkflowStep(workflow.currentStep), 'auto-advance');
-  const advanced = createWorkflow(input, advanceWorkflow(input, state));
-  assert.equal(advanced.currentStep.id, 'refresh-repository');
-  assert.equal(classifyWorkflowStep(advanced.currentStep), 'refresh-only');
+  assert.equal(workflow.currentStep.id, 'refresh-repository');
+  assert.equal(classifyWorkflowStep(workflow.currentStep), 'refresh-only');
 });
 
 test('automatic workflow effect advances bridge steps and triggers refresh-only once', () => {
@@ -194,10 +190,9 @@ test('auto-advance preserves manual diagnostics fallback and visible refresh com
   assert.match(appSource, /window\.localStorage\.removeItem\(workflowStateStorageKey\)/);
 });
 
-test('implementation workflow first step is copy-implementation-prompt', () => {
-  const implementationBlock = workflowSource.match(/Implementation:\s*\{[\s\S]*?steps:\s*\[([\s\S]*?)\]/)?.[1] ?? '';
-  const firstStep = implementationBlock.match(/\{\s*id:\s*'([^']+)'/)?.[1];
-  assert.equal(firstStep, 'copy-implementation-prompt', 'first step of Implementation workflow must be copy-implementation-prompt');
+test('implementation workflow first step prepares one execution package', () => {
+  const workflow = createWorkflow({ packageType: 'implementation', title: 'Test' }, null);
+  assert.equal(workflow.currentStep.id, 'prepare-execution-package');
 });
 
 test('implementation prompt is visible at both copy-implementation-prompt and open-codex steps', () => {

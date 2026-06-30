@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { sections, type Section } from './sections';
 import { filePathForTask, selectPrimaryFiles, uniqueFiles } from './implementation-guidance';
-import { createDecisionFlow, type DecisionFlow } from './decision-flow';
+import { createDecisionFlow, createExecutionPackage, type DecisionFlow, type ExecutionAgent, type ExecutionPackage } from './decision-flow';
 import { advanceWorkflow, classifyWorkflowStep, contextSnapshotHash, createWorkflow, workflowKey, workflowStateStorageKey, type Workflow, type WorkflowState } from './workflow';
 
 type WorkflowDiagnostics = {
@@ -642,6 +642,29 @@ function recommendationDisplaySummary(data: ControlPlane, task?: DecisionCandida
   return engineeringTask?.rootCause || engineeringTask?.implementationTarget || data.recommendation.displaySummary || task?.reason || data.recommendation.whyItMatters;
 }
 
+function executionPackagesForDecision(data: ControlPlane, documents: Record<string, DocumentState>, decisionFlow: DecisionFlow): ExecutionPackage[] {
+  const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
+  const validationPrompt = buildValidationPrompt(contextPackage);
+  return decisionFlow.availableExecutionAgents.map((executionAgent) => createExecutionPackage({
+    packageType: decisionFlow.packageType,
+    executionAgent,
+    repositoryMetadata: {
+      Repository: data.status.repositoryName,
+      Health: data.status.overallHealth,
+      Confidence: data.status.currentConfidence,
+      HandoffReadiness: data.status.repositoryHandoffReadiness,
+    },
+    repositoryContextPackage: contextPackage,
+    understandingPrompt: validationPrompt,
+    implementationPrompt: implementationPrompt(data, documents),
+    decisionTitle: decisionFlow.selectedDecisionTitle,
+    decisionReason: decisionFlow.whyThisDecisionExists,
+  }));
+}
+
+function executionPackageForAgent(packages: ExecutionPackage[], agent: ExecutionAgent) {
+  return packages.find((pkg) => pkg.executionAgent === agent) ?? packages[packages.length - 1];
+}
 function TaskArtifact({ artifactType, data, documents, repositoryPath }: { artifactType: UserTask['artifactType']; data: ControlPlane; documents: Record<string, DocumentState>; repositoryPath?: string }) {
   const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
   const validationPrompt = buildValidationPrompt(contextPackage);
@@ -805,6 +828,7 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeed
 
   const userTask = workflow ? stepToUserTask(workflow.currentStep.id, workflow.type, data, documents) : null;
   const decisionFlow = createDecisionFlow({ status: data.status, recommendation: data.recommendation, selectedCandidate: task, workflow });
+  const executionPackages = executionPackagesForDecision(data, documents, decisionFlow);
 
   return (
     <section className="todayWorkCard singleRecommendationCard currentTaskCard" aria-label="Next Repository Improvement">
@@ -822,16 +846,16 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeed
         <RepositoryDecisionAnswers data={data} task={task} documents={documents} repositoryPath={repositoryPath} userTask={userTask} decisionFlow={decisionFlow} />
         <CompletionPanel data={data} repositoryPath={repositoryPath} onSaved={onOutcomeSaved} onRefresh={onRefresh} />
       </div>
-      <RepositoryDecisionActionSurface decisionFlow={decisionFlow} workflow={workflow} repositoryPath={repositoryPath} actionFeedback={actionFeedback} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} />
+      <RepositoryDecisionActionSurface decisionFlow={decisionFlow} executionPackages={executionPackages} workflow={workflow} repositoryPath={repositoryPath} actionFeedback={actionFeedback} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} />
     </section>
   );
 }
 
-function RepositoryDecisionActionSurface({ decisionFlow, workflow, repositoryPath, actionFeedback, onPrimaryAction, onRefresh }: { decisionFlow: DecisionFlow; workflow: Workflow | null | undefined; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void }) {
+function RepositoryDecisionActionSurface({ decisionFlow, executionPackages, workflow, repositoryPath, actionFeedback, onPrimaryAction, onRefresh }: { decisionFlow: DecisionFlow; executionPackages: ExecutionPackage[]; workflow: Workflow | null | undefined; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void }) {
   const isRefreshDecision = decisionFlow.refresh.ready || !workflow;
   const primaryLabel = isRefreshDecision ? 'Refresh Repository Intelligence' : decisionFlow.currentRequiredOwnerAction === 'Approve canonical intent' ? 'Review Repository Decision' : 'Start Repository Decision';
   const helperText = decisionFlow.currentRequiredOwnerAction === 'Choose execution agent'
-    ? 'Choose where to execute the repository decision, then use the package preview and outcome capture on this card.'
+    ? 'Choose an execution agent. One click copies the complete package; paste once into the selected AI.'
     : decisionFlow.currentRequiredOwnerAction === 'Record outcome evidence'
       ? 'Record what happened before refreshing so the next repository decision can advance.'
       : decisionFlow.currentRequiredOwnerAction === 'Refresh repository intelligence'
@@ -845,7 +869,7 @@ function RepositoryDecisionActionSurface({ decisionFlow, workflow, repositoryPat
       <button className="primaryCta" data-decision-flow-primary-action="true" disabled={isRefreshDecision && !repositoryPath} onClick={isRefreshDecision ? onRefresh : onPrimaryAction} type="button">{primaryLabel}</button>
       {decisionFlow.currentRequiredOwnerAction === 'Choose execution agent' && (
         <div className="executionAgentGrid" aria-label="Available execution agents">
-          {decisionFlow.availableExecutionAgents.map((agent) => <button className="secondaryCta compactCta" key={agent} onClick={onPrimaryAction} type="button">{agent}</button>)}
+          {decisionFlow.availableExecutionAgents.map((agent) => { const pkg = executionPackageForAgent(executionPackages, agent); return <button className="secondaryCta compactCta" disabled={!pkg?.packageBody} key={agent} onClick={() => { if (pkg) void copyText(pkg.packageBody, `Copied ${agent} execution package`); onPrimaryAction(); }} type="button">Copy {agent} Package</button>; })}
         </div>
       )}
       <button className="secondaryCta" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Repository Intelligence</button>
@@ -1881,6 +1905,8 @@ export function App() {
     const task = firstCandidate(data, 1);
     const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
     const validationPrompt = buildValidationPrompt(contextPackage);
+    const packages = executionPackagesForDecision(data, documents, createDecisionFlow({ status: data.status, recommendation: data.recommendation, selectedCandidate: task, workflow }));
+    const genericPackage = executionPackageForAgent(packages, 'Generic');
     const actionText: Record<string, string> = {
       'copy-context-package': contextPackage,
       'copy-validation-prompt': validationPrompt,
@@ -1889,6 +1915,7 @@ export function App() {
       'open-codex': implementationPrompt(data, documents),
       'review-canonical-edit': data.recommendation.prompt,
       'inspect-evidence': task?.evidence ?? data.recommendation.evidenceSource,
+      'prepare-execution-package': genericPackage?.packageBody ?? '',
     };
     const textToCopy = actionText[workflow.currentStep.id];
     if (textToCopy) {
@@ -1900,6 +1927,7 @@ export function App() {
         'open-codex': 'Copied implementation prompt for your coding agent',
         'review-canonical-edit': 'Copied canonical decision text',
         'inspect-evidence': 'Copied cited evidence',
+        'prepare-execution-package': 'Copied Generic execution package',
       };
       await copyText(textToCopy, labels[workflow.currentStep.id] ?? 'Copied workflow package');
       return labels[workflow.currentStep.id] ?? 'Copied workflow package';
