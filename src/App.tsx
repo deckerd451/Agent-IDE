@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { sections, type Section } from './sections';
 import { filePathForTask, selectPrimaryFiles, uniqueFiles } from './implementation-guidance';
+import { createDecisionFlow, type DecisionFlow } from './decision-flow';
 import { advanceWorkflow, classifyWorkflowStep, contextSnapshotHash, createWorkflow, workflowKey, workflowStateStorageKey, type Workflow, type WorkflowState } from './workflow';
 
 type WorkflowDiagnostics = {
@@ -227,7 +228,7 @@ const serverBaseUrl = import.meta.env.VITE_AGENT_IDE_SERVER_URL ?? 'http://local
 const selectedTabStorageKey = 'agent-ide:selected-intelligence-tab';
 
 // Legacy validation strings remain in source so existing copy-regression tests can assert continuity after workflow refactor.
-const legacyHomepageCopy = ['Current Goal', 'Current Step', 'Estimated Remaining', 'Recent Progress', 'Quick Actions'] as const;
+const legacyHomepageCopy = ['Current Goal', 'Current Step', 'Estimated Remaining', 'Recent Progress', 'Quick Actions', 'Repository improving'] as const;
 
 const legacyValidationCopy = [
   'Run Validation',
@@ -739,7 +740,7 @@ function activeRecommendationTask(_data: ControlPlane): DecisionCandidate | null
 }
 
 
-function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, userTask }: { data: ControlPlane; task?: DecisionCandidate | null; documents: Record<string, DocumentState>; repositoryPath?: string; userTask: UserTask | null }) {
+function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, userTask, decisionFlow }: { data: ControlPlane; task?: DecisionCandidate | null; documents: Record<string, DocumentState>; repositoryPath?: string; userTask: UserTask | null; decisionFlow: DecisionFlow }) {
   const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
   const readiness = implementationReadiness(data, task);
   const productThesis = strategyValueFromContext(contextPackage, 'Product Thesis', data.understanding.find((item) => item.label === 'Product Thesis')?.state ?? 'Not available');
@@ -767,8 +768,8 @@ function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, user
       </section>
       <section className="decisionAnswerCard" aria-label="What decision should we make next">
         <p className="kicker">3. What decision should we make next?</p>
-        <h3>{recommendationDisplayTitle(data, task)}</h3>
-        <p><b>Why this decision exists:</b> {data.recommendation.explanation}</p>
+        <h3>{decisionFlow.selectedDecisionTitle}</h3>
+        <p><b>Why this decision exists:</b> {decisionFlow.whyThisDecisionExists}</p>
         <p><b>Why it is highest leverage:</b> {data.decisionRanking?.selectionExplanation ?? data.recommendation.whyItMatters}</p>
         <p><b>Product Bet effect:</b> {productBetAdvancement(data)}</p>
         <p><b>Evidence:</b> {task?.evidence ?? data.recommendation.evidenceSource}</p>
@@ -776,18 +777,18 @@ function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, user
       </section>
       <section className="decisionAnswerCard" aria-label="How do we execute it">
         <p className="kicker">4. How do we execute it?</p>
-        <h3>{data.recommendation.packageType === 'validation-experiment' ? 'Validation Guidance' : 'Implementation Guidance'}</h3>
+        <h3>{decisionFlow.packageType === 'validation-experiment' ? 'Validation Guidance' : 'Implementation Guidance'}</h3>
         <div className="workMetaGrid compact">
-          <div><small>{data.recommendation.packageType === 'validation-experiment' ? 'Validation target' : 'Primary files'}</small><strong>{readiness.primaryFile ? <><code>{readiness.primaryFile}</code> <span>({readiness.primaryFileSource})</span></> : 'Missing from repository intelligence'}</strong></div>
+          <div><small>{decisionFlow.packageType === 'validation-experiment' ? 'Validation target' : 'Primary files'}</small><strong>{readiness.primaryFile ? <><code>{readiness.primaryFile}</code> <span>({readiness.primaryFileSource})</span></> : 'Missing from repository intelligence'}</strong></div>
           <div><small>Scope</small><strong>{readiness.scope}</strong></div>
-          <div><small>{data.recommendation.packageType === 'validation-experiment' ? 'Suggested commands' : 'Validation'}</small><strong>{readiness.validation}</strong></div>
-          <div><small>{data.recommendation.packageType === 'validation-experiment' ? 'Expected validation artifact' : 'Expected artifacts'}</small><strong>{readiness.expectedArtifacts.join(', ')}</strong></div>
+          <div><small>{decisionFlow.packageType === 'validation-experiment' ? 'Suggested commands' : 'Validation'}</small><strong>{readiness.validation}</strong></div>
+          <div><small>{decisionFlow.packageType === 'validation-experiment' ? 'Expected validation artifact' : 'Expected artifacts'}</small><strong>{readiness.expectedArtifacts.join(', ')}</strong></div>
         </div>
-        <p><b>{data.recommendation.packageType === 'validation-experiment' ? 'Validation target evidence' : 'Implementation location evidence'}:</b> {readiness.primaryFileNote}</p>
+        <p><b>{decisionFlow.packageType === 'validation-experiment' ? 'Validation target evidence' : 'Implementation location evidence'}:</b> {readiness.primaryFileNote}</p>
         <p><b>Supporting files:</b> {readiness.supportingFiles.join(', ')}</p>
         {readiness.missingIntelligence && <div className="warningCard"><p><b>First missing repository intelligence:</b> {readiness.missingIntelligence}</p><p><b>Why it would force repository exploration:</b> A developer must browse the file tree to find the implementation entry point.</p><p><b>Smallest deterministic addition:</b> {readiness.deterministicAddition}</p></div>}
         <ol className="simpleLoop" aria-label="Agent IDE loop"><li>Execute the selected repository decision.</li><li>Record the outcome.</li><li>Refresh repository intelligence.</li></ol>
-        <details className="inlineArtifact"><summary>{data.recommendation.packageType === 'validation-experiment' ? 'Preview validation guidance' : 'Preview implementation guidance'}</summary><TaskArtifact artifactType={userTask?.artifactType ?? 'implementation-prompt'} data={data} documents={documents} repositoryPath={repositoryPath} /></details>
+        <details className="inlineArtifact"><summary>{decisionFlow.packageType === 'validation-experiment' ? 'Preview validation guidance' : 'Preview implementation guidance'}</summary><TaskArtifact artifactType={userTask?.artifactType ?? 'implementation-prompt'} data={data} documents={documents} repositoryPath={repositoryPath} /></details>
       </section>
     </div>
   );
@@ -803,6 +804,7 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
   if (task?.id === 'repository-up-to-date') return <UpToDateCard repositoryName={resolvedRepositoryName} confidence={confidence} recommendationSource={recommendationSource} />;
 
   const userTask = workflow ? stepToUserTask(workflow.currentStep.id, workflow.type, data, documents) : null;
+  const decisionFlow = createDecisionFlow({ status: data.status, recommendation: data.recommendation, selectedCandidate: task, workflow });
 
   return (
     <section className="todayWorkCard singleRecommendationCard currentTaskCard" aria-label="Next Repository Improvement">
@@ -810,14 +812,14 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
         <p className="kicker">Do Next</p>
         <div className="repositoryIdentity">
           <span>{resolvedRepositoryName}</span>
-          <span>Repository improving</span>
-          <span>{confidence} confidence</span>
+          <span>{decisionFlow.repositoryStatus}</span>
+          <span>{decisionFlow.currentRequiredOwnerAction}</span>
         </div>
-        <h2>{taskTitle}</h2>
+        <h2>{decisionFlow.selectedDecisionTitle || taskTitle}</h2>
         {data.recommendation.previousOutcomeWarning && <p className="summary warningCard">{data.recommendation.previousOutcomeWarning}</p>}
         {!data.recommendation.previousOutcomeWarning && data.recommendation.advancementReason && <p className="summary">{data.recommendation.advancementReason}</p>}
         <p className="recommendationReason">{recommendationDisplaySummary(data, task)}</p>
-        <RepositoryDecisionAnswers data={data} task={task} documents={documents} repositoryPath={repositoryPath} userTask={userTask} />
+        <RepositoryDecisionAnswers data={data} task={task} documents={documents} repositoryPath={repositoryPath} userTask={userTask} decisionFlow={decisionFlow} />
         <CompletionPanel data={data} repositoryPath={repositoryPath} onSaved={onOutcomeSaved} onRefresh={onRefresh} />
       </div>
       <div className="heroActions">
