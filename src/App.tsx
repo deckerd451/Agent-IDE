@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { sections, type Section } from './sections';
 import { filePathForTask, selectPrimaryFiles, uniqueFiles } from './implementation-guidance';
-import { createDecisionFlow, createExecutionPackage, type DecisionFlow, type ExecutionAgent, type ExecutionPackage } from './decision-flow';
+import { copyRenderedExecutionPackage, createDecisionFlow, createExecutionPackage, executionPackageForAgent, type DecisionFlow, type ExecutionPackage } from './decision-flow';
 import { advanceWorkflow, classifyWorkflowStep, contextSnapshotHash, createWorkflow, workflowKey, workflowStateStorageKey, type Workflow, type WorkflowState } from './workflow';
 
 type WorkflowDiagnostics = {
@@ -662,9 +662,6 @@ function executionPackagesForDecision(data: ControlPlane, documents: Record<stri
   }));
 }
 
-function executionPackageForAgent(packages: ExecutionPackage[], agent: ExecutionAgent) {
-  return packages.find((pkg) => pkg.executionAgent === agent) ?? packages[packages.length - 1];
-}
 function TaskArtifact({ artifactType, data, documents, repositoryPath }: { artifactType: UserTask['artifactType']; data: ControlPlane; documents: Record<string, DocumentState>; repositoryPath?: string }) {
   const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
   const validationPrompt = buildValidationPrompt(contextPackage);
@@ -827,8 +824,8 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeed
   if (task?.id === 'repository-up-to-date') return <UpToDateCard repositoryName={resolvedRepositoryName} confidence={confidence} recommendationSource={recommendationSource} />;
 
   const userTask = workflow ? stepToUserTask(workflow.currentStep.id, workflow.type, data, documents) : null;
-  const decisionFlow = createDecisionFlow({ status: data.status, recommendation: data.recommendation, selectedCandidate: task, workflow });
-  const executionPackages = executionPackagesForDecision(data, documents, decisionFlow);
+  const baseDecisionFlow = createDecisionFlow({ status: data.status, recommendation: data.recommendation, selectedCandidate: task, workflow });
+  const decisionFlow = { ...baseDecisionFlow, executionPackages: executionPackagesForDecision(data, documents, baseDecisionFlow) };
 
   return (
     <section className="todayWorkCard singleRecommendationCard currentTaskCard" aria-label="Next Repository Improvement">
@@ -846,12 +843,12 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeed
         <RepositoryDecisionAnswers data={data} task={task} documents={documents} repositoryPath={repositoryPath} userTask={userTask} decisionFlow={decisionFlow} />
         <CompletionPanel data={data} repositoryPath={repositoryPath} onSaved={onOutcomeSaved} onRefresh={onRefresh} />
       </div>
-      <RepositoryDecisionActionSurface decisionFlow={decisionFlow} executionPackages={executionPackages} workflow={workflow} repositoryPath={repositoryPath} actionFeedback={actionFeedback} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} />
+      <RepositoryDecisionActionSurface decisionFlow={decisionFlow} workflow={workflow} repositoryPath={repositoryPath} actionFeedback={actionFeedback} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} />
     </section>
   );
 }
 
-function RepositoryDecisionActionSurface({ decisionFlow, executionPackages, workflow, repositoryPath, actionFeedback, onPrimaryAction, onRefresh }: { decisionFlow: DecisionFlow; executionPackages: ExecutionPackage[]; workflow: Workflow | null | undefined; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void }) {
+function RepositoryDecisionActionSurface({ decisionFlow, workflow, repositoryPath, actionFeedback, onPrimaryAction, onRefresh }: { decisionFlow: DecisionFlow; workflow: Workflow | null | undefined; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void }) {
   const isRefreshDecision = decisionFlow.refresh.ready || !workflow;
   const primaryLabel = isRefreshDecision ? 'Refresh Repository Intelligence' : decisionFlow.currentRequiredOwnerAction === 'Approve canonical intent' ? 'Review Repository Decision' : 'Start Repository Decision';
   const helperText = decisionFlow.currentRequiredOwnerAction === 'Choose execution agent'
@@ -869,7 +866,7 @@ function RepositoryDecisionActionSurface({ decisionFlow, executionPackages, work
       <button className="primaryCta" data-decision-flow-primary-action="true" disabled={isRefreshDecision && !repositoryPath} onClick={isRefreshDecision ? onRefresh : onPrimaryAction} type="button">{primaryLabel}</button>
       {decisionFlow.currentRequiredOwnerAction === 'Choose execution agent' && (
         <div className="executionAgentGrid" aria-label="Available execution agents">
-          {decisionFlow.availableExecutionAgents.map((agent) => { const pkg = executionPackageForAgent(executionPackages, agent); return <button className="secondaryCta compactCta" disabled={!pkg?.packageBody} key={agent} onClick={() => { if (pkg) void copyText(pkg.packageBody, `Copied ${agent} execution package`); onPrimaryAction(); }} type="button">Copy {agent} Package</button>; })}
+          {decisionFlow.availableExecutionAgents.map((agent) => { const pkg = decisionFlow.executionPackages?.find((executionPackage) => executionPackage.executionAgent === agent); return <button className="secondaryCta compactCta" disabled={!pkg?.packageBody} key={agent} onClick={() => copyRenderedExecutionPackage(decisionFlow, agent, (packageBody, label) => { void copyText(packageBody, label); }, onPrimaryAction)} type="button">Copy {agent} Package</button>; })}
         </div>
       )}
       <button className="secondaryCta" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Repository Intelligence</button>
@@ -1905,8 +1902,9 @@ export function App() {
     const task = firstCandidate(data, 1);
     const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
     const validationPrompt = buildValidationPrompt(contextPackage);
-    const packages = executionPackagesForDecision(data, documents, createDecisionFlow({ status: data.status, recommendation: data.recommendation, selectedCandidate: task, workflow }));
-    const genericPackage = executionPackageForAgent(packages, 'Generic');
+    const workflowDecisionFlow = createDecisionFlow({ status: data.status, recommendation: data.recommendation, selectedCandidate: task, workflow });
+    const packages = executionPackagesForDecision(data, documents, workflowDecisionFlow);
+    const genericPackage = executionPackageForAgent({ ...workflowDecisionFlow, executionPackages: packages }, 'Generic');
     const actionText: Record<string, string> = {
       'copy-context-package': contextPackage,
       'copy-validation-prompt': validationPrompt,

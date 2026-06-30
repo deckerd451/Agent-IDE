@@ -137,6 +137,20 @@ export function createDecisionFlow(input: DecisionFlowInput): DecisionFlow {
 }
 
 
+export function executionPackageForAgent(decisionFlow: Pick<DecisionFlow, 'executionPackages'>, agent: ExecutionAgent) {
+  const packages = decisionFlow.executionPackages ?? [];
+  return packages.find((pkg) => pkg.executionAgent === agent) ?? packages[packages.length - 1];
+}
+
+export function copyRenderedExecutionPackage(decisionFlow: Pick<DecisionFlow, 'executionPackages'>, agent: ExecutionAgent, copyPackage: (packageBody: string, label: string) => void, afterCopy: () => void) {
+  const packageBody = executionPackageForAgent(decisionFlow, agent)?.packageBody;
+  if (!packageBody) return false;
+  copyPackage(packageBody, `Copied ${agent} execution package`);
+  afterCopy();
+  return true;
+}
+
+
 function removeEmbeddedContextPackage(prompt: string, contextPackage: string) {
   const trimmedContext = contextPackage.trim();
   if (!trimmedContext) return prompt.trim();
