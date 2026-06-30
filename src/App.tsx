@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { sections, type Section } from './sections';
 import { filePathForTask, selectPrimaryFiles, uniqueFiles } from './implementation-guidance';
 import { advanceWorkflow, contextSnapshotHash, createWorkflow, workflowKey, workflowStateStorageKey, type Workflow, type WorkflowState } from './workflow';
@@ -986,6 +986,10 @@ function ShadowRecommendationCard({ data }: { data: ControlPlane }) {
   );
 }
 
+function isDeterministicValidationRefreshStep(workflow?: Workflow | null) {
+  return workflow?.currentStep.id === 'validate-result' || workflow?.currentStep.id === 'run-validation';
+}
+
 function WorkflowPrimaryButton({ workflow, onPrimaryAction }: { workflow: Workflow; onPrimaryAction: () => void }) {
   return <button className="primaryCta" data-workflow-primary-action="true" onClick={onPrimaryAction} type="button">{outcomeWorkflowText(workflow.currentPrimaryAction)}</button>;
 }
@@ -1574,6 +1578,7 @@ export function App() {
   const [finishNotice, setFinishNotice] = useState('');
   const [workflowState, setWorkflowState] = useState<WorkflowState | null>(readWorkflowState);
   const [workflowActionFeedback, setWorkflowActionFeedback] = useState('');
+  const autoValidationRefreshKeyRef = useRef('');
   const [workflowDiagnostics, setWorkflowDiagnostics] = useState<WorkflowDiagnostics>(() => ({
     lastPrimaryActionClicked: '',
     lastStepActionResult: '',
@@ -1597,6 +1602,27 @@ export function App() {
     if (!controlPlane) return null;
     return createWorkflow(workflowInputForTask(controlPlane.recommendation, null), workflowState);
   }, [controlPlane, workflowState]);
+
+  useEffect(() => {
+    if (!controlPlane || !currentWorkflow || isRefreshing || !isDeterministicValidationRefreshStep(currentWorkflow)) return;
+    const refreshKey = `${currentWorkflow.workflowKey}:${currentWorkflow.currentStep.id}:${workflowState?.currentStepId ?? ''}`;
+    if (autoValidationRefreshKeyRef.current === refreshKey) return;
+    autoValidationRefreshKeyRef.current = refreshKey;
+    const previousTitle = controlPlane.recommendation.title;
+    setIsWorkItemOpen(false);
+    setWorkflowActionFeedback('Validation refresh started. Next: wait for repository intelligence to finish updating.');
+    setWorkflowDiagnostics((current) => ({
+      ...current,
+      lastPrimaryActionClicked: currentWorkflow.currentPrimaryAction,
+      lastStepActionResult: 'Auto-advanced validation refresh',
+      performWorkflowStepActionRan: false,
+      refreshStepDetected: true,
+      completionRecordPersistedBeforeRefresh: false,
+      refreshStarted: true,
+      currentLocalStorageValue: window.localStorage.getItem(workflowStateStorageKey) ?? '',
+    }));
+    void refreshIntelligence({ clearWorkflow: true, previousTitle });
+  }, [controlPlane, currentWorkflow, isRefreshing, workflowState?.currentStepId]);
 
   const selected = useMemo(
     () => sections.find((section) => section.id === selectedId) ?? sections[0],
@@ -1871,11 +1897,22 @@ export function App() {
       return;
     }
     setWorkflowState(next);
-    const advancedStep = createWorkflow(workflowInputForTask(controlPlane.recommendation, task), next).currentStep;
+    const advancedWorkflow = createWorkflow(workflowInputForTask(controlPlane.recommendation, task), next);
+    const advancedStep = advancedWorkflow.currentStep;
     const actionResult = workflowActionResult || 'Advanced workflow';
     const savedOutcomeReminder = currentWorkflow.currentStep.id === 'run-implementation' ? ' Outcome evidence was not saved; use Save Outcome if you want a persistent record.' : '';
-    setWorkflowActionFeedback(`${actionResult ? `${actionResult}. ` : ''}Workflow advanced to ${outcomeWorkflowText(advancedStep.label)}. Next: ${outcomeWorkflowText(advancedStep.primaryAction)}.${savedOutcomeReminder}`);
     setWorkflowDiagnostics((current) => ({ ...current, setWorkflowStateRan: true }));
+    if (isDeterministicValidationRefreshStep(advancedWorkflow)) {
+      setIsWorkItemOpen(false);
+      const previousTitle = controlPlane.recommendation.title;
+      const refreshKey = `${advancedWorkflow.workflowKey}:${advancedWorkflow.currentStep.id}:${next.currentStepId}`;
+      autoValidationRefreshKeyRef.current = refreshKey;
+      setWorkflowActionFeedback(`${actionResult ? `${actionResult}. ` : ''}Validation refresh started. Next: wait for repository intelligence to finish updating.${savedOutcomeReminder}`);
+      setWorkflowDiagnostics((current) => ({ ...current, refreshStepDetected: true, completionRecordPersistedBeforeRefresh: false, refreshStarted: true }));
+      await refreshIntelligence({ clearWorkflow: true, previousTitle });
+      return;
+    }
+    setWorkflowActionFeedback(`${actionResult ? `${actionResult}. ` : ''}Workflow advanced to ${outcomeWorkflowText(advancedStep.label)}. Next: ${outcomeWorkflowText(advancedStep.primaryAction)}.${savedOutcomeReminder}`);
     if (next.status === 'Ready To Refresh' || next.repositoryState === 'Refresh Repository') {
       setIsWorkItemOpen(false);
       const previousTitle = controlPlane.recommendation.title;
