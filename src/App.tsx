@@ -794,7 +794,7 @@ function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, user
   );
 }
 
-function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryAction, onRefresh, onOutcomeSaved }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOutcomeSaved: () => Promise<void> }) {
+function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeedback, onPrimaryAction, onRefresh, onOutcomeSaved }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void; onOutcomeSaved: () => Promise<void> }) {
   const recommendationSource = data.activeRecommendationSource ?? 'Legacy';
   const task = activeRecommendationTask(data);
   const taskTitle = recommendationDisplayTitle(data, task);
@@ -822,11 +822,35 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, onPrimaryA
         <RepositoryDecisionAnswers data={data} task={task} documents={documents} repositoryPath={repositoryPath} userTask={userTask} decisionFlow={decisionFlow} />
         <CompletionPanel data={data} repositoryPath={repositoryPath} onSaved={onOutcomeSaved} onRefresh={onRefresh} />
       </div>
-      <div className="heroActions">
-        {workflow ? <WorkflowPrimaryButton workflow={workflow} onPrimaryAction={onPrimaryAction} /> : <button className="primaryCta" onClick={onRefresh} type="button">Refresh Repository Intelligence</button>}
-        {workflow && <button className="secondaryCta" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Repository Intelligence</button>}
-      </div>
+      <RepositoryDecisionActionSurface decisionFlow={decisionFlow} workflow={workflow} repositoryPath={repositoryPath} actionFeedback={actionFeedback} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} />
     </section>
+  );
+}
+
+function RepositoryDecisionActionSurface({ decisionFlow, workflow, repositoryPath, actionFeedback, onPrimaryAction, onRefresh }: { decisionFlow: DecisionFlow; workflow: Workflow | null | undefined; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void }) {
+  const isRefreshDecision = decisionFlow.refresh.ready || !workflow;
+  const primaryLabel = isRefreshDecision ? 'Refresh Repository Intelligence' : decisionFlow.currentRequiredOwnerAction === 'Approve canonical intent' ? 'Review Repository Decision' : 'Start Repository Decision';
+  const helperText = decisionFlow.currentRequiredOwnerAction === 'Choose execution agent'
+    ? 'Choose where to execute the repository decision, then use the package preview and outcome capture on this card.'
+    : decisionFlow.currentRequiredOwnerAction === 'Record outcome evidence'
+      ? 'Record what happened before refreshing so the next repository decision can advance.'
+      : decisionFlow.currentRequiredOwnerAction === 'Refresh repository intelligence'
+        ? 'Refresh after the repository decision has been executed or when intelligence is missing.'
+        : 'Use this action surface to advance the selected repository decision.';
+  return (
+    <aside className="heroActions repositoryDecisionActions" aria-label="Repository decision action surface">
+      <p className="kicker">Repository Decision Action</p>
+      <h3>{decisionFlow.currentRequiredOwnerAction}</h3>
+      <p>{helperText}</p>
+      <button className="primaryCta" data-decision-flow-primary-action="true" disabled={isRefreshDecision && !repositoryPath} onClick={isRefreshDecision ? onRefresh : onPrimaryAction} type="button">{primaryLabel}</button>
+      {decisionFlow.currentRequiredOwnerAction === 'Choose execution agent' && (
+        <div className="executionAgentGrid" aria-label="Available execution agents">
+          {decisionFlow.availableExecutionAgents.map((agent) => <button className="secondaryCta compactCta" key={agent} onClick={onPrimaryAction} type="button">{agent}</button>)}
+        </div>
+      )}
+      <button className="secondaryCta" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Repository Intelligence</button>
+      {actionFeedback && <p className="summary workflowActionFeedback" role="status">{actionFeedback}</p>}
+    </aside>
   );
 }
 
@@ -1230,10 +1254,11 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
 
   return (
     <div className="controlPlane compactDashboard">
-      <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOutcomeSaved={onOutcomeSaved} />
+      <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} actionFeedback={actionFeedback} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOutcomeSaved={onOutcomeSaved} />
       <WorkflowDiagnosticsDisclosure workflow={workflow} diagnostics={diagnostics} onManualPrimaryAction={onPrimaryAction} />
 
       <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced</summary>
+      {workflow && <WorkflowProgress workflow={workflow} onPrimaryAction={onPrimaryAction} actionFeedback={actionFeedback} />}
       <ShadowRecommendationCard data={data} />
       <RepositoryJudgmentReadinessCard data={data} />
 
