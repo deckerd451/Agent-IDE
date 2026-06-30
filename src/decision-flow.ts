@@ -136,6 +136,87 @@ export function createDecisionFlow(input: DecisionFlowInput): DecisionFlow {
   };
 }
 
+function stripEmbeddedRepositoryContext(prompt: string, repositoryContextPackage?: string) {
+  const trimmed = prompt.trim();
+  if (!trimmed) return '';
+  const delimiterIndex = trimmed.indexOf('\n\n---\n\n');
+  const withoutDelimitedContext = delimiterIndex === -1 ? trimmed : trimmed.slice(0, delimiterIndex).trim();
+  const context = repositoryContextPackage?.trim();
+  if (context && withoutDelimitedContext.endsWith(context)) {
+    return withoutDelimitedContext.slice(0, -context.length).trim();
+  }
+  return withoutDelimitedContext;
+}
+
+function understandingCheckBody(understandingPrompt: string, repositoryContextPackage?: string) {
+  const prompt = stripEmbeddedRepositoryContext(understandingPrompt, repositoryContextPackage)
+    .replace(/Using only this Context Package:/i, 'Using the Repository Context above...')
+    .replace(/Only use evidence present in the Context Package\./i, 'Only use evidence present in the Repository Context above.');
+  if (/Using the Repository Context above/i.test(prompt)) return prompt;
+  return `Using the Repository Context above...\n\n${prompt}`;
+}
+
+function extractBacktickItems(text: string, pattern: RegExp, limit = 5) {
+  return [...text.matchAll(/`([^`]+)`/g)]
+    .map((match) => match[1].trim())
+    .filter((item) => pattern.test(item))
+    .filter((item, index, all) => all.indexOf(item) === index)
+    .slice(0, limit);
+}
+
+function bulletList(items: string[], fallback: string) {
+  const values = items.length ? items : [fallback];
+  return values.map((item) => `- ${item}`).join('\n');
+}
+
+function actionFirstSection(input: ExecutionPackageInput) {
+  const implementationPrompt = input.implementationPrompt?.trim() ?? '';
+  const decisionTitle = input.decisionTitle?.trim() || 'Selected repository issue';
+  const decisionReason = input.decisionReason?.trim() || 'Use the repository decision and context in this package.';
+  if (input.packageType === 'validation-experiment') {
+    const commands = extractBacktickItems(`${input.understandingPrompt ?? ''}\n${implementationPrompt}`, /^(npm|pnpm|yarn|bun|node|cargo|go|python|pytest|swift|xcodebuild|make|npx)\b/, 6);
+    return {
+      title: 'Action First',
+      body: [
+        'Task: run the validation experiment.',
+        `Validation target: ${decisionTitle}`,
+        'Suggested commands:',
+        bulletList(commands, 'Run the validation steps described by the Repository Decision and Repository Context.'),
+        'What to report back:',
+        '- Commands run and their pass/fail results.',
+        '- Any ambiguity, contradiction, missing context, or confidence gap found during validation.',
+        '- Whether the validation target is ready for the owner to record as outcome evidence.',
+        'Do not modify source unless required for validation.',
+      ].join('\n'),
+    };
+  }
+  if (input.packageType === 'product-decision') {
+    const files = extractBacktickItems(`${decisionTitle}\n${decisionReason}\n${implementationPrompt}`, /(^|\/|\.)[\w.-]+\.(md|json|txt|ya?ml)$/i, 3);
+    return {
+      title: 'Action First',
+      body: [
+        'Task: review or update canonical repository intent.',
+        `File to review: ${files[0] ?? '.ai/goals.md'}`,
+        `What decision is needed: ${decisionReason}`,
+      ].join('\n'),
+    };
+  }
+  const files = extractBacktickItems(`${decisionTitle}\n${decisionReason}\n${implementationPrompt}`, /(^|\/|\.)[\w.-]+\.(ts|tsx|js|jsx|mjs|cjs|css|html|md|json|yml|yaml)$/i, 8);
+  const tests = extractBacktickItems(implementationPrompt, /^(npm|pnpm|yarn|bun|node|cargo|go|python|pytest|swift|xcodebuild|make|npx)\b/, 6);
+  return {
+    title: 'Action First',
+    body: [
+      'Task: implement the selected issue.',
+      'Files/targets:',
+      bulletList(files, 'Use the Repository Decision, Repository Context, and Implementation Instructions to identify the necessary files.'),
+      'Acceptance criteria:',
+      bulletList([decisionTitle, decisionReason].filter(Boolean), 'The selected issue is implemented without weakening existing behavior.'),
+      'Tests to run:',
+      bulletList(tests, 'Run the relevant repository validation commands before reporting back.'),
+    ].join('\n'),
+  };
+}
+
 export function createExecutionPackage(input: ExecutionPackageInput): ExecutionPackage {
   const validationRequired = input.packageType === 'validation-experiment' || Boolean(input.understandingPrompt?.trim());
   const implementationRequired = input.packageType !== 'validation-experiment' && Boolean(input.implementationPrompt?.trim());
@@ -143,8 +224,9 @@ export function createExecutionPackage(input: ExecutionPackageInput): ExecutionP
   sections.push({ title: 'Execution Agent', body: input.executionAgent });
   sections.push({ title: 'Package Metadata', body: [`Package Type: ${input.packageType}`, `Package Version: ${executionPackageVersion}`, ...Object.entries(input.repositoryMetadata ?? {}).filter(([, value]) => Boolean(value)).map(([key, value]) => `${key}: ${value}`)].join('\n') });
   if (input.decisionTitle || input.decisionReason) sections.push({ title: 'Repository Decision', body: [input.decisionTitle, input.decisionReason].filter(Boolean).join('\n\n') });
+  sections.push(actionFirstSection(input));
   if (input.repositoryContextPackage?.trim()) sections.push({ title: 'Repository Context', body: input.repositoryContextPackage.trim() });
-  if (validationRequired && input.understandingPrompt?.trim()) sections.push({ title: 'Understanding Check', body: input.understandingPrompt.trim() });
+  if (validationRequired && input.understandingPrompt?.trim()) sections.push({ title: 'Understanding Check', body: understandingCheckBody(input.understandingPrompt, input.repositoryContextPackage) });
   if (implementationRequired && input.implementationPrompt?.trim()) sections.push({ title: 'Implementation Instructions', body: input.implementationPrompt.trim() });
   sections.push({ title: 'Required Execution Instructions', body: 'Use this single execution package as the complete repository-local artifact. Do not ask the repository owner for a second clipboard package before responding. Return your result so the owner can record the outcome in Agent IDE and refresh Repository Intelligence.' });
   return {
