@@ -93,6 +93,21 @@ test('workflow actions expose visible feedback for primary CTA advancement and c
 });
 
 
+
+
+test('repository decision agent copy actions do not refresh or advance workflow before outcome save', () => {
+  const actionStart = appSource.indexOf('function RepositoryDecisionActionSurface');
+  const actionEnd = appSource.indexOf('function workflowInputForTask', actionStart);
+  const actionSource = appSource.slice(actionStart, actionEnd);
+  const saveStart = actionSource.indexOf('async function saveOutcome');
+  const beforeSaveSource = actionSource.slice(0, saveStart);
+  const saveSource = actionSource.slice(saveStart);
+  assert.match(beforeSaveSource, /async function handleExecutionAgentClick\(agent: ExecutionAgent, packageBody: string\)/);
+  assert.match(beforeSaveSource, /setCopiedAgent\(agent\)/);
+  assert.doesNotMatch(beforeSaveSource, /refreshIntelligence|onOutcomeRefresh\(|onRefresh\(|onPrimaryAction\(\)|advanceWorkflow\(/);
+  assert.match(saveSource, /await onOutcomeSaved\(\);\s*if \(refreshAfterCompletion\) await onOutcomeRefresh\(previousTitle\);/);
+});
+
 test('repository decision card owns outcome recording and refresh-after-save loop', () => {
   const actionStart = appSource.indexOf('function RepositoryDecisionActionSurface');
   const actionEnd = appSource.indexOf('function workflowInputForTask', actionStart);

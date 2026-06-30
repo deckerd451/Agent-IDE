@@ -41,7 +41,7 @@ test('repository decision action card uses decision-first labels and no normal s
 });
 
 test('primary action surface exposes one short package copy button per supported agent', () => {
-  assert.match(appSource, /copyText\(pkg\.packageBody/);
+  assert.match(appSource, /handleExecutionAgentClick\(agent, pkg\.packageBody\)/);
   assert.match(appSource, /agent === 'Generic' \? 'Copy Package' : agent/);
   for (const overflowProneLabel of ['Copy Claude Package', 'Copy ChatGPT Package', 'Copy Codex Package', 'Copy Gemini Package', 'Copy Generic Package']) {
     assert.doesNotMatch(appSource, new RegExp(overflowProneLabel));
@@ -61,6 +61,30 @@ test('action card css guards against overflow in the narrow sidebar', () => {
   assert.match(stylesSource, /\.repositoryDecisionActions[\s\S]*min-width: 0/);
   assert.match(stylesSource, /\.executionAgentGrid[\s\S]*repeat\(auto-fit, minmax\(88px, 1fr\)\)/);
   assert.match(stylesSource, /\.compactCta[\s\S]*white-space: normal/);
+});
+
+
+
+test('clicking Codex once copies without refreshing and immediately exposes outcome controls', () => {
+  const actionStart = appSource.indexOf('function RepositoryDecisionActionSurface');
+  const actionEnd = appSource.indexOf('function workflowInputForTask', actionStart);
+  const actionSource = appSource.slice(actionStart, actionEnd);
+  assert.match(actionSource, /async function handleExecutionAgentClick\(agent: ExecutionAgent, packageBody: string\)/);
+  assert.match(actionSource, /await copyText\(packageBody, `\$\{agent\} package copied`\);\s*setCopiedAgent\(agent\);/);
+  assert.match(actionSource, /onClick=\{\(\) => \{ if \(pkg\?\.packageBody\) void handleExecutionAgentClick\(agent, pkg\.packageBody\); \}\}/);
+  assert.doesNotMatch(actionSource, /handleExecutionAgentClick[\s\S]*refreshIntelligence/);
+  assert.doesNotMatch(actionSource, /handleExecutionAgentClick[\s\S]*onPrimaryAction\(\)/);
+  assert.match(actionSource, /const actionTitle = isAwaitingExternalAi \? 'Waiting for AI'/);
+  assert.match(actionSource, /isAwaitingExternalAi && !outcomeFormOpen && <button className="primaryCta" data-decision-flow-primary-action="true" onClick=\{\(\) => setOutcomeFormOpen\(true\)\} type="button">Record Outcome<\/button>/);
+});
+
+test('inline outcome form uses dark-card styling and avoids completion panel styling', () => {
+  assert.match(stylesSource, /\.inlineOutcomeForm \{[\s\S]*background: transparent;[\s\S]*color: #e5edf8;/);
+  assert.match(stylesSource, /\.inlineOutcomeForm label \{[\s\S]*color: #e5edf8;/);
+  assert.match(stylesSource, new RegExp('\\.inlineOutcomeForm select,\\n\\.inlineOutcomeForm textarea \\{[\\s\\S]*box-sizing: border-box;[\\s\\S]*max-width: 100%;[\\s\\S]*background: rgba\\(15, 23, 42, 0\\.82\\);[\\s\\S]*color: #f8fafc;'));
+  assert.match(stylesSource, /\.inlineOutcomeForm \.checkboxLabel \{[\s\S]*grid-template-columns: auto minmax\(0, 1fr\);[\s\S]*overflow-wrap: anywhere;/);
+  assert.doesNotMatch(stylesSource, /\.inlineOutcomeForm[\s\S]*completionPanel/);
+  assert.doesNotMatch(appSource, /completionPanel/);
 });
 
 test('workflow states represent repository decisions instead of clipboard logistics', () => {
