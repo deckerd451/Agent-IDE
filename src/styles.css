@@ -1423,7 +1423,7 @@ h1 {
   }
 }
 
-.completionPanel {
+.inlineOutcomeForm {
   margin-top: 1rem;
   padding: 1rem;
   border: 1px solid var(--border, #d7dce5);
@@ -1431,19 +1431,19 @@ h1 {
   background: rgba(255, 255, 255, 0.72);
 }
 
-.completionPanel label {
+.inlineOutcomeForm label {
   display: grid;
   gap: 0.35rem;
   margin-top: 0.75rem;
   font-weight: 600;
 }
 
-.completionPanel select,
-.completionPanel textarea {
+.inlineOutcomeForm select,
+.inlineOutcomeForm textarea {
   width: 100%;
 }
 
-.completionPanel .checkboxLabel {
+.inlineOutcomeForm .checkboxLabel {
   display: flex;
   align-items: center;
   gap: 0.5rem;

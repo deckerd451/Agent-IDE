@@ -702,62 +702,6 @@ function labelPromptQuality(value?: string | null) {
   return promptQualityLabels.find(([key]) => key === value)?.[1] ?? value ?? 'Unknown';
 }
 
-function CompletionPanel({ data, repositoryPath, onSaved, onRefresh }: { data: ControlPlane; repositoryPath?: string; onSaved: () => Promise<void>; onRefresh: () => void }) {
-  const [outcome, setOutcome] = useState<OutcomeEntry['outcome']>('implemented');
-  const [promptQuality, setPromptQuality] = useState<OutcomeEntry['promptQuality']>('worked');
-  const [userNote, setUserNote] = useState('');
-  const [refreshAfterCompletion, setRefreshAfterCompletion] = useState(true);
-  const [status, setStatus] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-
-  async function saveOutcome() {
-    if (!repositoryPath) return;
-    setIsSaving(true);
-    setStatus('');
-    try {
-      const response = await fetch(new URL('/api/repository/outcome', serverBaseUrl), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          repositoryPath,
-          recommendationId: data.recommendation.id ?? data.decisionRanking?.selectedIssue?.id,
-          recommendationTitle: data.recommendation.title,
-          promptHash: data.recommendation.promptHash,
-          prompt: data.recommendation.prompt,
-          outcome,
-          promptQuality,
-          userNote,
-          testsRun: [],
-          refreshAfterCompletion,
-        }),
-      });
-      const result = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(result.error ?? 'Unable to save outcome.');
-      setStatus('Outcome saved to .ai/outcomes.json and .ai/outcomes.md. Next: refresh repository intelligence or review the updated outcome history.');
-      setUserNote('');
-      await onSaved();
-      if (refreshAfterCompletion) onRefresh();
-    } catch (saveError) {
-      setStatus(saveError instanceof Error ? saveError.message : String(saveError));
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  return (
-    <section className="completionPanel" aria-label="Mark External Work Complete">
-      <h3>Mark External Work Complete</h3>
-      <label>Outcome<select value={outcome} onChange={(event) => setOutcome(event.target.value as OutcomeEntry['outcome'])}>{outcomeLabels.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <label>Prompt quality<select value={promptQuality} onChange={(event) => setPromptQuality(event.target.value as OutcomeEntry['promptQuality'])}>{promptQualityLabels.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <label>Optional note<textarea value={userNote} onChange={(event) => setUserNote(event.target.value)} rows={3} /></label>
-      <label className="checkboxLabel"><input checked={refreshAfterCompletion} onChange={(event) => setRefreshAfterCompletion(event.target.checked)} type="checkbox" /> Refresh Repository Intelligence after saving</label>
-      <div className="promptActions"><button className="primaryCta" disabled={isSaving || !repositoryPath} onClick={() => void saveOutcome()} type="button">{isSaving ? 'Saving…' : 'Save Outcome'}</button><button className="secondaryCta" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Repository Intelligence</button></div>
-      {status && <p className="summary">{status}</p>}
-    </section>
-  );
-}
-
-
 function activeRecommendationTask(_data: ControlPlane): DecisionCandidate | null {
   return null;
 }
@@ -817,7 +761,7 @@ function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, user
   );
 }
 
-function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeedback, onPrimaryAction, onRefresh, onOutcomeSaved }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void; onOutcomeSaved: () => Promise<void> }) {
+function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeedback, onPrimaryAction, onRefresh, onOutcomeSaved, onOutcomeRefresh }: { data: ControlPlane; workflow: Workflow | null | undefined; documents: Record<string, DocumentState>; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void; onOutcomeSaved: () => Promise<void>; onOutcomeRefresh: (previousTitle: string) => Promise<void> }) {
   const recommendationSource = data.activeRecommendationSource ?? 'Legacy';
   const task = activeRecommendationTask(data);
   const taskTitle = recommendationDisplayTitle(data, task);
@@ -844,15 +788,57 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeed
         {!data.recommendation.previousOutcomeWarning && data.recommendation.advancementReason && <p className="summary">{data.recommendation.advancementReason}</p>}
         <p className="recommendationReason">{recommendationDisplaySummary(data, task)}</p>
         <RepositoryDecisionAnswers data={data} task={task} documents={documents} repositoryPath={repositoryPath} userTask={userTask} decisionFlow={decisionFlow} />
-        <CompletionPanel data={data} repositoryPath={repositoryPath} onSaved={onOutcomeSaved} onRefresh={onRefresh} />
       </div>
-      <RepositoryDecisionActionSurface decisionFlow={decisionFlow} executionPackages={executionPackages} workflow={workflow} repositoryPath={repositoryPath} actionFeedback={actionFeedback} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} />
+      <RepositoryDecisionActionSurface data={data} decisionFlow={decisionFlow} executionPackages={executionPackages} workflow={workflow} repositoryPath={repositoryPath} actionFeedback={actionFeedback} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOutcomeSaved={onOutcomeSaved} onOutcomeRefresh={onOutcomeRefresh} />
     </section>
   );
 }
 
-function RepositoryDecisionActionSurface({ decisionFlow, executionPackages, workflow, repositoryPath, actionFeedback, onPrimaryAction, onRefresh }: { decisionFlow: DecisionFlow; executionPackages: ExecutionPackage[]; workflow: Workflow | null | undefined; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void }) {
+function RepositoryDecisionActionSurface({ data, decisionFlow, executionPackages, workflow, repositoryPath, actionFeedback, onPrimaryAction, onRefresh, onOutcomeSaved, onOutcomeRefresh }: { data: ControlPlane; decisionFlow: DecisionFlow; executionPackages: ExecutionPackage[]; workflow: Workflow | null | undefined; repositoryPath?: string; actionFeedback?: string; onPrimaryAction: () => void; onRefresh: () => void; onOutcomeSaved: () => Promise<void>; onOutcomeRefresh: (previousTitle: string) => Promise<void> }) {
   const [copiedAgent, setCopiedAgent] = useState<ExecutionAgent | null>(null);
+
+  const [outcomeFormOpen, setOutcomeFormOpen] = useState(false);
+  const [outcome, setOutcome] = useState<OutcomeEntry['outcome']>('implemented');
+  const [promptQuality, setPromptQuality] = useState<OutcomeEntry['promptQuality']>('worked');
+  const [userNote, setUserNote] = useState('');
+  const [refreshAfterCompletion, setRefreshAfterCompletion] = useState(true);
+  const [status, setStatus] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function saveOutcome() {
+    if (!repositoryPath) return;
+    setIsSaving(true);
+    setStatus('');
+    try {
+      const previousTitle = data.recommendation.title;
+      const response = await fetch(new URL('/api/repository/outcome', serverBaseUrl), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repositoryPath,
+          recommendationId: data.recommendation.id ?? data.decisionRanking?.selectedIssue?.id,
+          recommendationTitle: data.recommendation.title,
+          promptHash: data.recommendation.promptHash,
+          prompt: data.recommendation.prompt,
+          outcome,
+          promptQuality,
+          userNote,
+          testsRun: [],
+          refreshAfterCompletion,
+        }),
+      });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? 'Unable to save outcome.');
+      setStatus('Outcome saved to .ai/outcomes.json and .ai/outcomes.md. Next: repository intelligence is refreshing so the next decision can appear.');
+      setUserNote('');
+      await onOutcomeSaved();
+      if (refreshAfterCompletion) await onOutcomeRefresh(previousTitle);
+    } catch (saveError) {
+      setStatus(saveError instanceof Error ? saveError.message : String(saveError));
+    } finally {
+      setIsSaving(false);
+    }
+  }
   const isRefreshDecision = decisionFlow.refresh.ready || !workflow;
   const isAwaitingExternalAi = Boolean(copiedAgent) || decisionFlow.currentRequiredOwnerAction === 'Perform external work' || decisionFlow.currentRequiredOwnerAction === 'Record outcome evidence';
   const actionTitle = isAwaitingExternalAi ? 'Waiting for AI' : isRefreshDecision ? 'Refresh Intelligence' : 'Execute With';
@@ -879,10 +865,18 @@ function RepositoryDecisionActionSurface({ decisionFlow, executionPackages, work
           })}
         </div>
       )}
-      {isAwaitingExternalAi && <button className="primaryCta" data-decision-flow-primary-action="true" onClick={onPrimaryAction} type="button">Record Outcome</button>}
+      {isAwaitingExternalAi && !outcomeFormOpen && <button className="primaryCta" data-decision-flow-primary-action="true" onClick={() => setOutcomeFormOpen(true)} type="button">Record Outcome</button>}
+      {isAwaitingExternalAi && outcomeFormOpen && (
+        <section className="inlineOutcomeForm" aria-label="Record repository outcome">
+          <label>Outcome<select value={outcome} onChange={(event) => setOutcome(event.target.value as OutcomeEntry['outcome'])}>{outcomeLabels.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label>Prompt quality<select value={promptQuality} onChange={(event) => setPromptQuality(event.target.value as OutcomeEntry['promptQuality'])}>{promptQualityLabels.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label>Optional note<textarea value={userNote} onChange={(event) => setUserNote(event.target.value)} rows={3} /></label>
+          <label className="checkboxLabel"><input checked={refreshAfterCompletion} onChange={(event) => setRefreshAfterCompletion(event.target.checked)} type="checkbox" /> Refresh Repository Intelligence after saving</label>
+          <button className="primaryCta" disabled={isSaving || !repositoryPath} onClick={() => void saveOutcome()} type="button">{isSaving ? 'Saving…' : 'Save Outcome'}</button>
+        </section>
+      )}
       {isRefreshDecision && <button className="secondaryCta" data-decision-flow-primary-action="true" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Intelligence</button>}
-      {!isRefreshDecision && <button className="secondaryCta" disabled={!repositoryPath} onClick={onRefresh} type="button">Refresh Intelligence</button>}
-      {(copiedFeedback || actionFeedback) && <p className="summary workflowActionFeedback" role="status">{copiedFeedback || actionFeedback}</p>}
+      {(status || copiedFeedback || actionFeedback) && <p className="summary workflowActionFeedback" role="status">{status || copiedFeedback || actionFeedback}</p>}
     </aside>
   );
 }
@@ -1201,9 +1195,9 @@ function WorkItemPage({ data, repositoryPath, documents, workflow, actionFeedbac
   );
 }
 
-function ControlPlaneDashboard({ data, progressSummary, workflow, documents, diagnostics, actionFeedback, onPrimaryAction, onRefresh, onOpenWorkItem, onViewStrategy, onOutcomeSaved, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; actionFeedback?: string; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void; onOutcomeSaved: () => Promise<void> }) {
+function ControlPlaneDashboard({ data, progressSummary, workflow, documents, diagnostics, actionFeedback, onPrimaryAction, onRefresh, onOpenWorkItem, onViewStrategy, onOutcomeSaved, onOutcomeRefresh, repositoryPath }: { data: ControlPlane | null; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; actionFeedback?: string; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void; onOutcomeSaved: () => Promise<void>; onOutcomeRefresh: (previousTitle: string) => Promise<void> }) {
   if (!data) return <WelcomeDashboard />;
-  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} documents={documents} diagnostics={diagnostics} actionFeedback={actionFeedback} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOpenWorkItem={onOpenWorkItem} onViewStrategy={onViewStrategy} onOutcomeSaved={onOutcomeSaved} />;
+  return <ControlPlaneDashboardContent data={data} progressSummary={progressSummary} workflow={workflow} documents={documents} diagnostics={diagnostics} actionFeedback={actionFeedback} repositoryPath={repositoryPath} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOpenWorkItem={onOpenWorkItem} onViewStrategy={onViewStrategy} onOutcomeSaved={onOutcomeSaved} onOutcomeRefresh={onOutcomeRefresh} />;
 }
 
 function ProductJudgmentShadowCard({ data }: { data: ControlPlane }) {
@@ -1238,7 +1232,7 @@ function primaryHomepageAction(workflow?: Workflow | null) {
   return outcomeWorkflowText(workflow.currentPrimaryAction);
 }
 
-function ControlPlaneDashboardContent({ data, progressSummary, workflow, documents, diagnostics, actionFeedback, onPrimaryAction, onRefresh, onOpenWorkItem, onViewStrategy, onOutcomeSaved, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; actionFeedback?: string; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void; onOutcomeSaved: () => Promise<void> }) {
+function ControlPlaneDashboardContent({ data, progressSummary, workflow, documents, diagnostics, actionFeedback, onPrimaryAction, onRefresh, onOpenWorkItem, onViewStrategy, onOutcomeSaved, onOutcomeRefresh, repositoryPath }: { data: ControlPlane; progressSummary?: ProgressSummary | null; workflow?: Workflow | null; documents: Record<string, DocumentState>; diagnostics: WorkflowDiagnostics; actionFeedback?: string; repositoryPath?: string; onPrimaryAction: () => void; onRefresh: () => void; onOpenWorkItem: () => void; onViewStrategy: () => void; onOutcomeSaved: () => Promise<void>; onOutcomeRefresh: (previousTitle: string) => Promise<void> }) {
   const recommendedPackage = (() => {
     if (data.recommendation.packageType === 'product-decision') {
       return {
@@ -1287,7 +1281,7 @@ function ControlPlaneDashboardContent({ data, progressSummary, workflow, documen
 
   return (
     <div className="controlPlane compactDashboard">
-      <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} actionFeedback={actionFeedback} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOutcomeSaved={onOutcomeSaved} />
+      <CurrentTaskCard data={data} workflow={workflow} documents={documents} repositoryPath={repositoryPath} actionFeedback={actionFeedback} onPrimaryAction={onPrimaryAction} onRefresh={onRefresh} onOutcomeSaved={onOutcomeSaved} onOutcomeRefresh={onOutcomeRefresh} />
       <WorkflowDiagnosticsDisclosure workflow={workflow} diagnostics={diagnostics} onManualPrimaryAction={onPrimaryAction} />
 
       <details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced</summary>
@@ -1993,7 +1987,7 @@ export function App() {
     const advancedWorkflow = createWorkflow(workflowInputForTask(controlPlane.recommendation, task), next);
     const advancedStep = advancedWorkflow.currentStep;
     const actionResult = workflowActionResult || 'Advanced workflow';
-    const savedOutcomeReminder = currentWorkflow.currentStep.id === 'run-implementation' ? ' Outcome evidence was not saved; use Save Outcome if you want a persistent record.' : '';
+    const savedOutcomeReminder = '';
     setWorkflowDiagnostics((current) => ({ ...current, setWorkflowStateRan: true }));
     if (workflowStepClassification(advancedWorkflow) === 'refresh-only') {
       setWorkflowActionFeedback(`${actionResult ? `${actionResult}. ` : ''}Workflow advanced to ${outcomeWorkflowText(advancedStep.label)}. Refresh will start automatically.${savedOutcomeReminder}`);
@@ -2067,7 +2061,7 @@ export function App() {
         </section>}
 
         {selected.id === 'Control Plane' && isWorkItemOpen && controlPlane && currentWorkflow && <WorkItemPage data={controlPlane} repositoryPath={connectedPath || repositoryPath} documents={documents} workflow={currentWorkflow} actionFeedback={workflowActionFeedback} onBack={() => setIsWorkItemOpen(false)} onPrimaryAction={() => void handleWorkflowPrimaryAction()} />}
-        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} documents={documents} diagnostics={workflowDiagnostics} repositoryPath={connectedPath || repositoryPath} onPrimaryAction={() => void handleWorkflowPrimaryAction()} onRefresh={() => void refreshIntelligence()} actionFeedback={workflowActionFeedback} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onViewStrategy={() => setSelectedId('Strategy')} onOutcomeSaved={() => reloadOutcomeEvidence()} />}
+        {selected.id === 'Control Plane' && !isWorkItemOpen && <ControlPlaneDashboard data={controlPlane} progressSummary={progressSummary} workflow={currentWorkflow} documents={documents} diagnostics={workflowDiagnostics} repositoryPath={connectedPath || repositoryPath} onPrimaryAction={() => void handleWorkflowPrimaryAction()} onRefresh={() => void refreshIntelligence()} actionFeedback={workflowActionFeedback} onOpenWorkItem={() => { setFinishNotice(''); setIsWorkItemOpen(true); }} onViewStrategy={() => setSelectedId('Strategy')} onOutcomeSaved={() => reloadOutcomeEvidence()} onOutcomeRefresh={(previousTitle) => refreshIntelligence({ clearWorkflow: true, previousTitle })} />}
         {selected.id === 'Prompt Center' && (
           <PromptCenter connectedPath={connectedPath} documents={documents} loadFile={loadIntelligenceFile} />
         )}

@@ -62,7 +62,7 @@ test('clicking the visible repository-decision primary action routes through wor
   assert.match(appSource, /function WorkflowPrimaryButton\(\{ workflow, onPrimaryAction \}: \{ workflow: Workflow; onPrimaryAction: \(\) => void \}\)/);
   assert.match(appSource, /data-workflow-primary-action="true" onClick=\{onPrimaryAction\}/);
   assert.match(appSource, /function RepositoryDecisionActionSurface/);
-  assert.match(appSource, /data-decision-flow-primary-action="true"[^>]*onClick=\{onPrimaryAction\}/);
+  assert.match(appSource, /data-decision-flow-primary-action="true"[^>]*onClick=\{\(\) => setOutcomeFormOpen\(true\)\}/);
   assert.match(appSource, /\{workflow && <WorkflowProgress workflow=\{workflow\} onPrimaryAction=\{onPrimaryAction\} actionFeedback=\{actionFeedback\} \/>\}/);
   assert.match(appSource, /await performWorkflowStepAction\(currentWorkflow, controlPlane\);[\s\S]*const next = advanceWorkflow\(workflowInputForTask\(controlPlane\.recommendation, task\), workflowState\);[\s\S]*window\.localStorage\.setItem\(workflowStateStorageKey, JSON\.stringify\(next\)\);[\s\S]*setWorkflowState\(next\);/);
   assert.match(workflowSource, /\{ id: 'prepare-execution-package', label: 'Execution Package Ready', primaryAction: 'Choose Execution Agent', state: 'Repository Decision Ready', nextState: 'Execution Package Ready' \}/);
@@ -87,10 +87,26 @@ test('workflow actions expose visible feedback for primary CTA advancement and c
   assert.match(appSource, /className="summary workflowActionFeedback" role="status"/);
   assert.match(appSource, /Copied implementation prompt/);
   assert.match(appSource, /Workflow advanced to \$\{outcomeWorkflowText\(advancedStep\.label\)\}\. Next: \$\{outcomeWorkflowText\(advancedStep\.primaryAction\)\}/);
-  assert.match(appSource, /Outcome evidence was not saved; use Save Outcome/);
   assert.match(appSource, /Refresh started\. Next: wait for repository intelligence to finish updating\./);
   assert.match(appSource, /Refresh completed\. Next: review the updated Control Plane recommendation\./);
   assert.match(appSource, /Refresh failed: \$\{msg\}\. Next: fix the error and refresh again\./);
+});
+
+
+test('repository decision card owns outcome recording and refresh-after-save loop', () => {
+  const actionStart = appSource.indexOf('function RepositoryDecisionActionSurface');
+  const actionEnd = appSource.indexOf('function workflowInputForTask', actionStart);
+  const actionSource = appSource.slice(actionStart, actionEnd);
+  assert.match(actionSource, /const \[outcomeFormOpen, setOutcomeFormOpen\] = useState\(false\)/);
+  assert.match(actionSource, /onClick=\{\(\) => setOutcomeFormOpen\(true\)\}[^>]*>Record Outcome<\/button>/);
+  assert.match(actionSource, /<section className="inlineOutcomeForm" aria-label="Record repository outcome">/);
+  assert.match(actionSource, /Save Outcome/);
+  assert.match(actionSource, /fetch\(new URL\('\/api\/repository\/outcome', serverBaseUrl\)/);
+  assert.match(actionSource, /recommendationId: data\.recommendation\.id \?\? data\.decisionRanking\?\.selectedIssue\?\.id/);
+  assert.match(actionSource, /await onOutcomeSaved\(\);/);
+  assert.match(actionSource, /if \(refreshAfterCompletion\) await onOutcomeRefresh\(previousTitle\);/);
+  assert.match(appSource, /onOutcomeRefresh=\{\(previousTitle\) => refreshIntelligence\(\{ clearWorkflow: true, previousTitle \}\)\}/);
+  assert.doesNotMatch(appSource, /function CompletionPanel/);
 });
 
 test('deterministic no-input bridge steps are relabeled as confirmations instead of URL or paste actions', () => {
