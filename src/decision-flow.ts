@@ -1,7 +1,28 @@
 export type DecisionPackageType = 'implementation' | 'validation-experiment' | 'product-decision' | 'investigation' | 'documentation';
 export type RequiredOwnerAction = 'Review decision' | 'Choose execution agent' | 'Perform external work' | 'Record outcome evidence' | 'Approve canonical intent' | 'Refresh repository intelligence';
 export type ExecutionReadiness = 'ready' | 'external-work-pending' | 'outcome-needed' | 'refresh-ready' | 'refresh-running' | 'blocked';
-export type ExecutionAgent = 'Claude' | 'Codex' | 'ChatGPT' | 'Gemini' | 'Cursor' | 'Copy Package';
+export type ExecutionAgent = 'Claude' | 'Codex' | 'ChatGPT' | 'Gemini' | 'Generic';
+
+export type ExecutionPackage = {
+  packageType: DecisionPackageType;
+  executionAgent: ExecutionAgent;
+  packageBody: string;
+  packageSections: Array<{ title: string; body: string }>;
+  validationRequired: boolean;
+  implementationRequired: boolean;
+  packageVersion: string;
+};
+
+export type ExecutionPackageInput = {
+  packageType: DecisionPackageType;
+  executionAgent: ExecutionAgent;
+  repositoryMetadata?: Record<string, string | undefined>;
+  repositoryContextPackage?: string;
+  understandingPrompt?: string;
+  implementationPrompt?: string;
+  decisionTitle?: string;
+  decisionReason?: string;
+};
 
 export type DecisionFlowRecommendation = {
   title?: string;
@@ -46,13 +67,15 @@ export type DecisionFlow = {
   currentRequiredOwnerAction: RequiredOwnerAction;
   executionReadiness: ExecutionReadiness;
   availableExecutionAgents: ExecutionAgent[];
+  executionPackages?: ExecutionPackage[];
   packageType: DecisionPackageType;
   outcomeRecordingNeeded: boolean;
   refresh: { ready: boolean; running: boolean };
   advancedDebugDataReferences: string[];
 };
 
-const defaultExecutionAgents: ExecutionAgent[] = ['Claude', 'Codex', 'ChatGPT', 'Gemini', 'Cursor', 'Copy Package'];
+export const defaultExecutionAgents: ExecutionAgent[] = ['Claude', 'ChatGPT', 'Codex', 'Gemini', 'Generic'];
+export const executionPackageVersion = 'execution-package/v1';
 
 export function decisionPackageType(input: Pick<DecisionFlowInput, 'recommendation' | 'selectedCandidate' | 'workflow'>): DecisionPackageType {
   if (input.recommendation?.packageType === 'product-decision') return 'product-decision';
@@ -105,9 +128,32 @@ export function createDecisionFlow(input: DecisionFlowInput): DecisionFlow {
     currentRequiredOwnerAction,
     executionReadiness,
     availableExecutionAgents: defaultExecutionAgents,
+    executionPackages: [],
     packageType,
     outcomeRecordingNeeded,
     refresh: { ready: currentRequiredOwnerAction === 'Refresh repository intelligence', running: Boolean(input.isRefreshing) },
     advancedDebugDataReferences: input.debugReferences ?? ['workflow', 'decisionRanking', 'repositoryJudgment', 'productJudgment', 'generatedArtifacts', 'promptPackages'],
+  };
+}
+
+export function createExecutionPackage(input: ExecutionPackageInput): ExecutionPackage {
+  const validationRequired = input.packageType === 'validation-experiment' || Boolean(input.understandingPrompt?.trim());
+  const implementationRequired = input.packageType !== 'validation-experiment' && Boolean(input.implementationPrompt?.trim());
+  const sections: Array<{ title: string; body: string }> = [];
+  sections.push({ title: 'Execution Agent', body: input.executionAgent });
+  sections.push({ title: 'Package Metadata', body: [`Package Type: ${input.packageType}`, `Package Version: ${executionPackageVersion}`, ...Object.entries(input.repositoryMetadata ?? {}).filter(([, value]) => Boolean(value)).map(([key, value]) => `${key}: ${value}`)].join('\n') });
+  if (input.decisionTitle || input.decisionReason) sections.push({ title: 'Repository Decision', body: [input.decisionTitle, input.decisionReason].filter(Boolean).join('\n\n') });
+  if (input.repositoryContextPackage?.trim()) sections.push({ title: 'Repository Context', body: input.repositoryContextPackage.trim() });
+  if (validationRequired && input.understandingPrompt?.trim()) sections.push({ title: 'Understanding Check', body: input.understandingPrompt.trim() });
+  if (implementationRequired && input.implementationPrompt?.trim()) sections.push({ title: 'Implementation Instructions', body: input.implementationPrompt.trim() });
+  sections.push({ title: 'Required Execution Instructions', body: 'Use this single execution package as the complete repository-local artifact. Do not ask the repository owner for a second clipboard package before responding. Return your result so the owner can record the outcome in Agent IDE and refresh Repository Intelligence.' });
+  return {
+    packageType: input.packageType,
+    executionAgent: input.executionAgent,
+    packageBody: sections.map((section) => `## ${section.title}\n${section.body}`).join('\n\n'),
+    packageSections: sections,
+    validationRequired,
+    implementationRequired,
+    packageVersion: executionPackageVersion,
   };
 }

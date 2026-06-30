@@ -51,10 +51,10 @@ test('persisted workflowState cannot inject implementationPrompt content', () =>
 test('createWorkflow ignores stale persisted state when workflowKey does not match current recommendation', () => {
   const staleState = {
     workflowKey: 'Implementation:implementation:Advance strategy: Control Plane reports repository handoff readiness as Ready',
-    currentStepId: 'open-codex',
-    repositoryState: 'Workflow In Progress',
+    currentStepId: 'waiting-for-external-ai',
+    repositoryState: 'Execution Package Ready',
     status: 'In Progress',
-    completedStepIds: ['copy-implementation-prompt'],
+    completedStepIds: ['prepare-execution-package'],
   };
   const freshInput = {
     packageType: 'implementation',
@@ -66,7 +66,7 @@ test('createWorkflow ignores stale persisted state when workflowKey does not mat
 
   const workflow = createWorkflow(freshInput, staleState);
   assert.equal(workflow.workflowKey, freshKey, 'workflow must carry the fresh key');
-  assert.equal(workflow.currentStep.id, 'copy-implementation-prompt', 'stale step must be discarded — workflow must restart from first step');
+  assert.equal(workflow.currentStep.id, 'prepare-execution-package', 'stale step must be discarded — workflow must restart from first step');
   assert.equal(workflow.completedSteps.length, 0, 'stale completed steps must be discarded');
 });
 
@@ -75,13 +75,13 @@ test('createWorkflow preserves step position only when workflowKey matches', () 
   const key = workflowKey(input);
   const matchingState = {
     workflowKey: key,
-    currentStepId: 'open-codex',
-    repositoryState: 'Workflow In Progress',
+    currentStepId: 'waiting-for-external-ai',
+    repositoryState: 'Execution Package Ready',
     status: 'In Progress',
-    completedStepIds: ['copy-implementation-prompt'],
+    completedStepIds: ['prepare-execution-package'],
   };
   const workflow = createWorkflow(input, matchingState);
-  assert.equal(workflow.currentStep.id, 'open-codex', 'matching workflowKey must preserve step position');
+  assert.equal(workflow.currentStep.id, 'waiting-for-external-ai', 'matching workflowKey must preserve step position');
   assert.equal(workflow.completedSteps.length, 1, 'matching workflowKey must preserve completed steps');
 });
 

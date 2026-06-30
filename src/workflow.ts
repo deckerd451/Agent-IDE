@@ -2,10 +2,10 @@ export type RepositoryWorkflowState =
   | 'Repository Not Connected'
   | 'Refresh Repository Intelligence'
   | 'Repository Analysis Running'
-  | 'Recommendation Ready'
-  | 'Workflow In Progress'
-  | 'Waiting for External Work (Codex / ChatGPT / User)'
-  | 'Validate Result'
+  | 'Repository Decision Ready'
+  | 'Execution Package Ready'
+  | 'Waiting For External AI'
+  | 'Record Outcome'
   | 'Refresh Repository'
   | 'Complete'
   | 'Next Recommendation Ready';
@@ -62,25 +62,9 @@ type StepDefinition = Omit<WorkflowStep, 'status'>;
 
 
 const workflowStepClassifications: Record<string, WorkflowStepClassification> = {
-  'copy-context-package': 'user-action-required',
-  'copy-validation-prompt': 'user-action-required',
-  'copy-understanding-check': 'user-action-required',
-  'copy-implementation-prompt': 'user-action-required',
-  'review-canonical-edit': 'user-action-required',
-  'edit-proposal': 'user-action-required',
-  'apply-canonical-edit': 'user-action-required',
-  'review-question': 'user-action-required',
-  'inspect-evidence': 'user-action-required',
-  'record-finding': 'user-action-required',
-  'review-documentation-gap': 'user-action-required',
-  'edit-documentation': 'user-action-required',
-  'review-diff': 'user-action-required',
-  'open-codex': 'external-work-required',
-  'run-implementation': 'external-work-required',
-  'open-chatgpt': 'external-work-required',
-  'paste-response': 'external-work-required',
-  'validate-result': 'auto-advance',
-  'run-validation': 'refresh-only',
+  'prepare-execution-package': 'user-action-required',
+  'waiting-for-external-ai': 'external-work-required',
+  'record-outcome': 'external-work-required',
   'refresh-repository': 'refresh-only',
 };
 
@@ -93,58 +77,22 @@ export function workflowStepRequiresUserClick(step: Pick<WorkflowStep, 'id'> | n
   return classifyWorkflowStep(step) === 'user-action-required' || classifyWorkflowStep(step) === 'external-work-required';
 }
 
+const repositoryDecisionSteps = (goal: string): { goal: string; steps: StepDefinition[] } => ({
+  goal,
+  steps: [
+    { id: 'prepare-execution-package', label: 'Execution Package Ready', primaryAction: 'Choose Execution Agent', state: 'Repository Decision Ready', nextState: 'Execution Package Ready' },
+    { id: 'waiting-for-external-ai', label: 'Waiting For External AI', primaryAction: 'Waiting For External AI', state: 'Execution Package Ready', nextState: 'Waiting For External AI' },
+    { id: 'record-outcome', label: 'Record Outcome', primaryAction: 'Record Outcome', state: 'Waiting For External AI', nextState: 'Record Outcome' },
+    { id: 'refresh-repository', label: 'Refresh Repository Intelligence', primaryAction: 'Refresh Repository Intelligence', state: 'Record Outcome', nextState: 'Repository Analysis Running' },
+  ],
+});
+
 const workflowDefinitions: Record<WorkflowType, { goal: string; steps: StepDefinition[] }> = {
-  'Product Decision': {
-    goal: 'Turn the recommended product decision into approved repository intent.',
-    steps: [
-      { id: 'review-canonical-edit', label: 'Review the proposed canonical decision', primaryAction: 'Review Canonical Edit', state: 'Recommendation Ready', nextState: 'Workflow In Progress' },
-      { id: 'edit-proposal', label: 'Edit or approve the owner-authored decision', primaryAction: 'Approve Decision Text', state: 'Workflow In Progress', nextState: 'Waiting for External Work (Codex / ChatGPT / User)' },
-      { id: 'apply-canonical-edit', label: 'Apply the canonical edit to repository intelligence', primaryAction: 'Apply Canonical Edit', state: 'Waiting for External Work (Codex / ChatGPT / User)', nextState: 'Validate Result' },
-      { id: 'validate-result', label: 'Validate the updated repository intelligence', primaryAction: 'Validate Result', state: 'Validate Result', nextState: 'Refresh Repository' },
-      { id: 'refresh-repository', label: 'Refresh repository intelligence', primaryAction: 'Refresh Repository Intelligence', state: 'Refresh Repository', nextState: 'Repository Analysis Running' },
-    ],
-  },
-  Implementation: {
-    goal: 'Execute the recommended repository improvement.',
-    steps: [
-      { id: 'copy-implementation-prompt', label: 'Copy the implementation prompt', primaryAction: 'Copy Implementation Prompt', state: 'Recommendation Ready', nextState: 'Workflow In Progress' },
-      { id: 'open-codex', label: 'Open Codex or your coding agent', primaryAction: 'Open Codex', state: 'Workflow In Progress', nextState: 'Waiting for External Work (Codex / ChatGPT / User)' },
-      { id: 'run-implementation', label: 'Complete the implementation outside Agent IDE', primaryAction: 'Mark External Work Complete', state: 'Waiting for External Work (Codex / ChatGPT / User)', nextState: 'Validate Result' },
-      { id: 'validate-result', label: 'Run or review validation checks', primaryAction: 'Validate Result', state: 'Validate Result', nextState: 'Refresh Repository' },
-      { id: 'refresh-repository', label: 'Refresh repository intelligence', primaryAction: 'Refresh Repository Intelligence', state: 'Refresh Repository', nextState: 'Repository Analysis Running' },
-    ],
-  },
-  Validation: {
-    goal: 'Verify repository intelligence with a fresh AI handoff.',
-    steps: [
-      { id: 'copy-context-package', label: 'Copy Context Package', primaryAction: 'Copy Context Package', state: 'Recommendation Ready', nextState: 'Workflow In Progress' },
-      { id: 'copy-understanding-check', label: 'Copy Understanding Check', primaryAction: 'Copy Understanding Check', state: 'Workflow In Progress', nextState: 'Waiting for External Work (Codex / ChatGPT / User)' },
-      { id: 'open-chatgpt', label: 'Open ChatGPT', primaryAction: 'Open ChatGPT', state: 'Waiting for External Work (Codex / ChatGPT / User)', nextState: 'Workflow In Progress' },
-      { id: 'paste-response', label: 'Paste the AI response back into Agent IDE', primaryAction: 'Paste Validation Response', state: 'Workflow In Progress', nextState: 'Validate Result' },
-      { id: 'run-validation', label: 'Run validation', primaryAction: 'Run Validation', state: 'Validate Result', nextState: 'Refresh Repository' },
-      { id: 'refresh-repository', label: 'Refresh repository intelligence', primaryAction: 'Refresh Repository Intelligence', state: 'Refresh Repository', nextState: 'Repository Analysis Running' },
-    ],
-  },
-  Investigation: {
-    goal: 'Resolve the ambiguity that blocks safe implementation.',
-    steps: [
-      { id: 'review-question', label: 'Review the blocking question', primaryAction: 'Review Question', state: 'Recommendation Ready', nextState: 'Workflow In Progress' },
-      { id: 'inspect-evidence', label: 'Inspect the cited evidence', primaryAction: 'Inspect Evidence', state: 'Workflow In Progress', nextState: 'Waiting for External Work (Codex / ChatGPT / User)' },
-      { id: 'record-finding', label: 'Record the finding', primaryAction: 'Record Finding', state: 'Waiting for External Work (Codex / ChatGPT / User)', nextState: 'Validate Result' },
-      { id: 'validate-result', label: 'Validate the finding', primaryAction: 'Validate Result', state: 'Validate Result', nextState: 'Refresh Repository' },
-      { id: 'refresh-repository', label: 'Refresh repository intelligence', primaryAction: 'Refresh Repository Intelligence', state: 'Refresh Repository', nextState: 'Repository Analysis Running' },
-    ],
-  },
-  Documentation: {
-    goal: 'Convert the documentation recommendation into a repository update.',
-    steps: [
-      { id: 'review-documentation-gap', label: 'Review the documentation gap', primaryAction: 'Review Documentation Gap', state: 'Recommendation Ready', nextState: 'Workflow In Progress' },
-      { id: 'edit-documentation', label: 'Edit documentation', primaryAction: 'Edit Documentation', state: 'Workflow In Progress', nextState: 'Waiting for External Work (Codex / ChatGPT / User)' },
-      { id: 'review-diff', label: 'Review the documentation diff', primaryAction: 'Review Diff', state: 'Waiting for External Work (Codex / ChatGPT / User)', nextState: 'Validate Result' },
-      { id: 'validate-result', label: 'Validate documentation output', primaryAction: 'Validate Result', state: 'Validate Result', nextState: 'Refresh Repository' },
-      { id: 'refresh-repository', label: 'Refresh repository intelligence', primaryAction: 'Refresh Repository Intelligence', state: 'Refresh Repository', nextState: 'Repository Analysis Running' },
-    ],
-  },
+  'Product Decision': repositoryDecisionSteps('Turn the recommended product decision into approved repository intent.'),
+  Implementation: repositoryDecisionSteps('Execute the recommended repository improvement.'),
+  Validation: repositoryDecisionSteps('Verify repository intelligence with a fresh AI handoff.'),
+  Investigation: repositoryDecisionSteps('Resolve the ambiguity that blocks safe implementation.'),
+  Documentation: repositoryDecisionSteps('Convert the documentation recommendation into a repository update.'),
 };
 
 export function workflowTypeForInput(input: WorkflowInput): WorkflowType {
