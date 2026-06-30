@@ -76,6 +76,27 @@ test('copy-only buttons are demoted and cannot be the sole primary CTA', () => {
   assert.doesNotMatch(appSource, /<button className="primaryCta"[^>]*copyText/);
 });
 
+
+test('workflow actions expose visible feedback for primary CTA advancement and clipboard results', () => {
+  assert.match(appSource, /workflowActionFeedback/);
+  assert.match(appSource, /className="summary workflowActionFeedback" role="status"/);
+  assert.match(appSource, /Copied implementation prompt/);
+  assert.match(appSource, /Workflow advanced to \$\{outcomeWorkflowText\(advancedStep\.label\)\}\. Next: \$\{outcomeWorkflowText\(advancedStep\.primaryAction\)\}/);
+  assert.match(appSource, /Outcome evidence was not saved; use Save Outcome/);
+  assert.match(appSource, /Refresh started\. Next: wait for repository intelligence to finish updating\./);
+  assert.match(appSource, /Refresh completed\. Next: review the updated Control Plane recommendation\./);
+  assert.match(appSource, /Refresh failed: \$\{msg\}\. Next: fix the error and refresh again\./);
+});
+
+test('deterministic no-input bridge steps are relabeled as confirmations instead of URL or paste actions', () => {
+  for (const expected of ['Confirm ChatGPT Is Open', 'Confirm Validation Response Reviewed', 'Confirm Validation Reviewed', 'Copy Prompt and Confirm Coding Agent Is Open']) {
+    assert.ok(appSource.includes(expected), `${expected} should be rendered from workflow text normalization`);
+  }
+  assert.match(appSource, /replace\(\/Open ChatGPT\/gi, 'Confirm ChatGPT Is Open'\)/);
+  assert.match(appSource, /replace\(\/Paste Validation Response\/gi, 'Confirm Validation Response Reviewed'\)/);
+  assert.match(appSource, /replace\(\/Run Validation\/gi, 'Confirm Validation Reviewed'\)/);
+});
+
 test('terminal refresh step does not persist recommendation-affecting validation completion state before refresh and clears workflow state after', () => {
   assert.doesNotMatch(appSource, /localStorage\.setItem\(validationCompletionStorageKey/);
   assert.doesNotMatch(appSource, /persistValidationCompletion/);
