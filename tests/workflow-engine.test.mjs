@@ -46,20 +46,24 @@ test('workflow state persists locally and resumes after reload', () => {
   assert.match(appSource, /window\.localStorage\.setItem\(workflowStateStorageKey, JSON\.stringify\(workflowState\)\)/);
 });
 
-test('work queue presents one primary workflow action while diagnostics remain advanced', () => {
+test('work queue presents one repository-decision action surface while diagnostics remain advanced', () => {
   for (const expected of ['Work Queue', 'Repository improving', 'recommendationReason', 'singleRecommendationCard', 'Advanced Repository Intelligence', 'Refresh Repository Intelligence', 'stepToUserTask', 'currentTaskCard', 'Repository is up to date']) {
     assert.match(appSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
   assert.match(appSource, /function primaryHomepageAction\(workflow\?: Workflow \| null\)/);
   assert.match(appSource, /return outcomeWorkflowText\(workflow\.currentPrimaryAction\)/);
+  assert.match(appSource, /function RepositoryDecisionActionSurface/);
+  assert.match(appSource, /data-decision-flow-primary-action="true"/);
   assert.match(appSource, /<details className="controlCard disclosureCard advancedIntelligence" aria-label="Advanced Repository Intelligence"><summary>Advanced<\/summary>/);
 });
 
 
-test('clicking the visible Work Queue primary CTA routes through workflow advancement', () => {
+test('clicking the visible repository-decision primary action routes through workflow advancement', () => {
   assert.match(appSource, /function WorkflowPrimaryButton\(\{ workflow, onPrimaryAction \}: \{ workflow: Workflow; onPrimaryAction: \(\) => void \}\)/);
   assert.match(appSource, /data-workflow-primary-action="true" onClick=\{onPrimaryAction\}/);
-  assert.match(appSource, /\{workflow \? <WorkflowPrimaryButton workflow=\{workflow\} onPrimaryAction=\{onPrimaryAction\} \/> : <button className="primaryCta"/);
+  assert.match(appSource, /function RepositoryDecisionActionSurface/);
+  assert.match(appSource, /data-decision-flow-primary-action="true"[^>]*onClick=\{isRefreshDecision \? onRefresh : onPrimaryAction\}/);
+  assert.match(appSource, /\{workflow && <WorkflowProgress workflow=\{workflow\} onPrimaryAction=\{onPrimaryAction\} actionFeedback=\{actionFeedback\} \/>\}/);
   assert.match(appSource, /await performWorkflowStepAction\(currentWorkflow, controlPlane\);[\s\S]*const next = advanceWorkflow\(workflowInputForTask\(controlPlane\.recommendation, task\), workflowState\);[\s\S]*window\.localStorage\.setItem\(workflowStateStorageKey, JSON\.stringify\(next\)\);[\s\S]*setWorkflowState\(next\);/);
   assert.match(workflowSource, /\{ id: 'copy-context-package', label: 'Copy Context Package', primaryAction: 'Copy Context Package', state: 'Recommendation Ready', nextState: 'Workflow In Progress' \},\s*\{ id: 'copy-understanding-check', label: 'Copy Understanding Check', primaryAction: 'Copy Understanding Check', state: 'Workflow In Progress'/);
   for (const expected of ['Development Diagnostics', 'lastPrimaryActionClicked', 'performWorkflowStepActionRan', 'advanceWorkflowRan', 'setWorkflowStateRan', 'localStoragePersistenceSucceeded', 'currentLocalStorageValue']) {

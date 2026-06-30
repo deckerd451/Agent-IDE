@@ -1299,6 +1299,37 @@ h1 {
   width: 100%;
 }
 
+
+.repositoryDecisionActions {
+  align-self: start;
+  background: rgba(12, 18, 30, 0.78);
+  border: 1px solid #2b3a52;
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.repositoryDecisionActions h3 {
+  margin: 0;
+}
+
+.repositoryDecisionActions p {
+  color: #b8c4d6;
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+.executionAgentGrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.compactCta {
+  font-size: 0.82rem;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
 .simpleLoop {
   counter-reset: simple-loop;
   display: grid;
