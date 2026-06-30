@@ -136,17 +136,26 @@ export function createDecisionFlow(input: DecisionFlowInput): DecisionFlow {
   };
 }
 
+
+function removeEmbeddedContextPackage(prompt: string, contextPackage: string) {
+  const trimmedContext = contextPackage.trim();
+  if (!trimmedContext) return prompt.trim();
+  return prompt.replace(trimmedContext, '').replace(/\n?---\s*$/m, '').trim();
+}
+
 export function createExecutionPackage(input: ExecutionPackageInput): ExecutionPackage {
-  const validationRequired = input.packageType === 'validation-experiment' || Boolean(input.understandingPrompt?.trim());
+  const repositoryContextPackage = input.repositoryContextPackage?.trim() ?? '';
+  const understandingPrompt = input.understandingPrompt?.trim() && repositoryContextPackage ? removeEmbeddedContextPackage(input.understandingPrompt, repositoryContextPackage) : input.understandingPrompt?.trim();
+  const validationRequired = input.packageType === 'validation-experiment' || Boolean(understandingPrompt);
   const implementationRequired = input.packageType !== 'validation-experiment' && Boolean(input.implementationPrompt?.trim());
   const sections: Array<{ title: string; body: string }> = [];
+  if (input.decisionTitle || input.decisionReason) sections.push({ title: 'Task', body: [input.decisionTitle, input.decisionReason].filter(Boolean).join('\n\n') });
+  sections.push({ title: 'Required Execution Instructions', body: 'Use this single execution package as the complete repository-local artifact. Do not ask the repository owner for a second clipboard package before responding. Return your result so the owner can record the outcome in Agent IDE and refresh Repository Intelligence.' });
+  if (implementationRequired && input.implementationPrompt?.trim()) sections.push({ title: 'Implementation Instructions', body: input.implementationPrompt.trim() });
+  if (validationRequired && understandingPrompt) sections.push({ title: 'Understanding Check', body: understandingPrompt });
+  if (repositoryContextPackage) sections.push({ title: 'Context Package', body: repositoryContextPackage });
   sections.push({ title: 'Execution Agent', body: input.executionAgent });
   sections.push({ title: 'Package Metadata', body: [`Package Type: ${input.packageType}`, `Package Version: ${executionPackageVersion}`, ...Object.entries(input.repositoryMetadata ?? {}).filter(([, value]) => Boolean(value)).map(([key, value]) => `${key}: ${value}`)].join('\n') });
-  if (input.decisionTitle || input.decisionReason) sections.push({ title: 'Repository Decision', body: [input.decisionTitle, input.decisionReason].filter(Boolean).join('\n\n') });
-  if (input.repositoryContextPackage?.trim()) sections.push({ title: 'Repository Context', body: input.repositoryContextPackage.trim() });
-  if (validationRequired && input.understandingPrompt?.trim()) sections.push({ title: 'Understanding Check', body: input.understandingPrompt.trim() });
-  if (implementationRequired && input.implementationPrompt?.trim()) sections.push({ title: 'Implementation Instructions', body: input.implementationPrompt.trim() });
-  sections.push({ title: 'Required Execution Instructions', body: 'Use this single execution package as the complete repository-local artifact. Do not ask the repository owner for a second clipboard package before responding. Return your result so the owner can record the outcome in Agent IDE and refresh Repository Intelligence.' });
   return {
     packageType: input.packageType,
     executionAgent: input.executionAgent,

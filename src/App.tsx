@@ -644,7 +644,7 @@ function recommendationDisplaySummary(data: ControlPlane, task?: DecisionCandida
 
 function executionPackagesForDecision(data: ControlPlane, documents: Record<string, DocumentState>, decisionFlow: DecisionFlow): ExecutionPackage[] {
   const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
-  const validationPrompt = buildValidationPrompt(contextPackage);
+  const validationPrompt = validationPromptInstructions;
   return decisionFlow.availableExecutionAgents.map((executionAgent) => createExecutionPackage({
     packageType: decisionFlow.packageType,
     executionAgent,
