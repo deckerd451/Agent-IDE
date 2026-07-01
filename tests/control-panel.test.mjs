@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { access, readFile } from 'node:fs/promises';
+import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { test } from 'node:test';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { repositoryIntelligenceStatus, renderRepositoryIntelligence } from '../terminal/decision-status.mjs';
 
 const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
 const controlPanel = await readFile('terminal/control-panel.sh', 'utf8');
@@ -61,7 +64,77 @@ test('control panel dashboard renders repository, development, quality, and logs
   assert.match(stdout, /Agent IDE terminal control panel/);
 });
 
-test('control panel dashboard implementation does not read repository intelligence or recommendations', () => {
-  assert.doesNotMatch(controlPanel, /\.ai/);
-  assert.doesNotMatch(controlPanel, /recommendation/i);
+
+
+test('control panel dashboard renders repository intelligence section in status output', async () => {
+  const { stdout } = await execFileAsync('bash', ['-lc', 'npm run control -- status']);
+
+  assert.match(stdout, /Repository Intelligence\n/);
+  assert.match(stdout, /Decision:/);
+  assert.match(stdout, /Development\n/);
+  assert.match(stdout, /Quality\n/);
+  assert.match(stdout, /Logs\n/);
 });
+
+test('repository intelligence status renders populated recommendation artifacts', async () => {
+  const dir = await mkdtempRepo();
+  try {
+    const ai = join(dir, '.ai');
+    await mkdir(ai, { recursive: true });
+    await writeFile(join(ai, 'active-recommendation.json'), JSON.stringify({ title: 'Tighten execution package', packageType: 'implementation', confidence: 'High' }));
+    await writeFile(join(ai, 'decision-ranking.json'), JSON.stringify({ selectedIssue: { id: 'tighten', title: 'Fallback title' }, candidates: [{ id: 'tighten', title: 'Tighten execution package', packageType: 'implementation', selected: true }] }));
+    await writeFile(join(ai, 'ai-handoff-validation.json'), JSON.stringify({ status: 'Ready', overallScore: 96 }));
+
+    const rendered = renderRepositoryIntelligence(await repositoryIntelligenceStatus(dir));
+
+    assert.match(rendered, /Decision:\s+Tighten execution package/);
+    assert.match(rendered, /Package type:\s+implementation/);
+    assert.match(rendered, /Confidence:\s+High/);
+    assert.match(rendered, /Handoff readiness:\s+Ready \(96\/100\)/);
+    assert.match(rendered, /Execution agents:\s+Claude, Codex, ChatGPT, Gemini, Generic/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('repository intelligence status renders empty state for missing artifacts', async () => {
+  const dir = await mkdtempRepo();
+  try {
+    const rendered = renderRepositoryIntelligence(await repositoryIntelligenceStatus(dir));
+
+    assert.match(rendered, /Repository Intelligence/);
+    assert.match(rendered, /Decision: Not available — refresh repository intelligence in Agent IDE\./);
+    assert.doesNotMatch(rendered, /Package type:/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('repository intelligence status ignores invalid JSON without crashing', async () => {
+  const dir = await mkdtempRepo();
+  try {
+    const ai = join(dir, '.ai');
+    await mkdir(ai, { recursive: true });
+    await writeFile(join(ai, 'active-recommendation.json'), '{not json');
+    await writeFile(join(ai, 'decision-ranking.json'), '{also not json');
+
+    const rendered = renderRepositoryIntelligence(await repositoryIntelligenceStatus(dir));
+
+    assert.match(rendered, /Decision: Not available — refresh repository intelligence in Agent IDE\./);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('terminal dashboard does not expose workflow or FSM language', async () => {
+  const { stdout } = await execFileAsync('bash', ['-lc', 'npm run control -- status']);
+
+  assert.doesNotMatch(stdout, /workflow/i);
+  assert.doesNotMatch(stdout, /FSM/i);
+  assert.doesNotMatch(stdout, /currentStep|completionState|repositoryState/);
+});
+
+async function mkdtempRepo() {
+  const { mkdtemp } = await import('node:fs/promises');
+  return mkdtemp(join(tmpdir(), 'agent-ide-control-panel-'));
+}
