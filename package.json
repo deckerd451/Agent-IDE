@@ -21,7 +21,8 @@
     "product:intelligence": "node scripts/product-intelligence.mjs",
     "strategy": "node scripts/strategy.mjs",
     "evidence:lineage": "node scripts/evidence-lineage.mjs",
-    "test": "node --loader ./scripts/ts-loader.mjs --test tests/*.test.mjs"
+    "test": "node --loader ./scripts/ts-loader.mjs --test tests/*.test.mjs",
+    "control": "bash terminal/control-panel.sh"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
