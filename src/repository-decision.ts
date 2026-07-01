@@ -1,4 +1,40 @@
-import { createDecisionFlow, defaultExecutionAgents, type DecisionFlowInput, type ExecutionAgent } from './decision-flow';
+export type ExecutionAgent = 'Claude' | 'Codex' | 'ChatGPT' | 'Gemini' | 'Generic';
+type DecisionPackageType = 'implementation' | 'validation-experiment' | 'product-decision' | 'investigation' | 'documentation';
+type RequiredOwnerAction = 'Review decision' | 'Choose execution agent' | 'Perform external work' | 'Record outcome evidence' | 'Approve canonical intent' | 'Refresh repository intelligence';
+type ExecutionReadiness = 'ready' | 'external-work-pending' | 'outcome-needed' | 'refresh-ready' | 'refresh-running' | 'blocked';
+
+type DecisionFlowRecommendation = {
+  title?: string;
+  displayTitle?: string;
+  explanation?: string;
+  whyItMatters?: string;
+  packageType?: 'implementation' | 'product-decision' | 'validation-experiment' | 'task-clarification' | string;
+};
+
+type DecisionFlowCandidate = {
+  title?: string;
+  category?: string;
+  reason?: string;
+  ownerAction?: string;
+};
+
+type DecisionFlowStatus = {
+  repositoryName?: string;
+  overallHealth?: string;
+  repositoryHandoffReadiness?: string;
+  currentConfidence?: string;
+};
+
+type RepositoryDecisionFlowInput = {
+  status?: DecisionFlowStatus;
+  recommendation?: DecisionFlowRecommendation | null;
+  selectedCandidate?: DecisionFlowCandidate | null;
+  workflow?: { type?: string; repositoryState?: string; completionState?: string; currentStep?: { id?: string } } | null;
+  isRefreshing?: boolean;
+  hasOutcomeEvidenceForCurrentDecision?: boolean;
+};
+
+const repositoryDecisionExecutionAgents: ExecutionAgent[] = ['Claude', 'Codex', 'ChatGPT', 'Gemini', 'Generic'];
 
 export type RepositoryDecision = Readonly<{
   available: boolean;
@@ -60,7 +96,39 @@ function formatHandoffReadiness(validation: any, healthMarkdown: string, status:
   return clean(healthMatch?.[1]) || 'Unknown';
 }
 
-export type RepositoryDecisionInput = DecisionFlowInput & {
+function repositoryDecisionPackageType(input: Pick<RepositoryDecisionFlowInput, 'recommendation' | 'selectedCandidate' | 'workflow'>): DecisionPackageType {
+  if (input.recommendation?.packageType === 'product-decision') return 'product-decision';
+  if (input.recommendation?.packageType === 'validation-experiment') return 'validation-experiment';
+  if (input.recommendation?.packageType === 'implementation') return 'implementation';
+  const text = `${input.selectedCandidate?.category ?? ''} ${input.selectedCandidate?.title ?? ''} ${input.selectedCandidate?.ownerAction ?? ''} ${input.recommendation?.title ?? ''} ${input.workflow?.type ?? ''}`;
+  if (/documentation|docs/i.test(text)) return 'documentation';
+  if (/investigat|unknown|risk|explain/i.test(text)) return 'investigation';
+  return 'implementation';
+}
+
+function isExternalWorkStep(step: { id?: string } | null | undefined) {
+  return Boolean(step?.id && ['open-codex', 'run-implementation', 'open-chatgpt', 'paste-response', 'edit-documentation'].includes(step.id));
+}
+
+function repositoryOwnerActionFor(input: RepositoryDecisionFlowInput, packageType: DecisionPackageType): RequiredOwnerAction {
+  if (input.isRefreshing) return 'Refresh repository intelligence';
+  const workflow = input.workflow;
+  if (!workflow) return 'Refresh repository intelligence';
+  if (workflow.repositoryState === 'Refresh Repository' || workflow.completionState === 'Ready To Refresh') return 'Refresh repository intelligence';
+  if (isExternalWorkStep(workflow.currentStep)) return input.hasOutcomeEvidenceForCurrentDecision ? 'Perform external work' : 'Record outcome evidence';
+  if (packageType === 'product-decision') return 'Approve canonical intent';
+  return 'Choose execution agent';
+}
+
+function repositoryReadinessFor(input: RepositoryDecisionFlowInput, ownerAction: RequiredOwnerAction): ExecutionReadiness {
+  if (input.isRefreshing) return 'refresh-running';
+  if (ownerAction === 'Refresh repository intelligence') return 'refresh-ready';
+  if (ownerAction === 'Perform external work') return 'external-work-pending';
+  if (ownerAction === 'Record outcome evidence') return 'outcome-needed';
+  return input.recommendation ? 'ready' : 'blocked';
+}
+
+export type RepositoryDecisionInput = RepositoryDecisionFlowInput & {
   repositoryName?: string;
   quality?: any;
   aiHandoffValidation?: any;
@@ -70,22 +138,27 @@ export type RepositoryDecisionInput = DecisionFlowInput & {
 export function createRepositoryDecision(input: RepositoryDecisionInput): RepositoryDecision {
   const selectedCandidate = input.selectedCandidate as any;
   const recommendation = input.recommendation as any;
-  const flow = createDecisionFlow(input);
+  const packageType = repositoryDecisionPackageType(input);
+  const currentRequiredOwnerAction = repositoryOwnerActionFor(input, packageType);
+  const executionReadiness = repositoryReadinessFor(input, currentRequiredOwnerAction);
   const repositoryName = firstValue(input.repositoryName, input.status?.repositoryName, 'Connected repository');
-  const selectedDecision = flow.selectedDecisionTitle || emptyDecision;
-  const decisionSummary = firstValue(selectedCandidate?.reason, recommendation?.displaySummary, recommendation?.explanation, recommendation?.whyItMatters, flow.whyThisDecisionExists);
+  const repositoryStatus = [input.status?.repositoryName, input.status?.overallHealth, input.status?.repositoryHandoffReadiness, input.status?.currentConfidence].filter(Boolean).join(' · ') || 'Repository intelligence not loaded';
+  const selectedDecisionTitle = selectedCandidate?.title ?? recommendation?.displayTitle ?? recommendation?.title ?? 'Refresh repository intelligence';
+  const selectedDecision = selectedDecisionTitle || emptyDecision;
+  const whyThisDecisionExists = selectedCandidate?.reason ?? recommendation?.explanation ?? recommendation?.whyItMatters ?? 'Repository intelligence needs to be generated before a decision can be selected.';
+  const decisionSummary = firstValue(selectedCandidate?.reason, recommendation?.displaySummary, recommendation?.explanation, recommendation?.whyItMatters, whyThisDecisionExists);
   const model = {
     available: selectedDecision !== 'Refresh repository intelligence' && selectedDecision !== emptyDecision,
     repositoryName,
-    repositoryStatus: flow.repositoryStatus,
+    repositoryStatus,
     selectedDecision: selectedDecision === 'Refresh repository intelligence' ? emptyDecision : selectedDecision,
-    packageType: flow.packageType,
+    packageType,
     confidence: formatConfidence(recommendation, selectedCandidate, input.quality, input.status),
     handoffReadiness: formatHandoffReadiness(input.aiHandoffValidation, input.healthMarkdown ?? '', input.status),
-    executionAgents: Object.freeze([...defaultExecutionAgents]),
-    executionReady: flow.executionReadiness,
+    executionAgents: Object.freeze([...repositoryDecisionExecutionAgents]),
+    executionReady: executionReadiness,
     decisionSummary: decisionSummary || 'Repository intelligence needs to be generated before a decision can be selected.',
-    recommendedOwnerAction: flow.currentRequiredOwnerAction,
+    recommendedOwnerAction: currentRequiredOwnerAction,
   };
   return Object.freeze(model);
 }
