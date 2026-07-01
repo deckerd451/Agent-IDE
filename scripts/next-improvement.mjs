@@ -158,8 +158,26 @@ function backlogCount(backlog) { return bullets(mdSection(backlog, 'Prioritized 
 function score(value, fallback = 100) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 
 
+function normalizeRecommendationTitle(value) {
+  return String(value ?? '').replace(/`+/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function safelyNormalizeRecommendationId(value) {
+  const text = String(value ?? '');
+  const normalized = normalizeRecommendationTitle(text);
+  return normalized !== text ? normalized : '';
+}
+
 function outcomeMatchesRecommendation(entry, issue) {
-  return entry?.recommendationId === issue?.id || entry?.recommendationTitle === issue?.title;
+  if (entry?.recommendationId === issue?.id || entry?.recommendationTitle === issue?.title) return true;
+
+  const entryTitle = normalizeRecommendationTitle(entry?.recommendationTitle);
+  const issueTitle = normalizeRecommendationTitle(issue?.title);
+  if (entryTitle && issueTitle && entryTitle === issueTitle) return true;
+
+  const entryId = safelyNormalizeRecommendationId(entry?.recommendationId);
+  const issueId = safelyNormalizeRecommendationId(issue?.id);
+  return Boolean(entryId && issueId && entryId === issueId);
 }
 
 function completedWorkedOutcomeFor(issue, outcomeEntries = []) {
