@@ -567,7 +567,16 @@ export function buildDecisionRanking(issues) {
     ],
     tieBreaking: ['priorityScore desc', 'expectedImprovement.total desc', 'actionability rank asc', 'severity rank asc', 'title asc', 'id asc'],
     candidates: enriched,
-    selectedIssue: selectedIssue ? { id: selectedIssue.id, title: selectedIssue.title, rank: selectedIssue.rank, priorityScore: selectedIssue.priorityScore, advancement: selectedIssue.advancement } : null,
+    selectedIssue: selectedIssue ? {
+      id: selectedIssue.id,
+      title: selectedIssue.title,
+      rank: selectedIssue.rank,
+      priorityScore: selectedIssue.priorityScore,
+      advancement: selectedIssue.advancement,
+      repositoryIntelligenceSnapshotHash: selectedIssue.repositoryIntelligenceSnapshotHash,
+      contextPackageHash: selectedIssue.contextPackageHash,
+      snapshotHash: selectedIssue.snapshotHash,
+    } : null,
     advancement: { suppressedCandidates: enriched.flatMap((issue) => issue.advancementSuppressedCandidates ?? []), selected: selectedIssue?.advancement ?? null },
     selectionExplanation: selectedIssue ? `${selectedIssue.title} is ranked #1 with priority ${selectedIssue.priorityScore} and total expected improvement +${selectedIssue.expectedImprovement.total}.${engineeringTask?.status === 'compiled' ? ` Engineering task compiled from original recommendation: ${engineeringTask.originalRecommendation.title}.` : ''}${engineeringTask?.status === 'blocked' ? ' Recommendation requires task clarification before implementation.' : ''}${selectedIssue.advancement?.reason ? ` Advancement: ${selectedIssue.advancement.reason}` : ''}` : 'No candidate issue generated.',
   };
