@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
 const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
 const controlPanel = await readFile('terminal/control-panel.sh', 'utf8');
 const docs = await readFile('terminal/README.md', 'utf8');
+
+test('terminal control panel file exists for the npm control script', async () => {
+  await access('terminal/control-panel.sh');
+  assert.equal(packageJson.scripts.control, 'bash terminal/control-panel.sh');
+});
 
 test('npm control script launches the project-owned terminal control panel', () => {
   assert.equal(packageJson.scripts.control, 'bash terminal/control-panel.sh');
