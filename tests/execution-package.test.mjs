@@ -121,7 +121,7 @@ test('validation-experiment execution package is action-first for Nearify-like X
   assert.deepEqual(sectionOrder, [...sectionOrder].sort((a, b) => a - b));
   assert.match(pkg.packageBody, /`xcodebuild -list -project Nearify\.xcodeproj`/);
   assert.match(pkg.packageBody, /`xcodebuild -list -workspace Nearify\.xcworkspace`/);
-  assert.match(pkg.packageBody, /`xcodebuild build -workspace Nearify\.xcworkspace -scheme <Scheme> -destination 'platform=iOS Simulator,name=<Simulator Name>'`/);
+  assert.match(pkg.packageBody, /`xcodebuild build -workspace Nearify\.xcworkspace -scheme <Scheme> -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'`/);
   assert.match(pkg.packageBody, /Run Xcode metadata discovery first/);
   assert.match(pkg.packageBody, /Do not modify source code unless/);
   assert.match(pkg.packageBody, /Commands run, in order/);
@@ -146,4 +146,53 @@ test('non-Xcode validation-experiment execution package surfaces detected packag
     decisionTitle: 'Run validation',
   });
   assert.match(withoutScript.packageBody, /No deterministic validation command detected/);
+});
+
+test('validation-experiment execution package injects detected Xcode scheme from validation evidence', () => {
+  const pkg = createExecutionPackage({
+    packageType: 'validation-experiment',
+    executionAgent: 'Codex',
+    repositoryContextPackage: '# Context Package\n\n## Validation Evidence\n.ai/validation.md reports `xcodebuild -list -project Beacon.xcodeproj`.\nScheme: `Beacon`\n',
+    understandingPrompt: 'Validate the package.',
+    decisionTitle: 'Full simulator/device build: Not run by default',
+  });
+  assert.match(pkg.packageBody, /`xcodebuild -list -project Beacon\.xcodeproj`/);
+  assert.match(pkg.packageBody, /`xcodebuild build -project Beacon\.xcodeproj -scheme Beacon -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'`/);
+  assert.doesNotMatch(pkg.packageBody, /-scheme <Scheme>/);
+});
+
+test('validation-experiment execution package chooses first Xcode scheme by stable sort', () => {
+  const pkg = createExecutionPackage({
+    packageType: 'validation-experiment',
+    executionAgent: 'Codex',
+    repositoryContextPackage: '# Context Package\n\nRepository files include `Beacon.xcodeproj`.\nSchemes: Zebra, Beacon\n',
+    understandingPrompt: 'Validate the package.',
+    decisionTitle: 'Full simulator/device build: Not run by default',
+  });
+  assert.match(pkg.packageBody, /-scheme Beacon -destination/);
+  assert.match(pkg.packageBody, /multiple schemes were detected, so this package chose the first scheme by stable alphabetical sort/i);
+});
+
+test('validation-experiment execution package keeps scheme placeholder when no scheme is detected', () => {
+  const pkg = createExecutionPackage({
+    packageType: 'validation-experiment',
+    executionAgent: 'Codex',
+    repositoryContextPackage: '# Context Package\n\nRepository files include `Beacon.xcodeproj`. No scheme evidence is present.\n',
+    understandingPrompt: 'Validate the package.',
+    decisionTitle: 'Full simulator/device build: Not run by default',
+  });
+  assert.match(pkg.packageBody, /-scheme <Scheme> -destination/);
+  assert.match(pkg.packageBody, /replace `<Scheme>` with a scheme reported by `xcodebuild -list`/);
+});
+
+test('validation-experiment execution package emits deterministic project and workspace discovery commands', () => {
+  const pkg = createExecutionPackage({
+    packageType: 'validation-experiment',
+    executionAgent: 'Codex',
+    repositoryContextPackage: '# Context Package\n\nRepository files include `B.xcworkspace`, `A.xcodeproj`, and `B.xcodeproj`.\nScheme: `Beacon`\n',
+    understandingPrompt: 'Validate the package.',
+    decisionTitle: 'Full simulator/device build: Not run by default',
+  });
+  assert.match(pkg.packageBody, /`xcodebuild -list -project A\.xcodeproj`[\s\S]*`xcodebuild -list -project B\.xcodeproj`[\s\S]*`xcodebuild -list -workspace B\.xcworkspace`/);
+  assert.match(pkg.packageBody, /`xcodebuild build -workspace B\.xcworkspace -scheme Beacon -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'`/);
 });

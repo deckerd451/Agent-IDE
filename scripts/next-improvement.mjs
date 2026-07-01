@@ -77,10 +77,22 @@ function firstXcodeTarget(files = []) {
   return files.find((file) => file.endsWith('.xcworkspace')) ?? files.find((file) => file.endsWith('.xcodeproj')) ?? null;
 }
 
+function schemesFromValidationMarkdown(validationMarkdown = '') {
+  const schemes = [];
+  const addScheme = (value) => {
+    const scheme = value?.trim().replace(/^[`'"-]+/, '').replace(/[`'".,;:]+$/g, '').trim();
+    if (scheme && !/[<>]/.test(scheme) && /^[A-Za-z0-9_. -]{1,80}$/.test(scheme)) schemes.push(scheme);
+  };
+  for (const match of validationMarkdown.matchAll(/(?:^|\n)\s*(?:[-*]\s*)?(?:shared\s+)?schemes?\s*[:=]\s*([^\n]+)/gi)) {
+    for (const value of match[1].split(/,|\s{2,}/)) addScheme(value);
+  }
+  for (const match of validationMarkdown.matchAll(/-scheme\s+['"]?([^'"\n\s]+)/gi)) addScheme(match[1]);
+  for (const match of validationMarkdown.matchAll(/(?:schemes?|targets?)\s+(?:include|detected|available|named)\s+`?([A-Za-z0-9_. -]+?)`?(?:[.;\n]|$)/gi)) addScheme(match[1]);
+  return [...new Set(schemes)].sort((a, b) => a.localeCompare(b));
+}
+
 function schemeFromValidationMarkdown(validationMarkdown = '') {
-  return validationMarkdown.match(/\bScheme:\s*`?([^`\n]+?)`?\s*$/im)?.[1]?.trim()
-    ?? validationMarkdown.match(/\b-scheme\s+([A-Za-z0-9_.-]+)/)?.[1]
-    ?? null;
+  return schemesFromValidationMarkdown(validationMarkdown)[0] ?? null;
 }
 
 function validationGuidanceFromEvidence(evidence) {
@@ -90,8 +102,9 @@ function validationGuidanceFromEvidence(evidence) {
   if (hasXcodeEvidence && target) {
     const flag = target.endsWith('.xcworkspace') ? '-workspace' : '-project';
     const scheme = schemeFromValidationMarkdown(evidence.validationMarkdown) ?? '<Scheme>';
-    commands.push(`xcodebuild -list ${flag} ${target}`);
-    commands.push(`xcodebuild build ${flag} ${target} -scheme ${scheme} -destination 'platform=iOS Simulator,name=<Simulator Name>'`);
+    const listTargets = evidence.files.filter((file) => file.endsWith('.xcodeproj') || file.endsWith('.xcworkspace'));
+    for (const listTarget of listTargets) commands.push(`xcodebuild -list ${listTarget.endsWith('.xcworkspace') ? '-workspace' : '-project'} ${listTarget}`);
+    commands.push(`xcodebuild build ${flag} ${target} -scheme ${scheme} -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'`);
   }
   if (!hasXcodeEvidence) {
     if (typeof evidence.packageScripts?.test === 'string') commands.push('npm test');
@@ -102,7 +115,7 @@ function validationGuidanceFromEvidence(evidence) {
     commands,
     supportingEvidence: evidence.files.filter((file) => file !== target),
     expectedArtifact: hasXcodeEvidence ? '.ai/validation.md entry with xcodebuild -list output and the simulator/device build result or skipped reason.' : '.ai/validation.md entry with command output and pass/fail status.',
-    notes: hasXcodeEvidence && target ? [schemeFromValidationMarkdown(evidence.validationMarkdown) ? '' : 'Fill in <Scheme> from the xcodebuild -list output.', 'Fill in <Simulator Name> with an installed iOS Simulator name. Do not run xcodebuild automatically.'].filter(Boolean) : [],
+    notes: hasXcodeEvidence && target ? [schemesFromValidationMarkdown(evidence.validationMarkdown).length > 1 ? `Multiple schemes were detected; selected ${schemeFromValidationMarkdown(evidence.validationMarkdown)} by stable alphabetical sort.` : '', schemeFromValidationMarkdown(evidence.validationMarkdown) ? '' : 'Fill in <Scheme> from the xcodebuild -list output.', 'Fill in <Installed Simulator Name> with an installed iOS Simulator name. Do not run xcodebuild automatically.'].filter(Boolean) : [],
   };
 }
 

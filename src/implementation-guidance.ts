@@ -77,6 +77,25 @@ function isCanonicalOrContradictionTask(candidate: any, recommendation: any) {
   return /intelligence[-\s]?contradiction|contradiction|canonical|manual|repository intent|goals|strategy|architecture|context package/i.test(text);
 }
 
+
+function detectedXcodeSchemes(text: string) {
+  const schemes: string[] = [];
+  const addScheme = (value?: string) => {
+    const scheme = value?.trim().replace(/^[`'"-]+/, '').replace(/[`'".,;:]+$/g, '').trim();
+    if (scheme && !/[<>]/.test(scheme) && /^[A-Za-z0-9_. -]{1,80}$/.test(scheme)) schemes.push(scheme);
+  };
+  for (const match of text.matchAll(/(?:^|\n)\s*(?:[-*]\s*)?(?:shared\s+)?schemes?\s*[:=]\s*([^\n]+)/gi)) {
+    for (const value of match[1].split(/,|\s{2,}/)) addScheme(value);
+  }
+  for (const match of text.matchAll(/-scheme\s+['"]?([^'"\n\s]+)/gi)) addScheme(match[1]);
+  for (const match of text.matchAll(/(?:schemes?|targets?)\s+(?:include|detected|available|named)\s+`?([A-Za-z0-9_. -]+?)`?(?:[.;\n]|$)/gi)) addScheme(match[1]);
+  return uniqueFiles(schemes).sort((a, b) => a.localeCompare(b));
+}
+
+function validationEvidenceText(candidate: any, recommendation: any) {
+  return [candidate?.ownerAction, candidate?.reason, candidate?.evidence, recommendation.displaySummary, recommendation.explanation, recommendation.evidenceSource, recommendation.prompt].filter(Boolean).join('\n');
+}
+
 function preferredExistingValidationFiles(existingFiles: Set<string> | null, directFiles: string[]) {
   const repositoryFiles = existingFiles ? [...existingFiles] : [];
   const projectFiles = filterExistingFiles(uniqueFiles([...directFiles, ...repositoryFiles]).filter((file) => ['xcode-workspace', 'xcode-project'].includes(classifyRepositoryFile(file))).sort((a, b) => (classifyRepositoryFile(a) === 'xcode-workspace' ? 0 : 1) - (classifyRepositoryFile(b) === 'xcode-workspace' ? 0 : 1) || a.localeCompare(b)), existingFiles);
@@ -84,14 +103,15 @@ function preferredExistingValidationFiles(existingFiles: Set<string> | null, dir
   return uniqueFiles([...projectFiles, ...artifactFiles, ...directFiles.filter((file) => classifyRepositoryFile(file) === 'validation-artifact')]);
 }
 
-function validationCommandsFor(primaryFile: string | null, supportingFiles: string[]) {
+function validationCommandsFor(primaryFile: string | null, supportingFiles: string[], evidenceText = '') {
   const files = uniqueFiles([primaryFile, ...supportingFiles]);
   const workspace = files.find((file) => file.endsWith('.xcworkspace'));
   const project = files.find((file) => file.endsWith('.xcodeproj'));
   const container = workspace ?? project;
   if (!container) return [];
   const flag = workspace ? '-workspace' : '-project';
-  return [`xcodebuild -list ${flag} ${container}`, `xcodebuild build ${flag} ${container} -scheme <Scheme> -destination 'platform=iOS Simulator,name=<Simulator Name>'`];
+  const scheme = detectedXcodeSchemes(evidenceText)[0] ?? '<Scheme>';
+  return [`xcodebuild -list ${flag} ${container}`, `xcodebuild build ${flag} ${container} -scheme ${scheme} -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'`];
 }
 
 function preferredExistingCanonicalFiles(existingFiles: Set<string> | null, directFiles: string[]) {
@@ -113,7 +133,7 @@ export function selectPrimaryFiles(candidate: any, recommendation: any, options?
       supportingFiles,
       source: primaryFile ? (directFiles.includes(primaryFile) ? 'direct' : 'inferred') : 'missing',
       note: primaryFile ? 'Primary file is validation guidance: project/workspace files and validation artifacts are preferred for validation experiments; canonical owner-intent files are not primary unless this is a manual/product-decision package.' : 'No existing validation command target, project/workspace, or validation artifact file could be identified from deterministic repository-local evidence.',
-      validationCommands: validationCommandsFor(primaryFile ?? null, supportingFiles),
+      validationCommands: validationCommandsFor(primaryFile ?? null, supportingFiles, validationEvidenceText(candidate, recommendation)),
     };
   }
 
