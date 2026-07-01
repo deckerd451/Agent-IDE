@@ -184,9 +184,13 @@ function sameRepositoryIntelligenceSnapshot(entry = {}, issue = {}) {
 }
 
 function unavailableToolingOutcomeFor(issue, outcomeEntries = []) {
-  return outcomeEntries.slice().reverse().find((entry) => outcomeMatchesRecommendation(entry, issue)
-    && isUnavailableLocalToolingOutcome(entry)
-    && sameRepositoryIntelligenceSnapshot(entry, issue));
+  return outcomeEntries.slice().reverse().find((entry) => {
+    if (!outcomeMatchesRecommendation(entry, issue) || !isUnavailableLocalToolingOutcome(entry)) return false;
+    const issueSnapshot = issue?.repositoryIntelligenceSnapshotHash ?? issue?.contextPackageHash ?? issue?.snapshotHash;
+    const entrySnapshot = entry?.repositoryIntelligenceSnapshotHash ?? entry?.contextPackageHash ?? entry?.snapshotHash;
+    if (issueSnapshot && !entrySnapshot) return true;
+    return sameRepositoryIntelligenceSnapshot(entry, issue);
+  });
 }
 
 function deterministicRetentionEvidence(issue) {

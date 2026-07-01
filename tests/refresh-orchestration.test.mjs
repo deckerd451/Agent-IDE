@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { nonCriticalStepIds, persistControlPlane, readControlPlane } from '../scripts/server.mjs';
@@ -11,6 +11,7 @@ async function makeRepo(aiFiles = {}) {
   const aiDir = join(dir, '.ai');
   await mkdir(aiDir, { recursive: true });
   for (const [name, content] of Object.entries(aiFiles)) {
+    await mkdir(dirname(join(aiDir, name)), { recursive: true });
     await writeFile(join(aiDir, name), content, 'utf8');
   }
   return { dir, aiDir, cleanup: () => rm(dir, { recursive: true, force: true }) };
@@ -156,6 +157,73 @@ test('refresh persists Product Intelligence Strategic Context into active recomm
     assert.match(controlPlane.recommendation.implementationPrompt, /## Strategic Context/, 'Control Plane Preview Prompt source must include Strategic Context');
     assert.equal(controlPlane.recommendation.implementationPrompt, nextPrompt, 'Control Plane must expose the same generated prompt body');
     assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt, 'Copy/Open Codex builder prompt must use the same source body');
+  } finally {
+    await cleanup();
+  }
+});
+
+
+test('refresh pipeline suppresses Nearify skipped unavailable-Xcode validation recommendation and promotes next candidate', async () => {
+  const skippedId = 'validation-full-simulator-device-build-not-run-by-default-no-full-xcodebuild';
+  const nextId = 'validation-run-documentation-validation-with-npm-test';
+  const initialContextPackage = '# Context Package\n\nNearify validation snapshot.\n';
+  const skippedOutcome = {
+    timestamp: '2026-06-30T00:00:00.000Z',
+    repository: 'Nearify',
+    recommendationId: skippedId,
+    recommendationTitle: 'Full simulator/device build: Not run by default; no full xcodebuild',
+    promptHash: 'nearify-xcode-skip',
+    outcome: 'skipped',
+    promptQuality: 'worked',
+    userNote: 'Skipped: Linux without unavailable local Xcode/xcodebuild simulator tooling.',
+    testsRun: [],
+    refreshAfterCompletion: true,
+  };
+  const { dir, aiDir, cleanup } = await makeRepo({
+    'goals.md': '# Goals\n\n## Product Thesis\nNearify helps people discover nearby events.\n\n## Current Focus\nValidate the iOS app handoff.\n\n## Manual Goals\n- Product intent: Nearify helps people discover nearby events.\n- Current focus: Validate the iOS app handoff.\n- Success criteria: Local validation guidance stays actionable.\n- Long-term vision: Reliable local event discovery.\n',
+    'architecture.md': '# Architecture\n\n## Core Systems\n- Nearify.xcodeproj iOS app.\n\n## Primary Flows\n- User opens the iOS app and reviews nearby events.\n',
+    'strategy.md': '# Strategy\n\n## Product Thesis\nNearify helps people discover nearby events.\n\n## Current Product Bet\nValidate the iOS app handoff.\n\n## Strategy Confidence\nHigh\n',
+    'decisions.md': '# Decisions\n\n## Active Decisions\n- Keep validation local-first and deterministic.\n',
+    'validation.md': '# Validation\n\n## Confidence\n- High\n\n## Commands Run\n- `npm test`\n\n## Xcode Project Validation\n- Xcode project validation metadata detected.\n- `xcodebuild -list -project Nearify.xcodeproj`\n- Scheme: `Nearify`\n- Full simulator/device build: Not run by default; no full xcodebuild.\n- Run documentation validation with npm test.\n',
+    'repository-health.md': '# Repository Health\n\nOverall Health: Healthy\nConfidence: High\n\n## Risks\n- No repository health risks detected.\n',
+    'backlog.md': '# Backlog\n\n## Prioritized Backlog\n- Useful work.\n',
+    'context-package.md': initialContextPackage,
+    'intelligence-audit.md': '# Intelligence Audit\n\nNo contradictions detected.\n',
+    'intelligence-quality.json': JSON.stringify({
+      coverage: { goalsPresent: true, strategyPresent: true, architecturePresent: true, decisionsPresent: true, validationPresent: true, backlogPresent: true, repositoryHealthPresent: true, agentsPresent: true, codePresent: true },
+      consistency: { contradictions: [], duplicatedSections: [] },
+      canonicalIntelligenceQuality: { score: 92, fields: { manualGoals: { state: 'Complete', percent: 100, missing: [] } }, strategyFields: { classification: 'Present', percent: 100, requiredFields: [] } },
+      generatedExportQuality: { score: 94 },
+      confidence: { score: 88, validationConfidence: 'High' },
+      freshness: { canonicalStaleDocuments: [] },
+    }, null, 2),
+    'ai-handoff-validation.md': '# AI Handoff Validation\n\nReady.\n',
+    'intelligence-verification.md': '# Intelligence Verification\n\nReady.\n',
+    'agents.md': '# Agents\n\n- Builder.\n',
+    'code.md': '# Code\n\n- Nearify iOS app.\n',
+    'ai-handoff-validation.json': JSON.stringify({ overallScore: 100, status: 'Ready', contradictions: [], missingExplanations: [] }, null, 2),
+    'prompts/architect.md': '# Architect Prompt\nReady.\n',
+    'prompts/builder.md': '# Builder Prompt\nReady.\n',
+    'prompts/reviewer.md': '# Reviewer Prompt\nReady.\n',
+    'prompts/debugger.md': '# Debugger Prompt\nReady.\n',
+    'outcomes.json': JSON.stringify([skippedOutcome], null, 2),
+    'outcomes.md': '# Outcome Tracking\n\n## Last Outcome\n- Time: 2026-06-30T00:00:00.000Z\n- Recommendation: Full simulator/device build: Not run by default; no full xcodebuild\n- Outcome: Skipped\n- Prompt quality: Worked without clarification\n- Note: Skipped: Linux without unavailable local Xcode/xcodebuild simulator tooling.\n',
+  });
+  try {
+    await mkdir(join(dir, 'Nearify.xcodeproj'), { recursive: true });
+
+    await persistControlPlane(dir, null, new Date('2026-07-01T00:00:00.000Z'));
+
+    const ranking = JSON.parse(await readFile(join(aiDir, 'decision-ranking.json'), 'utf8'));
+    const active = JSON.parse(await readFile(join(aiDir, 'active-recommendation.json'), 'utf8'));
+    const contextPackage = await readFile(join(aiDir, 'context-package.md'), 'utf8');
+
+    assert.notEqual(ranking.selectedIssue?.id, skippedId, 'decision ranking must not reselect the skipped unavailable-Xcode recommendation');
+    assert.notEqual(active.id, skippedId, 'active recommendation must not persist the skipped unavailable-Xcode recommendation');
+    assert.doesNotMatch(contextPackage, new RegExp(`Selected Issue ID: ${skippedId}`), 'context package must not report the skipped unavailable-Xcode recommendation as selected');
+    assert.equal(ranking.selectedIssue?.id, nextId, 'next eligible validation candidate must be promoted');
+    assert.equal(active.id, nextId, 'active recommendation must expose the promoted next eligible candidate');
+    assert.match(contextPackage, new RegExp(`Selected Issue ID: ${nextId}`), 'context package must report the promoted next eligible candidate');
   } finally {
     await cleanup();
   }
