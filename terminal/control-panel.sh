@@ -126,7 +126,10 @@ Agent IDE terminal control panel
   9) Show Vite log
   10) Quit
 MENU
-    read -r -p "Choose an option: " choice
+    if ! read -r -p "Choose an option: " choice; then
+      printf '\nNo interactive input detected; control panel launched successfully and is exiting.\n'
+      exit 0
+    fi
     case "$choice" in
       1) restart_servers ;;
       2) stop_servers ;;
