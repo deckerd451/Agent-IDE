@@ -7,6 +7,8 @@ SERVER_LOG="$LOG_DIR/server.log"
 VITE_LOG="$LOG_DIR/vite.log"
 SERVER_PID="$LOG_DIR/server.pid"
 VITE_PID="$LOG_DIR/vite.pid"
+TEST_RESULT="$LOG_DIR/last-test-result"
+BUILD_RESULT="$LOG_DIR/last-build-result"
 APP_URL="http://localhost:5173"
 
 cd "$ROOT_DIR" || exit 1
@@ -22,17 +24,75 @@ is_running() {
 
 status_label() {
   if is_running "$1"; then
-    printf 'running (pid %s)' "$(cat "$1")"
+    printf 'Running'
   else
-    printf 'stopped'
+    printf 'Stopped'
   fi
 }
 
+repository_name() {
+  local origin
+  origin="$(git config --get remote.origin.url 2>/dev/null || true)"
+  if [[ -n "$origin" ]]; then
+    origin="${origin%.git}"
+    printf '%s' "${origin##*/}"
+  else
+    basename "$ROOT_DIR"
+  fi
+}
+
+current_branch() {
+  local branch
+  branch="$(git branch --show-current 2>/dev/null || true)"
+  if [[ -n "$branch" ]]; then
+    printf '%s' "$branch"
+  else
+    printf 'Unknown'
+  fi
+}
+
+working_tree_status() {
+  if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+    printf 'Modified'
+  else
+    printf 'Clean'
+  fi
+}
+
+quality_status() {
+  local result_file="$1"
+  local success_label="$2"
+  if [[ -f "$result_file" ]] && [[ "$(cat "$result_file" 2>/dev/null || true)" == "success" ]]; then
+    printf '%s' "$success_label"
+  else
+    printf 'Unknown'
+  fi
+}
+
+record_result() {
+  local result_file="$1"
+  shift
+  if "$@"; then
+    printf 'success' >"$result_file"
+    return 0
+  fi
+  rm -f "$result_file"
+  return 1
+}
+
 print_status() {
-  printf '\nAgent IDE status\n'
-  printf '  API server: %s\n' "$(status_label "$SERVER_PID")"
-  printf '  Vite:       %s\n' "$(status_label "$VITE_PID")"
-  printf '  Logs:       %s\n\n' "$LOG_DIR"
+  printf '\nRepository\n'
+  printf '  Connected repository: %s\n' "$(repository_name)"
+  printf '  Current branch:       %s\n' "$(current_branch)"
+  printf '  Working tree:         %s\n' "$(working_tree_status)"
+  printf '\nDevelopment\n'
+  printf '  API server:           %s\n' "$(status_label "$SERVER_PID")"
+  printf '  Vite:                 %s\n' "$(status_label "$VITE_PID")"
+  printf '\nQuality\n'
+  printf '  Last test result:     %s\n' "$(quality_status "$TEST_RESULT" 'Passing')"
+  printf '  Last build result:    %s\n' "$(quality_status "$BUILD_RESULT" 'Healthy')"
+  printf '\nLogs\n'
+  printf '  .dev-logs location:   %s\n\n' "$LOG_DIR"
 }
 
 stop_process() {
@@ -107,7 +167,7 @@ show_log() {
 }
 
 pull_test_build_restart() {
-  git pull --ff-only && npm test && npm run build && restart_servers
+  git pull --ff-only && record_result "$TEST_RESULT" npm test && record_result "$BUILD_RESULT" npm run build && restart_servers
 }
 
 menu() {
@@ -134,8 +194,8 @@ MENU
       1) restart_servers ;;
       2) stop_servers ;;
       3) pull_test_build_restart ;;
-      4) npm test ;;
-      5) npm run build ;;
+      4) record_result "$TEST_RESULT" npm test ;;
+      5) record_result "$BUILD_RESULT" npm run build ;;
       6) git status --short --branch ;;
       7) open_browser ;;
       8) show_log "$SERVER_LOG" ;;
@@ -151,8 +211,8 @@ case "${1:-}" in
   stop) stop_servers ;;
   restart) restart_servers ;;
   status) print_status ;;
-  test) npm test ;;
-  build) npm run build ;;
+  test) record_result "$TEST_RESULT" npm test ;;
+  build) record_result "$BUILD_RESULT" npm run build ;;
   open) open_browser ;;
   server-log) show_log "$SERVER_LOG" ;;
   vite-log) show_log "$VITE_LOG" ;;
