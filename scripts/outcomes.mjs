@@ -92,6 +92,8 @@ export async function appendOutcome(repositoryPath, input) {
     recommendationId: input.recommendationId || 'unknown',
     recommendationTitle: input.recommendationTitle || 'Unknown recommendation',
     promptHash: input.promptHash || hashPrompt(input.prompt || ''),
+    repositoryIntelligenceSnapshotHash: input.repositoryIntelligenceSnapshotHash || input.contextPackageHash || '',
+    contextPackageHash: input.contextPackageHash || input.repositoryIntelligenceSnapshotHash || '',
     outcome: input.outcome,
     promptQuality: input.promptQuality,
     userNote: input.userNote || '',

@@ -65,6 +65,7 @@ type ControlPlaneRecommendation = {
   blockingState?: { state: string; reason: string };
   id?: string;
   promptHash?: string;
+  repositoryIntelligenceSnapshotHash?: string;
   previousOutcomeWarning?: string;
   advancementReason?: string;
   canonicalIntelligenceState?: 'existing' | 'missing';
@@ -828,6 +829,7 @@ function RepositoryDecisionActionSurface({ data, decisionFlow, executionPackages
           recommendationId: data.recommendation.id ?? data.decisionRanking?.selectedIssue?.id,
           recommendationTitle: data.recommendation.title,
           promptHash: data.recommendation.promptHash,
+          repositoryIntelligenceSnapshotHash: data.recommendation.repositoryIntelligenceSnapshotHash,
           prompt: data.recommendation.prompt,
           outcome,
           promptQuality,

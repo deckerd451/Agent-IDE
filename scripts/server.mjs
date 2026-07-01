@@ -568,6 +568,7 @@ async function readControlPlane(repositoryPath) {
       : `This recommendation was previously marked implemented with prompt quality "worked without clarification" at ${implementedMatch.timestamp}. ${advancementReason ?? 'Repository Judgment retained it because no alternate advancement decision was recorded.'}`;
   }
   recommendation.id = recommendationIdFor(recommendation, decisionRanking);
+  recommendation.repositoryIntelligenceSnapshotHash = decisionRanking?.candidates?.find((candidate) => candidate.id === recommendation.id)?.repositoryIntelligenceSnapshotHash ?? decisionRanking?.candidates?.[0]?.repositoryIntelligenceSnapshotHash ?? recommendation.repositoryIntelligenceSnapshotHash;
   recommendation.promptHash = hashPrompt(recommendation.prompt);
   const packages = handoffPackages(docs);
   packages.builder = recommendation.implementationPrompt;
@@ -616,6 +617,7 @@ async function persistControlPlane(repositoryPath, previousSnapshot, refreshStar
   data.qualityHistory = qualityResult.history;
   data.decisionRanking = nextImprovement.decisionRanking;
   data.recommendation.id = recommendationIdFor(data.recommendation, data.decisionRanking);
+  data.recommendation.repositoryIntelligenceSnapshotHash = data.decisionRanking?.candidates?.find((candidate) => candidate.id === data.recommendation.id)?.repositoryIntelligenceSnapshotHash ?? data.decisionRanking?.candidates?.[0]?.repositoryIntelligenceSnapshotHash ?? data.recommendation.repositoryIntelligenceSnapshotHash;
   data.recommendation.promptHash = hashPrompt(data.recommendation.prompt);
   await writeFile(join(repositoryPath, '.ai', 'active-recommendation.json'), JSON.stringify(data.recommendation, null, 2));
   data.repositoryJudgment = await generateRepositoryJudgment(repositoryPath);
