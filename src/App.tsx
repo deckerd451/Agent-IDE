@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { sections, type Section } from './sections';
 import { filePathForTask, selectPrimaryFiles, uniqueFiles } from './implementation-guidance';
 import { createDecisionFlow, createExecutionPackage, type DecisionFlow, type ExecutionAgent, type ExecutionPackage } from './decision-flow';
+import { createRepositoryDecision, type RepositoryDecision } from './repository-decision';
 import { advanceWorkflow, classifyWorkflowStep, contextSnapshotHash, createWorkflow, workflowKey, workflowStateStorageKey, type Workflow, type WorkflowState } from './workflow';
 
 type WorkflowDiagnostics = {
@@ -133,6 +134,7 @@ type ControlPlane = {
   repositoryFiles?: string[];
   outcomeEvidence?: { entries: OutcomeEntry[]; summary: { lastOutcome: OutcomeEntry | null; successRate: number | null; recentCount: number; qualityTrend: string | null } };
   activeRecommendationSource?: 'Repository Judgment' | 'Legacy' | string;
+  repositoryDecision?: RepositoryDecision;
   legacyRecommendation?: ControlPlaneRecommendation;
   status: Record<string, string>;
   understanding: Array<{ label: string; state: IntelligenceState; source: string }>;
@@ -713,7 +715,8 @@ function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, user
   const productThesis = strategyValueFromContext(contextPackage, 'Product Thesis', data.understanding.find((item) => item.label === 'Product Thesis')?.state ?? 'Not available');
   const productBet = strategyValueFromContext(contextPackage, 'Current Product Bet', data.status.recommendedNextStep ?? 'Not available');
   const currentExperiment = strategyValueFromContext(contextPackage, 'Current Experiment', 'Not available in loaded strategy intelligence');
-  const confidence = data.status.currentConfidence || `${data.quality?.confidence.score ?? 0}%`;
+  const repositoryDecision = data.repositoryDecision ?? createRepositoryDecision({ status: data.status, recommendation: data.recommendation, selectedCandidate: task, quality: data.quality, aiHandoffValidation: data.aiHandoffValidation });
+  const confidence = repositoryDecision.confidence;
   return (
     <div className="decisionAnswerStack" aria-label="Repository intelligence first workflow">
       <section className="decisionAnswerCard" aria-label="Where are we">
@@ -722,7 +725,7 @@ function RepositoryDecisionAnswers({ data, task, documents, repositoryPath, user
         <div className="workMetaGrid compact">
           <div><small>Health</small><strong>{data.status.overallHealth || 'Unknown'}</strong></div>
           <div><small>Current experiment</small><strong>{currentExperiment}</strong></div>
-          <div><small>Handoff readiness</small><strong>{data.status.repositoryHandoffReadiness || 'Unknown'}</strong></div>
+          <div><small>Handoff readiness</small><strong>{repositoryDecision.handoffReadiness}</strong></div>
           <div><small>Confidence</small><strong>{confidence}</strong></div>
         </div>
       </section>
@@ -766,7 +769,8 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeed
   const task = activeRecommendationTask(data);
   const taskTitle = recommendationDisplayTitle(data, task);
   const resolvedRepositoryName = data.status.repositoryName || repositoryPath?.split(/[\\/]/).filter(Boolean).pop() || 'Connected repository';
-  const confidence = data.status.currentConfidence || `${data.quality?.confidence.score ?? 0}%`;
+  const repositoryDecision = data.repositoryDecision ?? createRepositoryDecision({ status: data.status, recommendation: data.recommendation, selectedCandidate: task, workflow, quality: data.quality, aiHandoffValidation: data.aiHandoffValidation });
+  const confidence = repositoryDecision.confidence;
 
   if (task?.id === 'repository-up-to-date') return <UpToDateCard repositoryName={resolvedRepositoryName} confidence={confidence} recommendationSource={recommendationSource} />;
 
@@ -779,11 +783,11 @@ function CurrentTaskCard({ data, workflow, documents, repositoryPath, actionFeed
       <div>
         <p className="kicker">Do Next</p>
         <div className="repositoryIdentity">
-          <span>{resolvedRepositoryName}</span>
-          <span>{decisionFlow.repositoryStatus}</span>
-          <span>{decisionFlow.currentRequiredOwnerAction}</span>
+          <span>{repositoryDecision.repositoryName || resolvedRepositoryName}</span>
+          <span>{repositoryDecision.repositoryStatus}</span>
+          <span>{repositoryDecision.recommendedOwnerAction}</span>
         </div>
-        <h2>{decisionFlow.selectedDecisionTitle || taskTitle}</h2>
+        <h2>{repositoryDecision.selectedDecision || taskTitle}</h2>
         {data.recommendation.previousOutcomeWarning && <p className="summary warningCard">{data.recommendation.previousOutcomeWarning}</p>}
         {!data.recommendation.previousOutcomeWarning && data.recommendation.advancementReason && <p className="summary">{data.recommendation.advancementReason}</p>}
         <p className="recommendationReason">{recommendationDisplaySummary(data, task)}</p>

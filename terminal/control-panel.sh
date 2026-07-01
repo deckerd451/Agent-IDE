@@ -86,7 +86,7 @@ print_status() {
   printf '  Current branch:       %s\n' "$(current_branch)"
   printf '  Working tree:         %s\n' "$(working_tree_status)"
   printf '\n'
-  node terminal/decision-status.mjs --root "$ROOT_DIR"
+  node --loader ./scripts/ts-loader.mjs terminal/decision-status.mjs --root "$ROOT_DIR"
   printf '\nDevelopment\n'
   printf '  API server:           %s\n' "$(status_label "$SERVER_PID")"
   printf '  Vite:                 %s\n' "$(status_label "$VITE_PID")"
