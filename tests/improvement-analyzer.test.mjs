@@ -373,6 +373,53 @@ test('skipped Xcode validation on Linux suppresses same recommendation for same 
   assert.ok(candidates[0].advancementSuppressedCandidates.some((candidate) => candidate.id === 'validation-full-simulator-device-build-requires-xcodebuild'));
 });
 
+
+test('skipped npm build recommendation marked irrelevant for Nearify Xcode snapshot is not reselected', () => {
+  const contextPackage = '# Context Package\nNearify Xcode/iOS repository snapshot.\n';
+  const snapshot = stableContextPackageHash(contextPackage);
+  const validation = '# Validation\n\n## Known Validation Gaps\n- No `npm run build` script was detected, so production build validation could not run.\n- Document `xcodebuild -list` and simulator build validation in `.ai/validation.md`.\n';
+  const { candidates } = chooseNextImprovementWithCandidates({
+    ...healthyArgs,
+    contextPackage,
+    validation,
+    outcomeEntries: [{
+      timestamp: '2026-07-01T00:00:00.000Z',
+      recommendationId: 'validation-no-script-was-detected-so-production-build',
+      recommendationTitle: 'No `npm run build` script was detected, so production build',
+      outcome: 'skipped',
+      promptQuality: 'needed_clarification',
+      userNote: 'Nearify is an Xcode/iOS repository. No npm run build script is not appropriate unless package.json is part of the primary build system.',
+      repositoryIntelligenceSnapshotHash: snapshot,
+    }],
+  });
+
+  assert.equal(candidates.find((candidate) => candidate.id === 'validation-no-script-was-detected-so-production-build'), undefined, 'same skipped repository-type-irrelevant recommendation must be absent from eligible candidates');
+  assert.equal(candidates[0]?.id, 'validation-document-and-simulator-build-validation-in', 'next eligible candidate must be promoted without changing ranking priority');
+  assert.ok(candidates[0].advancementSuppressedCandidates.some((candidate) => candidate.id === 'validation-no-script-was-detected-so-production-build'));
+});
+
+test('ordinary skipped npm build recommendation is not repository-type suppressed', () => {
+  const contextPackage = '# Context Package\nNearify Xcode/iOS repository snapshot.\n';
+  const snapshot = stableContextPackageHash(contextPackage);
+  const validation = '# Validation\n\n## Known Validation Gaps\n- No `npm run build` script was detected, so production build validation could not run.\n- Document `xcodebuild -list` and simulator build validation in `.ai/validation.md`.\n';
+  const { candidates } = chooseNextImprovementWithCandidates({
+    ...healthyArgs,
+    contextPackage,
+    validation,
+    outcomeEntries: [{
+      timestamp: '2026-07-01T00:00:00.000Z',
+      recommendationId: 'validation-no-script-was-detected-so-production-build',
+      recommendationTitle: 'No `npm run build` script was detected, so production build',
+      outcome: 'skipped',
+      promptQuality: 'needed_clarification',
+      userNote: 'Skipped for now; need product owner input before changing validation docs.',
+      repositoryIntelligenceSnapshotHash: snapshot,
+    }],
+  });
+
+  assert.equal(candidates[0]?.id, 'validation-no-script-was-detected-so-production-build', 'unrelated skipped outcomes must not suppress the recommendation');
+});
+
 test('selected issue persists snapshot hashes and recorded unavailable tooling outcome suppresses same validation recommendation', async () => {
   const contextPackage = '# Context Package\nXcode app snapshot.\n';
   const snapshot = stableContextPackageHash(contextPackage);

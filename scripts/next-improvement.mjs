@@ -168,12 +168,24 @@ function completedWorkedOutcomeFor(issue, outcomeEntries = []) {
     && outcomeMatchesRecommendation(entry, issue));
 }
 
+function outcomeNoteText(entry = {}) {
+  return [entry.userNote, entry.note, entry.reason, entry.outcomeNote].filter(Boolean).join(' ');
+}
+
 export function isUnavailableLocalToolingOutcome(entry = {}) {
-  const note = [entry.userNote, entry.note, entry.reason, entry.outcomeNote].filter(Boolean).join(' ');
+  const note = outcomeNoteText(entry);
   const skippedOrBlocked = entry.outcome === 'skipped' || entry.outcome === 'blocked' || /\b(?:skipped|blocked)\b/i.test(note);
   if (!skippedOrBlocked) return false;
   return /\b(?:unavailable|not available|missing|not installed|not found|absent|without|requires?\s+(?:macos|xcode|local environment|tooling)|linux\s+without|cannot\s+run)\b/i.test(note)
     && /\b(?:xcodebuild|xcrun|xcode|simulator|device|tooling|local environment|macos|linux)\b/i.test(note);
+}
+
+export function isIrrelevantRepositoryTypeOutcome(entry = {}) {
+  const note = outcomeNoteText(entry);
+  if (entry.outcome !== 'skipped') return false;
+  const saysIrrelevant = /\b(?:irrelevant|inappropriate|not\s+appropriate|not\s+applicable|not\s+relevant|wrong\s+(?:repository|repo)\s+type|does\s+not\s+apply)\b/i.test(note);
+  const citesRepositoryType = /\b(?:repository|repo|project|app|xcode|ios|android|mobile|swift|kotlin|gradle|maven|cargo|rust|python|package\.json|npm|primary\s+build\s+system)\b/i.test(note);
+  return saysIrrelevant && citesRepositoryType;
 }
 
 function sameRepositoryIntelligenceSnapshot(entry = {}, issue = {}) {
@@ -191,6 +203,12 @@ function unavailableToolingOutcomeFor(issue, outcomeEntries = []) {
     if (issueSnapshot && !entrySnapshot) return true;
     return sameRepositoryIntelligenceSnapshot(entry, issue);
   });
+}
+
+function irrelevantRepositoryTypeOutcomeFor(issue, outcomeEntries = []) {
+  return outcomeEntries.slice().reverse().find((entry) => outcomeMatchesRecommendation(entry, issue)
+    && isIrrelevantRepositoryTypeOutcome(entry)
+    && sameRepositoryIntelligenceSnapshot(entry, issue));
 }
 
 function deterministicRetentionEvidence(issue) {
@@ -220,6 +238,10 @@ export function applyRecommendationAdvancement(candidates = [], outcomeEntries =
     if (unavailableToolingOutcome) {
       return { ...candidate, advancement: { state: 'environment-suppressed', reason: `Suppressed for this repository intelligence snapshot because a skipped/blocked outcome recorded unavailable local tooling: ${unavailableToolingOutcome.userNote || unavailableToolingOutcome.note || 'no note provided'}.`, outcomeTimestamp: unavailableToolingOutcome.timestamp } };
     }
+    const irrelevantRepositoryTypeOutcome = irrelevantRepositoryTypeOutcomeFor(candidate, outcomeEntries);
+    if (irrelevantRepositoryTypeOutcome) {
+      return { ...candidate, advancement: { state: 'repository-type-suppressed', reason: `Suppressed for this repository intelligence snapshot because a skipped outcome recorded that this recommendation is inappropriate for the repository type: ${irrelevantRepositoryTypeOutcome.userNote || irrelevantRepositoryTypeOutcome.note || 'no note provided'}.`, outcomeTimestamp: irrelevantRepositoryTypeOutcome.timestamp } };
+    }
     const outcome = completedWorkedOutcomeFor(candidate, outcomeEntries);
     if (!outcome) return { ...candidate, advancement: { state: 'eligible', reason: 'No implemented + worked outcome or unavailable-tooling skip matched this recommendation for this snapshot.' } };
     const retentionEvidence = deterministicRetentionEvidence(candidate);
@@ -229,7 +251,7 @@ export function applyRecommendationAdvancement(candidates = [], outcomeEntries =
     }
     return { ...candidate, advancement: { state: 'satisfied', reason: `Satisfied by implemented + worked outcome recorded at ${outcome.timestamp ?? 'unknown time'}; no deterministic incomplete evidence remains.`, outcomeTimestamp: outcome.timestamp } };
   });
-  const suppressingStates = new Set(['satisfied', 'environment-suppressed']);
+  const suppressingStates = new Set(['satisfied', 'environment-suppressed', 'repository-type-suppressed']);
   const unsuppressed = evaluated.filter((candidate) => !suppressingStates.has(candidate.advancement?.state));
   const suppressed = evaluated.filter((item) => suppressingStates.has(item.advancement?.state)).map((item) => ({ id: item.id, title: item.title, reason: item.advancement.reason }));
   if (unsuppressed.length > 0) return unsuppressed.map((candidate) => ({ ...candidate, advancementSuppressedCandidates: suppressed }));
