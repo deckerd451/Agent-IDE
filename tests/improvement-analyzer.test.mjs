@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { analyzeImprovements } from '../scripts/improvement-analyzer.mjs';
+import { appendOutcome, readOutcomeEvidence } from '../scripts/outcomes.mjs';
 import { chooseNextImprovement, chooseNextImprovementWithCandidates, renderPrompt, stableContextPackageHash } from '../scripts/next-improvement.mjs';
 
 // ---------------------------------------------------------------------------
@@ -367,6 +371,46 @@ test('skipped Xcode validation on Linux suppresses same recommendation for same 
   assert.notEqual(candidates[0]?.id, 'validation-full-simulator-device-build-requires-xcodebuild', 'selection must advance to next ranked candidate');
   assert.ok(candidates[0], 'next eligible candidate should be promoted');
   assert.ok(candidates[0].advancementSuppressedCandidates.some((candidate) => candidate.id === 'validation-full-simulator-device-build-requires-xcodebuild'));
+});
+
+test('selected issue persists snapshot hashes and recorded unavailable tooling outcome suppresses same validation recommendation', async () => {
+  const contextPackage = '# Context Package\nXcode app snapshot.\n';
+  const snapshot = stableContextPackageHash(contextPackage);
+  const first = chooseNextImprovementWithCandidates({
+    ...healthyArgs,
+    contextPackage,
+    validation: '# Validation\n\n## Known Validation Gaps\n- Full simulator/device build requires xcodebuild.\n',
+  });
+  assert.equal(first.decisionRanking.selectedIssue.repositoryIntelligenceSnapshotHash, snapshot);
+  assert.equal(first.candidates[0].repositoryIntelligenceSnapshotHash, snapshot);
+
+  const repo = await mkdtemp(join(tmpdir(), 'agent-ide-outcome-'));
+  try {
+    await appendOutcome(repo, {
+      recommendationId: first.decisionRanking.selectedIssue.id,
+      recommendationTitle: first.decisionRanking.selectedIssue.title,
+      repositoryIntelligenceSnapshotHash: first.decisionRanking.selectedIssue.repositoryIntelligenceSnapshotHash,
+      outcome: 'skipped',
+      promptQuality: 'worked',
+      userNote: 'Linux without xcodebuild/xcrun',
+      refreshAfterCompletion: true,
+    });
+    const outcomeEntries = (await readOutcomeEvidence(repo)).entries;
+    assert.equal(outcomeEntries[0].repositoryIntelligenceSnapshotHash, snapshot);
+    assert.equal(outcomeEntries[0].contextPackageHash, snapshot);
+
+    const refreshed = chooseNextImprovementWithCandidates({
+      ...healthyArgs,
+      contextPackage,
+      validation: '# Validation\n\n## Known Validation Gaps\n- Full simulator/device build requires xcodebuild.\n',
+      intelligenceVerification: '# Intelligence Verification\n\n## Findings\n- Document the local environment prerequisite for simulator validation.\n',
+      outcomeEntries,
+    });
+    assert.equal(refreshed.candidates.find((candidate) => candidate.id === first.decisionRanking.selectedIssue.id), undefined);
+    assert.ok(refreshed.candidates[0].advancementSuppressedCandidates.some((candidate) => candidate.id === first.decisionRanking.selectedIssue.id));
+  } finally {
+    await rm(repo, { recursive: true, force: true });
+  }
 });
 
 test('skipped Xcode validation is not suppressed after repository intelligence snapshot changes', () => {
