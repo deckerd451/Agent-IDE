@@ -95,3 +95,55 @@ test('workflow states represent repository decisions instead of clipboard logist
     assert.doesNotMatch(workflowSource, new RegExp(clipboardStep));
   }
 });
+
+test('validation-experiment execution package is action-first for Nearify-like Xcode validation gaps', () => {
+  const pkg = createExecutionPackage({
+    packageType: 'validation-experiment',
+    executionAgent: 'Codex',
+    repositoryMetadata: { Repository: 'Nearify', Health: 'Needs validation' },
+    repositoryContextPackage: '# Context Package\n\nNearify is an iOS app. Repository files include `Nearify.xcodeproj` and `Nearify.xcworkspace`. Xcode validation notes say full simulator/device build was not run by default; no full `xcodebuild`.',
+    understandingPrompt: 'Using only this Context Package, validate the selected issue.\n\n---\n\n# Context Package\n\nNearify is an iOS app. Repository files include `Nearify.xcodeproj` and `Nearify.xcworkspace`. Xcode validation notes say full simulator/device build was not run by default; no full `xcodebuild`.',
+    implementationPrompt: 'Full simulator/device build: Not run by default; no full `xcodebuild`.',
+    decisionTitle: 'Full simulator/device build: Not run by default; no full xcodebuild',
+    decisionReason: 'Inspect the Xcode project/schemes and run or report the deterministic simulator/device build command.',
+  });
+
+  const sectionOrder = [
+    '## Task',
+    '## Required Execution Instructions',
+    '## Validation Task',
+    '## Suggested Commands',
+    '## What To Report Back',
+    '## Understanding Check',
+    '## Context Package',
+  ].map((heading) => pkg.packageBody.indexOf(heading));
+  assert.ok(sectionOrder.every((index) => index >= 0), 'expected all action-first validation sections to exist');
+  assert.deepEqual(sectionOrder, [...sectionOrder].sort((a, b) => a - b));
+  assert.match(pkg.packageBody, /`xcodebuild -list -project Nearify\.xcodeproj`/);
+  assert.match(pkg.packageBody, /`xcodebuild -list -workspace Nearify\.xcworkspace`/);
+  assert.match(pkg.packageBody, /`xcodebuild build -workspace Nearify\.xcworkspace -scheme <Scheme> -destination 'platform=iOS Simulator,name=<Simulator Name>'`/);
+  assert.match(pkg.packageBody, /Run Xcode metadata discovery first/);
+  assert.match(pkg.packageBody, /Do not modify source code unless/);
+  assert.match(pkg.packageBody, /Commands run, in order/);
+  assert.equal((pkg.packageBody.match(/Nearify is an iOS app/g) ?? []).length, 1);
+});
+
+test('non-Xcode validation-experiment execution package surfaces detected package scripts or absence', () => {
+  const withScript = createExecutionPackage({
+    packageType: 'validation-experiment',
+    executionAgent: 'Codex',
+    repositoryContextPackage: '# Context Package\n\n## Commands Run\n- `npm test`\n- `npm run build`\n',
+    understandingPrompt: 'Validate the package.',
+    decisionTitle: 'Run validation',
+  });
+  assert.match(withScript.packageBody, /## Suggested Commands\n- `npm test`\n- `npm run build`/);
+
+  const withoutScript = createExecutionPackage({
+    packageType: 'validation-experiment',
+    executionAgent: 'Codex',
+    repositoryContextPackage: '# Context Package\n\nNo known commands.\n',
+    understandingPrompt: 'Validate the package.',
+    decisionTitle: 'Run validation',
+  });
+  assert.match(withoutScript.packageBody, /No deterministic validation command detected/);
+});
