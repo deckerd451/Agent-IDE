@@ -50,9 +50,12 @@ export function renderRepositoryIntelligence(status) {
     return lines.join('\n');
   }
   lines.push(`  Decision:          ${status.selectedDecision}`);
+  lines.push(`  Why:               ${status.whyNow || status.decisionSummary}`);
+  lines.push(`  Owner action:      ${status.recommendedOwnerAction}`);
   lines.push(`  Package type:      ${status.packageType}`);
   lines.push(`  Confidence:        ${status.confidence}`);
   lines.push(`  Handoff readiness: ${status.handoffReadiness}`);
+  lines.push(`  Execution ready:   ${status.executionReady}`);
   lines.push(`  Execution agents:  ${status.executionAgents.join(', ')}`);
   return lines.join('\n');
 }
