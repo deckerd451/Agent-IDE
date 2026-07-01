@@ -9,6 +9,7 @@ const docs = await readFile('terminal/README.md', 'utf8');
 test('npm control script launches the project-owned terminal control panel', () => {
   assert.equal(packageJson.scripts.control, 'bash terminal/control-panel.sh');
   assert.match(controlPanel, /Agent IDE terminal control panel/);
+  assert.match(controlPanel, /No interactive input detected; control panel launched successfully and is exiting\./);
 });
 
 test('control panel preserves existing local developer commands', () => {
