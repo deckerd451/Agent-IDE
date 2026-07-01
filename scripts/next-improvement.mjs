@@ -158,10 +158,35 @@ function backlogCount(backlog) { return bullets(mdSection(backlog, 'Prioritized 
 function score(value, fallback = 100) { return Number.isFinite(Number(value)) ? Number(value) : fallback; }
 
 
+function outcomeMatchesRecommendation(entry, issue) {
+  return entry?.recommendationId === issue?.id || entry?.recommendationTitle === issue?.title;
+}
+
 function completedWorkedOutcomeFor(issue, outcomeEntries = []) {
   return outcomeEntries.slice().reverse().find((entry) => entry?.outcome === 'implemented'
     && entry?.promptQuality === 'worked'
-    && (entry.recommendationId === issue?.id || entry.recommendationTitle === issue?.title));
+    && outcomeMatchesRecommendation(entry, issue));
+}
+
+export function isUnavailableLocalToolingOutcome(entry = {}) {
+  const note = [entry.userNote, entry.note, entry.reason, entry.outcomeNote].filter(Boolean).join(' ');
+  const skippedOrBlocked = entry.outcome === 'skipped' || entry.outcome === 'blocked' || /\b(?:skipped|blocked)\b/i.test(note);
+  if (!skippedOrBlocked) return false;
+  return /\b(?:unavailable|not available|missing|not installed|not found|absent|without|requires?\s+(?:macos|xcode|local environment|tooling)|linux\s+without|cannot\s+run)\b/i.test(note)
+    && /\b(?:xcodebuild|xcrun|xcode|simulator|device|tooling|local environment|macos|linux)\b/i.test(note);
+}
+
+function sameRepositoryIntelligenceSnapshot(entry = {}, issue = {}) {
+  const issueSnapshot = issue.repositoryIntelligenceSnapshotHash ?? issue.contextPackageHash ?? issue.snapshotHash;
+  const entrySnapshot = entry.repositoryIntelligenceSnapshotHash ?? entry.contextPackageHash ?? entry.snapshotHash;
+  if (issueSnapshot && entrySnapshot) return issueSnapshot === entrySnapshot;
+  return Boolean(issueSnapshot || entrySnapshot) ? false : true;
+}
+
+function unavailableToolingOutcomeFor(issue, outcomeEntries = []) {
+  return outcomeEntries.slice().reverse().find((entry) => outcomeMatchesRecommendation(entry, issue)
+    && isUnavailableLocalToolingOutcome(entry)
+    && sameRepositoryIntelligenceSnapshot(entry, issue));
 }
 
 function deterministicRetentionEvidence(issue) {
@@ -187,8 +212,12 @@ function deterministicRetentionEvidence(issue) {
 
 export function applyRecommendationAdvancement(candidates = [], outcomeEntries = []) {
   const evaluated = candidates.map((candidate) => {
+    const unavailableToolingOutcome = unavailableToolingOutcomeFor(candidate, outcomeEntries);
+    if (unavailableToolingOutcome) {
+      return { ...candidate, advancement: { state: 'environment-suppressed', reason: `Suppressed for this repository intelligence snapshot because a skipped/blocked outcome recorded unavailable local tooling: ${unavailableToolingOutcome.userNote || unavailableToolingOutcome.note || 'no note provided'}.`, outcomeTimestamp: unavailableToolingOutcome.timestamp } };
+    }
     const outcome = completedWorkedOutcomeFor(candidate, outcomeEntries);
-    if (!outcome) return { ...candidate, advancement: { state: 'eligible', reason: 'No implemented + worked outcome matched this recommendation.' } };
+    if (!outcome) return { ...candidate, advancement: { state: 'eligible', reason: 'No implemented + worked outcome or unavailable-tooling skip matched this recommendation for this snapshot.' } };
     const retentionEvidence = deterministicRetentionEvidence(candidate);
     if (retentionEvidence) {
       const reason = `Retained despite implemented outcome because ${retentionEvidence}.`;
@@ -196,12 +225,13 @@ export function applyRecommendationAdvancement(candidates = [], outcomeEntries =
     }
     return { ...candidate, advancement: { state: 'satisfied', reason: `Satisfied by implemented + worked outcome recorded at ${outcome.timestamp ?? 'unknown time'}; no deterministic incomplete evidence remains.`, outcomeTimestamp: outcome.timestamp } };
   });
-  const unsuppressed = evaluated.filter((candidate) => candidate.advancement?.state !== 'satisfied');
-  const suppressed = evaluated.filter((item) => item.advancement?.state === 'satisfied').map((item) => ({ id: item.id, title: item.title, reason: item.advancement.reason }));
+  const suppressingStates = new Set(['satisfied', 'environment-suppressed']);
+  const unsuppressed = evaluated.filter((candidate) => !suppressingStates.has(candidate.advancement?.state));
+  const suppressed = evaluated.filter((item) => suppressingStates.has(item.advancement?.state)).map((item) => ({ id: item.id, title: item.title, reason: item.advancement.reason }));
   if (unsuppressed.length > 0) return unsuppressed.map((candidate) => ({ ...candidate, advancementSuppressedCandidates: suppressed }));
   if (evaluated.length > 0) {
     return [{
-      ...selectedIssue({ id: 'no-eligible-next-improvement', category: 'repository status', severity: 'low', actionability: 'validation-experiment', source: 'No eligible next improvement found.', title: 'No eligible next improvement found.', evidence: 'No eligible next improvement found.', reason: 'All deterministic candidates were suppressed by implemented + worked outcomes and no incomplete evidence remains.', recommendedAction: 'Refresh after repository changes or add actionable repository intelligence.' }),
+      ...selectedIssue({ id: 'no-eligible-next-improvement', category: 'repository status', severity: 'low', actionability: 'validation-experiment', source: 'No eligible next improvement found.', title: 'No eligible next improvement found.', evidence: 'No eligible next improvement found.', reason: 'All deterministic candidates were suppressed by completed outcomes or same-snapshot unavailable-tooling skips and no incomplete evidence remains.', recommendedAction: 'Refresh after repository changes or add actionable repository intelligence.' }),
       advancement: { state: 'empty', reason: 'No eligible next improvement found.' },
       advancementSuppressedCandidates: suppressed,
     }];
@@ -675,7 +705,7 @@ export function chooseNextImprovementWithCandidates({ health = '', quality = nul
   const maintenanceIssues = issues.length ? issues : (!includeMaintenanceFallback ? [] : (validationAlreadyCompleted
     ? [upToDateIssue(contextHash)]
     : [selectedIssue({ id: 'ai-handoff-validation', category: 'AI handoff validation', severity: 'low', actionability: 'validation-experiment', source: 'No serious repository intelligence issue detected.', title: 'Run AI Handoff Validation', evidence: 'No serious repository intelligence issue detected.', reason: 'When the control plane is healthy, validate that a fresh assistant can use the handoff package successfully.', recommendedAction: 'Run and document a local AI handoff validation dry run.' })]));
-  const candidates = applyRecommendationAdvancement([...improvementCandidates, ...maintenanceIssues], outcomeEntries);
+  const candidates = applyRecommendationAdvancement([...improvementCandidates, ...maintenanceIssues].map((candidate) => ({ ...candidate, repositoryIntelligenceSnapshotHash: contextHash })), outcomeEntries);
   const decisionRanking = buildDecisionRanking(candidates);
   return { selectedIssue: decisionRanking.candidates[0], candidates: decisionRanking.candidates, decisionRanking };
 }

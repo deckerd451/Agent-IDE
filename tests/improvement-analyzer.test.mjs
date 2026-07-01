@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { analyzeImprovements } from '../scripts/improvement-analyzer.mjs';
-import { chooseNextImprovement, chooseNextImprovementWithCandidates, renderPrompt } from '../scripts/next-improvement.mjs';
+import { chooseNextImprovement, chooseNextImprovementWithCandidates, renderPrompt, stableContextPackageHash } from '../scripts/next-improvement.mjs';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -342,4 +342,47 @@ test('no improvement is produced for a repository with clean decisions and no ex
   assert.ok(!improvementIds.includes('technical-debt'), 'Normal backlog items must not become debt');
   assert.ok(!improvementIds.some((id) => id.startsWith('exec-model-risk')), 'Clean exec model must not produce risks');
   assert.ok(!improvementIds.some((id) => id.startsWith('implicit-persistence')), 'Clean decisions must not produce persistence risks');
+});
+
+test('skipped Xcode validation on Linux suppresses same recommendation for same snapshot and promotes next candidate', () => {
+  const contextPackage = '# Context Package\nXcode app snapshot.\n';
+  const snapshot = stableContextPackageHash(contextPackage);
+  const { candidates } = chooseNextImprovementWithCandidates({
+    ...healthyArgs,
+    contextPackage,
+    validation: '# Validation\n\n## Known Validation Gaps\n- Full simulator/device build requires xcodebuild.\n',
+    intelligenceVerification: '# Intelligence Verification\n\n## Findings\n- Document the local environment prerequisite for simulator validation.\n',
+    outcomeEntries: [{
+      timestamp: '2026-07-01T00:00:00.000Z',
+      recommendationId: 'validation-full-simulator-device-build-requires-xcodebuild',
+      recommendationTitle: 'Full simulator/device build requires xcodebuild',
+      outcome: 'skipped',
+      promptQuality: 'worked',
+      userNote: 'Linux without xcodebuild/xcrun',
+      repositoryIntelligenceSnapshotHash: snapshot,
+    }],
+  });
+  const xcodeCandidate = candidates.find((candidate) => candidate.id === 'validation-full-simulator-device-build-requires-xcodebuild');
+  assert.equal(xcodeCandidate, undefined, 'same skipped local-tooling recommendation must be absent from eligible candidates');
+  assert.notEqual(candidates[0]?.id, 'validation-full-simulator-device-build-requires-xcodebuild', 'selection must advance to next ranked candidate');
+  assert.ok(candidates[0], 'next eligible candidate should be promoted');
+  assert.ok(candidates[0].advancementSuppressedCandidates.some((candidate) => candidate.id === 'validation-full-simulator-device-build-requires-xcodebuild'));
+});
+
+test('skipped Xcode validation is not suppressed after repository intelligence snapshot changes', () => {
+  const { candidates } = chooseNextImprovementWithCandidates({
+    ...healthyArgs,
+    contextPackage: '# Context Package\nMeaningfully changed Xcode app snapshot.\n',
+    validation: '# Validation\n\n## Known Validation Gaps\n- Full simulator/device build requires xcodebuild.\n',
+    outcomeEntries: [{
+      timestamp: '2026-07-01T00:00:00.000Z',
+      recommendationId: 'validation-full-simulator-device-build-requires-xcodebuild',
+      recommendationTitle: 'Full simulator/device build requires xcodebuild',
+      outcome: 'skipped',
+      promptQuality: 'worked',
+      userNote: 'Linux without xcodebuild/xcrun',
+      repositoryIntelligenceSnapshotHash: 'different-snapshot',
+    }],
+  });
+  assert.ok(candidates.some((candidate) => candidate.id === 'validation-full-simulator-device-build-requires-xcodebuild'), 'changed snapshot must allow recommendation to reappear');
 });
