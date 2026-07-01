@@ -606,7 +606,7 @@ test('validation experiment for Xcode repository uses repository-native validati
     await writeFile(join(dir, '.ai/architecture.md'), '# Architecture\n\n## Core Systems\nBeacon.xcodeproj iOS app.\n');
     await writeFile(join(dir, '.ai/decisions.md'), '# Decisions\n');
     await writeFile(join(dir, '.ai/execution-model.md'), '# Execution Model\n');
-    await writeFile(join(dir, '.ai/validation.md'), '# Validation\n\n## Xcode Project Validation\n- Xcode project validation metadata detected.\n- `xcodebuild -list -project Beacon.xcodeproj`\n- Full simulator/device build: Not run by default; no full xcodebuild.\n');
+    await writeFile(join(dir, '.ai/validation.md'), '# Validation\n\n## Xcode Project Validation\n- Xcode project validation metadata detected.\n- `xcodebuild -list -project Beacon.xcodeproj`\n- Scheme: `Beacon`\n- Full simulator/device build: Not run by default; no full xcodebuild.\n');
     await writeFile(join(dir, '.ai/ai-handoff-validation.md'), '# AI Handoff Validation\nReady.\n');
     await writeFile(join(dir, '.ai/intelligence-verification.md'), '# Intelligence Verification\n');
 
@@ -615,7 +615,7 @@ test('validation experiment for Xcode repository uses repository-native validati
     assert.match(result.prompt, /## Validation Guidance/);
     assert.match(result.prompt, /Validation target: Beacon\.xcodeproj/);
     assert.match(result.prompt, /xcodebuild -list -project Beacon\.xcodeproj/);
-    assert.match(result.prompt, /xcodebuild build -project Beacon\.xcodeproj -scheme <Scheme> -destination 'platform=iOS Simulator,name=<Simulator Name>'/);
+    assert.match(result.prompt, /xcodebuild build -project Beacon\.xcodeproj -scheme Beacon -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'/);
     assert.match(result.prompt, /\.ai\/validation\.md/);
     assert.doesNotMatch(result.prompt, /- npm test/);
     assert.doesNotMatch(result.prompt, /- npm run build/);

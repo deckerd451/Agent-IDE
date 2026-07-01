@@ -154,18 +154,22 @@ function detectXcodeContainers(text: string) {
   return { workspaces: uniqueStrings(workspaceMatches), projects: uniqueStrings(projectMatches) };
 }
 
-function detectXcodeScheme(text: string) {
-  const patterns = [
-    /(?:^|\n)\s*(?:[-*]\s*)?(?:scheme|shared scheme)\s*[:=]\s*`?([^`\n,;]+)/i,
-    /-scheme\s+['"]?([^'"\n\s]+)/i,
-    /(?:schemes?|targets?)\s+(?:include|detected|available|named)\s+`?([A-Za-z0-9_. -]+?)`?(?:[.;\n]|$)/i,
-  ];
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    const scheme = match?.[1]?.trim().replace(/[`'".]+$/g, '');
-    if (scheme && !/[<>]/.test(scheme) && scheme.length <= 80) return scheme;
+function detectedXcodeSchemes(text: string) {
+  const schemes: string[] = [];
+  const addScheme = (value?: string) => {
+    const scheme = value?.trim().replace(/^[`'"-]+/, '').replace(/[`'".,;:]+$/g, '').trim();
+    if (scheme && !/[<>]/.test(scheme) && /^[A-Za-z0-9_. -]{1,80}$/.test(scheme)) schemes.push(scheme);
+  };
+  for (const match of text.matchAll(/(?:^|\n)\s*(?:[-*]\s*)?(?:shared\s+)?schemes?\s*[:=]\s*([^\n]+)/gi)) {
+    for (const value of match[1].split(/,|\s{2,}/)) addScheme(value);
   }
-  return '<Scheme>';
+  for (const match of text.matchAll(/-scheme\s+['"]?([^'"\n\s]+)/gi)) addScheme(match[1]);
+  for (const match of text.matchAll(/(?:schemes?|targets?)\s+(?:include|detected|available|named)\s+`?([A-Za-z0-9_. -]+?)`?(?:[.;\n]|$)/gi)) addScheme(match[1]);
+  return uniqueStrings(schemes).sort((a, b) => a.localeCompare(b));
+}
+
+function detectXcodeScheme(text: string) {
+  return detectedXcodeSchemes(text)[0] ?? '<Scheme>';
 }
 
 function detectedValidationCommands(text: string) {
@@ -176,8 +180,9 @@ function detectedValidationCommands(text: string) {
 function validationActionSections(input: ExecutionPackageInput, understandingPrompt?: string) {
   const evidenceText = [input.decisionTitle, input.decisionReason, input.implementationPrompt, understandingPrompt, input.repositoryContextPackage].filter(Boolean).join('\n');
   const { workspaces, projects } = detectXcodeContainers(evidenceText);
-  const scheme = detectXcodeScheme(evidenceText);
-  const simulator = '<Simulator Name>';
+  const schemes = detectedXcodeSchemes(evidenceText);
+  const scheme = schemes[0] ?? '<Scheme>';
+  const simulator = '<Installed Simulator Name>';
   const listCommands = [
     ...projects.map((project) => `xcodebuild -list -project ${project}`),
     ...workspaces.map((workspace) => `xcodebuild -list -workspace ${workspace}`),
@@ -190,8 +195,8 @@ function validationActionSections(input: ExecutionPackageInput, understandingPro
     ? [
       'This is a validation experiment, not an implementation task. Make the validation command actionable before reading broad repository context.',
       '1. Run Xcode metadata discovery first using the commands in Suggested Commands.',
-      '2. Select an available shared scheme from the local project/workspace metadata. If the package uses `<Scheme>`, replace it with a scheme reported by `xcodebuild -list`.',
-      '3. Run the full simulator/device build if possible. If the package uses `<Simulator Name>`, replace it with an installed simulator name from the local machine.',
+      schemes.length > 1 ? `2. Use shared scheme ${scheme}; multiple schemes were detected, so this package chose the first scheme by stable alphabetical sort. If that is not the intended validation target, report the local metadata evidence before changing it.` : schemes.length === 1 ? `2. Use shared scheme ${scheme} from repository-local validation evidence.` : '2. Select an available shared scheme from the local project/workspace metadata. Because no deterministic scheme was detected, replace `<Scheme>` with a scheme reported by `xcodebuild -list`.',
+      '3. Run the full simulator/device build if possible. If the package uses `<Installed Simulator Name>`, replace it with an installed simulator name from the local machine.',
       '4. Do not modify source code unless a minimal local change is required to make the validation command runnable.',
       '5. Stop after validation evidence is collected; do not broaden into unrelated repository changes.',
     ].join('\n')
