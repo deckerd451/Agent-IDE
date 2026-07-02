@@ -62,3 +62,50 @@ test('implemented + worked recommendation produces positive empty state when no 
   assert.equal(ranking.selectedIssue.title, 'No eligible next improvement found.');
   assert.equal(ranking.advancement.suppressedCandidates.length, 1);
 });
+
+test('implemented + worked validation recommendation is terminal even when validation gap text remains', () => {
+  const validation = candidate({
+    id: 'validation-xcodebuild-build-succeeded',
+    title: 'Run xcodebuild build validation',
+    actionability: 'validation-experiment',
+    packageType: 'validation-experiment',
+    evidence: 'Known Validation Gaps still mention xcodebuild build missing.',
+    source: 'Known Validation Gaps still mention xcodebuild build missing.',
+    reason: 'A missing validation gap remains in generated markdown.',
+  });
+  const next = candidate({ id: 'validation-next', title: 'Run next validation', actionability: 'validation-experiment', packageType: 'validation-experiment' });
+  const advanced = applyRecommendationAdvancement([validation, next], [implementedWorked({
+    recommendationId: 'validation-xcodebuild-build-succeeded',
+    recommendationTitle: 'Run xcodebuild build validation',
+  })]);
+  const ranking = buildDecisionRanking(advanced);
+
+  assert.equal(ranking.selectedIssue.id, 'validation-next');
+  assert.ok(ranking.advancement.suppressedCandidates.some((item) => item.id === 'validation-xcodebuild-build-succeeded'));
+  assert.match(ranking.advancement.suppressedCandidates.find((item) => item.id === 'validation-xcodebuild-build-succeeded').reason, /completed validation evidence is terminal/);
+});
+
+test('skipped wrong-recommendation validation outcome that cites prior validation suppresses same candidate', () => {
+  const validation = candidate({
+    id: 'validation-xcodebuild-build-succeeded',
+    title: 'Run xcodebuild build validation',
+    actionability: 'validation-experiment',
+    packageType: 'validation-experiment',
+    evidence: 'Known Validation Gaps still mention xcodebuild build missing.',
+  });
+  const next = candidate({ id: 'validation-next', title: 'Run next validation', actionability: 'validation-experiment', packageType: 'validation-experiment' });
+  const advanced = applyRecommendationAdvancement([validation, next], [{
+    timestamp: '2026-07-01T00:00:00.000Z',
+    recommendationId: 'validation-xcodebuild-build-succeeded',
+    recommendationTitle: 'Run xcodebuild build validation',
+    outcome: 'skipped',
+    promptQuality: 'wrong_recommendation',
+    userNote: 'Previous outcome already validated this recommendation with existing evidence.',
+  }]);
+  const ranking = buildDecisionRanking(advanced);
+
+  assert.equal(ranking.selectedIssue.id, 'validation-next');
+  assert.ok(ranking.advancement.suppressedCandidates.some((item) => item.id === 'validation-xcodebuild-build-succeeded'));
+  assert.match(ranking.advancement.suppressedCandidates.find((item) => item.id === 'validation-xcodebuild-build-succeeded').reason, /prior evidence already validated/);
+});
+

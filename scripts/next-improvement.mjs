@@ -169,8 +169,28 @@ function completedWorkedOutcomeFor(issue, outcomeEntries = []) {
     && outcomeMatchesRecommendation(entry, issue));
 }
 
+function isValidationCandidate(issue = {}) {
+  const text = [issue.id, issue.kind, issue.class, issue.category, issue.actionability, issue.packageType, issue.title, issue.recommendedAction].filter(Boolean).join(' ');
+  return /(?:^|[-_\s])validation(?:[-_\s]|$)|validation-experiment|handoff validation|xcodebuild|simulator/i.test(text);
+}
+
 function outcomeNoteText(entry = {}) {
   return [entry.userNote, entry.note, entry.reason, entry.outcomeNote].filter(Boolean).join(' ');
+}
+
+export function isAlreadyValidatedWrongRecommendationOutcome(entry = {}) {
+  if (entry.outcome !== 'skipped' || entry.promptQuality !== 'wrong_recommendation') return false;
+  const note = outcomeNoteText(entry);
+  const saysAlready = /\b(?:already|previous(?:ly)?|prior|existing)\b/i.test(note);
+  const saysSatisfied = /\b(?:validated|validation|satisf(?:y|ies|ied)|covered|proved|completed|terminal|evidence)\b/i.test(note);
+  const citesRecommendation = /\b(?:recommendation|candidate|prompt|outcome|evidence)\b/i.test(note);
+  return saysAlready && saysSatisfied && citesRecommendation;
+}
+
+function alreadyValidatedWrongRecommendationOutcomeFor(issue, outcomeEntries = []) {
+  if (!isValidationCandidate(issue)) return null;
+  return outcomeEntries.slice().reverse().find((entry) => outcomeMatchesRecommendation(entry, issue)
+    && isAlreadyValidatedWrongRecommendationOutcome(entry));
 }
 
 export function isUnavailableLocalToolingOutcome(entry = {}) {
@@ -243,8 +263,15 @@ export function applyRecommendationAdvancement(candidates = [], outcomeEntries =
     if (irrelevantRepositoryTypeOutcome) {
       return { ...candidate, advancement: { state: 'repository-type-suppressed', reason: `Suppressed for this repository intelligence snapshot because a skipped outcome recorded that this recommendation is inappropriate for the repository type: ${irrelevantRepositoryTypeOutcome.userNote || irrelevantRepositoryTypeOutcome.note || 'no note provided'}.`, outcomeTimestamp: irrelevantRepositoryTypeOutcome.timestamp } };
     }
+    const alreadyValidatedOutcome = alreadyValidatedWrongRecommendationOutcomeFor(candidate, outcomeEntries);
+    if (alreadyValidatedOutcome) {
+      return { ...candidate, advancement: { state: 'satisfied', reason: `Satisfied by skipped + wrong-recommendation outcome recorded at ${alreadyValidatedOutcome.timestamp ?? 'unknown time'} because the note says prior evidence already validated this recommendation: ${alreadyValidatedOutcome.userNote || alreadyValidatedOutcome.note || 'no note provided'}.`, outcomeTimestamp: alreadyValidatedOutcome.timestamp } };
+    }
     const outcome = completedWorkedOutcomeFor(candidate, outcomeEntries);
-    if (!outcome) return { ...candidate, advancement: { state: 'eligible', reason: 'No implemented + worked outcome or unavailable-tooling skip matched this recommendation for this snapshot.' } };
+    if (!outcome) return { ...candidate, advancement: { state: 'eligible', reason: 'No terminal validation evidence, implemented + worked outcome, or unavailable-tooling skip matched this recommendation for this snapshot.' } };
+    if (isValidationCandidate(candidate)) {
+      return { ...candidate, advancement: { state: 'satisfied', reason: `Satisfied by implemented + worked validation outcome recorded at ${outcome.timestamp ?? 'unknown time'}; completed validation evidence is terminal for this candidate.`, outcomeTimestamp: outcome.timestamp } };
+    }
     const retentionEvidence = deterministicRetentionEvidence(candidate);
     if (retentionEvidence) {
       const reason = `Retained despite implemented outcome because ${retentionEvidence}.`;
