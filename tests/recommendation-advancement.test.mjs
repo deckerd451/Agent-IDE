@@ -109,3 +109,79 @@ test('skipped wrong-recommendation validation outcome that cites prior validatio
   assert.match(ranking.advancement.suppressedCandidates.find((item) => item.id === 'validation-xcodebuild-build-succeeded').reason, /prior evidence already validated/);
 });
 
+
+test('failed xcodebuild test with scheme test action not configured suppresses validation candidate for same snapshot', () => {
+  const snapshot = 'snapshot-xcode-test-action';
+  const validation = candidate({
+    id: 'validation-run-xcodebuild-test',
+    title: 'Run xcodebuild test validation',
+    actionability: 'validation-experiment',
+    packageType: 'validation-experiment',
+    repositoryIntelligenceSnapshotHash: snapshot,
+    evidence: 'Run xcodebuild test for the Beacon scheme.',
+  });
+  const next = candidate({
+    id: 'validation-next',
+    title: 'Run next validation',
+    actionability: 'validation-experiment',
+    packageType: 'validation-experiment',
+    repositoryIntelligenceSnapshotHash: snapshot,
+  });
+  const advanced = applyRecommendationAdvancement([validation, next], [{
+    timestamp: '2026-07-02T00:00:00.000Z',
+    recommendationId: 'validation-run-xcodebuild-test',
+    recommendationTitle: 'Run xcodebuild test validation',
+    outcome: 'failed',
+    promptQuality: 'worked',
+    repositoryIntelligenceSnapshotHash: snapshot,
+    userNote: 'xcodebuild: error: Scheme Beacon is not currently configured for the test action.',
+  }]);
+  const ranking = buildDecisionRanking(advanced);
+
+  assert.equal(ranking.selectedIssue.id, 'validation-next');
+  const suppressed = ranking.advancement.suppressedCandidates.find((item) => item.id === 'validation-run-xcodebuild-test');
+  assert.ok(suppressed);
+  assert.match(suppressed.reason, /missing repository configuration/);
+  assert.match(suppressed.reason, /Scheme Beacon is not currently configured for the test action/);
+});
+
+test('repository-configuration-blocked validation outcome requires same snapshot', () => {
+  const validation = candidate({
+    id: 'validation-run-xcodebuild-test',
+    title: 'Run xcodebuild test validation',
+    actionability: 'validation-experiment',
+    packageType: 'validation-experiment',
+    repositoryIntelligenceSnapshotHash: 'new-snapshot',
+  });
+  const advanced = applyRecommendationAdvancement([validation, candidate({ id: 'other', title: 'Other Work' })], [{
+    timestamp: '2026-07-02T00:00:00.000Z',
+    recommendationId: 'validation-run-xcodebuild-test',
+    recommendationTitle: 'Run xcodebuild test validation',
+    outcome: 'failed',
+    promptQuality: 'worked',
+    repositoryIntelligenceSnapshotHash: 'old-snapshot',
+    userNote: 'xcodebuild: error: Scheme Beacon is not currently configured for the test action.',
+  }]);
+
+  assert.equal(advanced.find((item) => item.id === 'validation-run-xcodebuild-test').advancement.state, 'eligible');
+});
+
+test('ordinary failed validation remains eligible when failure is not repository-configuration-blocked', () => {
+  const validation = candidate({
+    id: 'validation-run-test',
+    title: 'Run test validation',
+    actionability: 'validation-experiment',
+    packageType: 'validation-experiment',
+    evidence: 'Run deterministic tests.',
+  });
+  const advanced = applyRecommendationAdvancement([validation, candidate({ id: 'other', title: 'Other Work' })], [{
+    timestamp: '2026-07-02T00:00:00.000Z',
+    recommendationId: 'validation-run-test',
+    recommendationTitle: 'Run test validation',
+    outcome: 'failed',
+    promptQuality: 'worked',
+    userNote: 'Tests failed: expected true to equal false.',
+  }]);
+
+  assert.equal(advanced.find((item) => item.id === 'validation-run-test').advancement.state, 'eligible');
+});

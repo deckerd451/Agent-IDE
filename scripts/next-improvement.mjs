@@ -232,6 +232,27 @@ function irrelevantRepositoryTypeOutcomeFor(issue, outcomeEntries = []) {
     && sameRepositoryIntelligenceSnapshot(entry, issue));
 }
 
+
+export function isRepositoryConfigurationBlockedValidationOutcome(entry = {}) {
+  const note = outcomeNoteText(entry);
+  const status = String(entry.outcome ?? '').toLowerCase();
+  const attemptedButTerminal = status === 'failed' || status === 'blocked' || status === 'skipped' || /\b(?:failed|blocked|skipped|cannot\s+run|could\s+not\s+run|unavailable)\b/i.test(note);
+  if (!attemptedButTerminal) return false;
+  const xcodeSchemeMissingTestAction = /xcodebuild:\s*error:\s*Scheme\s+[^\n]+?\s+is\s+not\s+currently\s+configured\s+for\s+the\s+test\s+action\.?/i.test(note);
+  const xcodeTestActionNotConfigured = /\bxcodebuild\b[\s\S]{0,240}\b(?:scheme|test\s+action)\b[\s\S]{0,240}\bnot\s+(?:currently\s+)?configured\b[\s\S]{0,240}\b(?:test\s+action|scheme)\b/i.test(note);
+  const absentRepoValidationConfig = /\b(?:required\s+)?(?:repo|repository|project)\s+configuration\s+(?:is\s+)?(?:absent|missing|not\s+present|unavailable)\b/i.test(note)
+    || /\b(?:no|missing|absent)\s+(?:test\s+target|test\s+action|configured\s+test\s+action|validation\s+configuration|validation\s+command|test\s+scheme)\b/i.test(note)
+    || /\b(?:scheme|target)\b[\s\S]{0,160}\b(?:does\s+not\s+have|lacks|missing|without)\b[\s\S]{0,160}\b(?:test\s+action|test\s+target|tests?)\b/i.test(note);
+  return xcodeSchemeMissingTestAction || xcodeTestActionNotConfigured || absentRepoValidationConfig;
+}
+
+function repositoryConfigurationBlockedOutcomeFor(issue, outcomeEntries = []) {
+  if (!isValidationCandidate(issue)) return null;
+  return outcomeEntries.slice().reverse().find((entry) => outcomeMatchesRecommendation(entry, issue)
+    && isRepositoryConfigurationBlockedValidationOutcome(entry)
+    && sameRepositoryIntelligenceSnapshot(entry, issue));
+}
+
 function deterministicRetentionEvidence(issue) {
   const text = [issue?.evidence, issue?.source, issue?.reason, issue?.recommendedAction].filter(Boolean).join(' ');
   const incompletePatterns = [
@@ -259,6 +280,10 @@ export function applyRecommendationAdvancement(candidates = [], outcomeEntries =
     if (unavailableToolingOutcome) {
       return { ...candidate, advancement: { state: 'environment-suppressed', reason: `Suppressed for this repository intelligence snapshot because a skipped/blocked outcome recorded unavailable local tooling: ${unavailableToolingOutcome.userNote || unavailableToolingOutcome.note || 'no note provided'}.`, outcomeTimestamp: unavailableToolingOutcome.timestamp } };
     }
+    const repositoryConfigurationBlockedOutcome = repositoryConfigurationBlockedOutcomeFor(candidate, outcomeEntries);
+    if (repositoryConfigurationBlockedOutcome) {
+      return { ...candidate, advancement: { state: 'repository-configuration-blocked', reason: `Suppressed for this repository intelligence snapshot because validation terminally failed due to missing repository configuration: ${repositoryConfigurationBlockedOutcome.userNote || repositoryConfigurationBlockedOutcome.note || repositoryConfigurationBlockedOutcome.reason || 'no note provided'}.`, outcomeTimestamp: repositoryConfigurationBlockedOutcome.timestamp } };
+    }
     const irrelevantRepositoryTypeOutcome = irrelevantRepositoryTypeOutcomeFor(candidate, outcomeEntries);
     if (irrelevantRepositoryTypeOutcome) {
       return { ...candidate, advancement: { state: 'repository-type-suppressed', reason: `Suppressed for this repository intelligence snapshot because a skipped outcome recorded that this recommendation is inappropriate for the repository type: ${irrelevantRepositoryTypeOutcome.userNote || irrelevantRepositoryTypeOutcome.note || 'no note provided'}.`, outcomeTimestamp: irrelevantRepositoryTypeOutcome.timestamp } };
@@ -268,7 +293,7 @@ export function applyRecommendationAdvancement(candidates = [], outcomeEntries =
       return { ...candidate, advancement: { state: 'satisfied', reason: `Satisfied by skipped + wrong-recommendation outcome recorded at ${alreadyValidatedOutcome.timestamp ?? 'unknown time'} because the note says prior evidence already validated this recommendation: ${alreadyValidatedOutcome.userNote || alreadyValidatedOutcome.note || 'no note provided'}.`, outcomeTimestamp: alreadyValidatedOutcome.timestamp } };
     }
     const outcome = completedWorkedOutcomeFor(candidate, outcomeEntries);
-    if (!outcome) return { ...candidate, advancement: { state: 'eligible', reason: 'No terminal validation evidence, implemented + worked outcome, or unavailable-tooling skip matched this recommendation for this snapshot.' } };
+    if (!outcome) return { ...candidate, advancement: { state: 'eligible', reason: 'No terminal validation evidence, implemented + worked outcome, unavailable-tooling skip, or repository-configuration-blocked validation outcome matched this recommendation for this snapshot.' } };
     if (isValidationCandidate(candidate)) {
       return { ...candidate, advancement: { state: 'satisfied', reason: `Satisfied by implemented + worked validation outcome recorded at ${outcome.timestamp ?? 'unknown time'}; completed validation evidence is terminal for this candidate.`, outcomeTimestamp: outcome.timestamp } };
     }
@@ -279,13 +304,13 @@ export function applyRecommendationAdvancement(candidates = [], outcomeEntries =
     }
     return { ...candidate, advancement: { state: 'satisfied', reason: `Satisfied by implemented + worked outcome recorded at ${outcome.timestamp ?? 'unknown time'}; no deterministic incomplete evidence remains.`, outcomeTimestamp: outcome.timestamp } };
   });
-  const suppressingStates = new Set(['satisfied', 'environment-suppressed', 'repository-type-suppressed']);
+  const suppressingStates = new Set(['satisfied', 'environment-suppressed', 'repository-type-suppressed', 'repository-configuration-blocked']);
   const unsuppressed = evaluated.filter((candidate) => !suppressingStates.has(candidate.advancement?.state));
   const suppressed = evaluated.filter((item) => suppressingStates.has(item.advancement?.state)).map((item) => ({ id: item.id, title: item.title, reason: item.advancement.reason }));
   if (unsuppressed.length > 0) return unsuppressed.map((candidate) => ({ ...candidate, advancementSuppressedCandidates: suppressed }));
   if (evaluated.length > 0) {
     return [{
-      ...selectedIssue({ id: 'no-eligible-next-improvement', category: 'repository status', severity: 'low', actionability: 'validation-experiment', source: 'No eligible next improvement found.', title: 'No eligible next improvement found.', evidence: 'No eligible next improvement found.', reason: 'All deterministic candidates were suppressed by completed outcomes or same-snapshot unavailable-tooling skips and no incomplete evidence remains.', recommendedAction: 'Refresh after repository changes or add actionable repository intelligence.' }),
+      ...selectedIssue({ id: 'no-eligible-next-improvement', category: 'repository status', severity: 'low', actionability: 'validation-experiment', source: 'No eligible next improvement found.', title: 'No eligible next improvement found.', evidence: 'No eligible next improvement found.', reason: 'All deterministic candidates were suppressed by completed outcomes, same-snapshot unavailable-tooling skips, or repository-configuration-blocked validation outcomes and no incomplete evidence remains.', recommendedAction: 'Refresh after repository changes or add actionable repository intelligence.' }),
       advancement: { state: 'empty', reason: 'No eligible next improvement found.' },
       advancementSuppressedCandidates: suppressed,
     }];
