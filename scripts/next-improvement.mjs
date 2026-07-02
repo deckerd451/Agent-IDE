@@ -361,10 +361,16 @@ function limitedExpansion(sourceKey, sourceFile, markdown, sectionPatterns = [])
   }).slice(0, 8).map((item, index) => candidateExpansionIssue({ sourceKey, sourceFile, index, text: item.text, section: item.section }));
 }
 
+function isDescriptiveValidationMetadataLine(text = '') {
+  const normalized = String(text).replace(/^(?:[-*]|\d+[.)])\s+/, '').trim();
+  return /^(?:Repository type|Primary build system|Primary language|Target validation status)\s*:/i.test(normalized);
+}
+
 function repositoryAwareValidationCandidates(validation = '') {
   const profile = detectRepositoryProfile({ validationMarkdown: validation });
   const explicitPrimaryBuildSystem = /Primary build system:\s*Xcode/i.test(validation);
-  const candidates = limitedExpansion('validation', '.ai/validation.md', validation, [/failed|missing|gap|validation|known/i]);
+  const candidates = limitedExpansion('validation', '.ai/validation.md', validation, [/failed|missing|gap|validation|known/i])
+    .filter((candidate) => !isDescriptiveValidationMetadataLine(candidate.evidence) && !isDescriptiveValidationMetadataLine(candidate.recommendedAction) && !isDescriptiveValidationMetadataLine(candidate.title));
   return candidates
     .filter((candidate) => {
       const text = recommendationText(candidate);

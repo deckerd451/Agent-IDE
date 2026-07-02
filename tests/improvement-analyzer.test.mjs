@@ -507,8 +507,11 @@ test('repository-aware validation separates Xcode target gaps from npm script ga
     intelligenceVerification: '# Intelligence Verification\n\n## Findings\n- Document generated validation summary.\n',
   });
   assert.equal(candidates.some((candidate) => /npm run (?:build|test|lint)|npm test|package scripts?/i.test(`${candidate.title} ${candidate.evidence}`)), false);
+  assert.equal(candidates.some((candidate) => /^(?:Repository type|Primary build system|Primary language|Target validation status)\s*:/i.test(candidate.evidence)), false);
   assert.ok(candidates.some((candidate) => /xcodebuild -list/i.test(`${candidate.title} ${candidate.evidence}`)));
   assert.ok(candidates.some((candidate) => /xcodebuild build/i.test(`${candidate.title} ${candidate.evidence}`)));
+  assert.match(`${candidates[0].title} ${candidates[0].evidence}`, /xcodebuild/i);
+  assert.doesNotMatch(`${candidates[0].title} ${candidates[0].evidence}`, /Primary build system:\s*Xcode/i);
   assert.equal(candidates[0].id.startsWith('validation-'), true);
 });
 
