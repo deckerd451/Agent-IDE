@@ -196,3 +196,30 @@ test('validation-experiment execution package emits deterministic project and wo
   assert.match(pkg.packageBody, /`xcodebuild -list -project A\.xcodeproj`[\s\S]*`xcodebuild -list -project B\.xcodeproj`[\s\S]*`xcodebuild -list -workspace B\.xcworkspace`/);
   assert.match(pkg.packageBody, /`xcodebuild build -workspace B\.xcworkspace -scheme Beacon -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'`/);
 });
+
+test('validation-experiment execution package uses xcodebuild test for xcodebuild test recommendation', () => {
+  const pkg = createExecutionPackage({
+    packageType: 'validation-experiment',
+    executionAgent: 'Codex',
+    repositoryContextPackage: '# Context Package\n\n## Validation Evidence\n.ai/validation.md reports `xcodebuild -list -project Beacon.xcodeproj`.\nScheme: `Beacon`\n',
+    understandingPrompt: 'Validate the package.',
+    decisionTitle: 'Run and document xcodebuild test when a test scheme and simulator/device destination are available',
+    decisionReason: 'Known Validation Gaps still require the Xcode test command to be run or documented as skipped.',
+  });
+  assert.match(pkg.packageBody, /`xcodebuild -list -project Beacon\.xcodeproj`/);
+  assert.match(pkg.packageBody, /`xcodebuild test -project Beacon\.xcodeproj -scheme Beacon -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'`/);
+  assert.doesNotMatch(pkg.packageBody, /`xcodebuild build -project Beacon\.xcodeproj -scheme Beacon -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'`/);
+  assert.match(pkg.packageBody, /Run the xcodebuild test validation command if possible/);
+});
+
+test('validation-experiment execution package preserves xcodebuild build for xcodebuild build recommendation', () => {
+  const pkg = createExecutionPackage({
+    packageType: 'validation-experiment',
+    executionAgent: 'Codex',
+    repositoryContextPackage: '# Context Package\n\nRepository files include `Beacon.xcodeproj`.\nScheme: `Beacon`\n',
+    understandingPrompt: 'Validate the package.',
+    decisionTitle: 'Run and document an Xcode-native xcodebuild build result or the local environment reason it was skipped',
+  });
+  assert.match(pkg.packageBody, /`xcodebuild build -project Beacon\.xcodeproj -scheme Beacon -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'`/);
+  assert.doesNotMatch(pkg.packageBody, /`xcodebuild test -project Beacon\.xcodeproj -scheme Beacon -destination 'platform=iOS Simulator,name=<Installed Simulator Name>'`/);
+});

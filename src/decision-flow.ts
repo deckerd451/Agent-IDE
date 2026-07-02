@@ -177,6 +177,13 @@ function detectedValidationCommands(text: string) {
   return uniqueStrings(backticked.filter((command) => /^(?:npm\s+(?:run\s+)?(?:test|build|lint|typecheck)|pnpm\s+(?:run\s+)?(?:test|build|lint|typecheck)|yarn\s+(?:test|build|lint|typecheck)|bun\s+(?:test|run\s+(?:build|lint|typecheck))|cargo\s+(?:test|build|check)|go\s+test|swift\s+(?:test|build)|xcodebuild\s+)/i.test(command))).slice(0, 8);
 }
 
+function validationCommandActionFor(input: ExecutionPackageInput) {
+  const selectedCandidateText = [input.decisionTitle, input.decisionReason, input.implementationPrompt].filter(Boolean).join('\n');
+  if (/xcodebuild\s+test|run and document [`']?xcodebuild test/i.test(selectedCandidateText)) return 'test';
+  if (/xcodebuild\s+build|simulator\/device build|full [`']?xcodebuild/i.test(selectedCandidateText)) return 'build';
+  return 'build';
+}
+
 function validationActionSections(input: ExecutionPackageInput, understandingPrompt?: string) {
   const evidenceText = [input.decisionTitle, input.decisionReason, input.implementationPrompt, understandingPrompt, input.repositoryContextPackage].filter(Boolean).join('\n');
   const { workspaces, projects } = detectXcodeContainers(evidenceText);
@@ -188,15 +195,18 @@ function validationActionSections(input: ExecutionPackageInput, understandingPro
     ...workspaces.map((workspace) => `xcodebuild -list -workspace ${workspace}`),
   ];
   const buildContainer = workspaces[0] ? { flag: '-workspace', path: workspaces[0] } : projects[0] ? { flag: '-project', path: projects[0] } : null;
+  const xcodebuildAction = validationCommandActionFor(input);
+  const finalXcodeCommand = buildContainer ? `xcodebuild ${xcodebuildAction} ${buildContainer.flag} ${buildContainer.path} -scheme ${scheme} -destination 'platform=iOS Simulator,name=${simulator}'` : null;
   const suggestedCommands = buildContainer
-    ? [...listCommands, `xcodebuild build ${buildContainer.flag} ${buildContainer.path} -scheme ${scheme} -destination 'platform=iOS Simulator,name=${simulator}'`]
+    ? [...listCommands, finalXcodeCommand]
     : detectedValidationCommands(evidenceText);
+  const xcodeValidationDescription = xcodebuildAction === 'test' ? 'validation command' : 'simulator/device build';
   const actionBody = buildContainer
     ? [
       'This is a validation experiment, not an implementation task. Make the validation command actionable before reading broad repository context.',
       '1. Run Xcode metadata discovery first using the commands in Suggested Commands.',
       schemes.length > 1 ? `2. Use shared scheme ${scheme}; multiple schemes were detected, so this package chose the first scheme by stable alphabetical sort. If that is not the intended validation target, report the local metadata evidence before changing it.` : schemes.length === 1 ? `2. Use shared scheme ${scheme} from repository-local validation evidence.` : '2. Select an available shared scheme from the local project/workspace metadata. Because no deterministic scheme was detected, replace `<Scheme>` with a scheme reported by `xcodebuild -list`.',
-      '3. Run the full simulator/device build if possible. If the package uses `<Installed Simulator Name>`, replace it with an installed simulator name from the local machine.',
+      `3. Run the xcodebuild ${xcodebuildAction} ${xcodeValidationDescription} if possible. If the package uses \`<Installed Simulator Name>\`, replace it with an installed simulator name from the local machine.`,
       '4. Do not modify source code unless a minimal local change is required to make the validation command runnable.',
       '5. Stop after validation evidence is collected; do not broaden into unrelated repository changes.',
     ].join('\n')
