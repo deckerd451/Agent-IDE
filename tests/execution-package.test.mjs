@@ -74,7 +74,7 @@ test('clicking Codex once copies without refreshing and immediately exposes outc
   assert.match(actionSource, /onClick=\{\(\) => \{ if \(pkg\?\.packageBody\) void handleExecutionAgentClick\(agent, pkg\.packageBody\); \}\}/);
   assert.doesNotMatch(actionSource, /handleExecutionAgentClick[\s\S]*refreshIntelligence/);
   assert.doesNotMatch(actionSource, /handleExecutionAgentClick[\s\S]*onPrimaryAction\(\)/);
-  assert.match(actionSource, /const actionTitle = isAwaitingExternalAi \? 'Waiting for AI'/);
+  assert.match(actionSource, /isAwaitingExternalAi \? 'Waiting for AI'/);
   assert.match(actionSource, /isAwaitingExternalAi && !outcomeFormOpen && <button className="primaryCta" data-decision-flow-primary-action="true" onClick=\{\(\) => setOutcomeFormOpen\(true\)\} type="button">Record Outcome<\/button>/);
 });
 

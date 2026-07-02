@@ -29,7 +29,7 @@ export type DecisionFlowRecommendation = {
   displayTitle?: string;
   explanation?: string;
   whyItMatters?: string;
-  packageType?: 'implementation' | 'product-decision' | 'validation-experiment' | 'task-clarification' | string;
+  packageType?: 'implementation' | 'product-decision' | 'validation-experiment' | 'task-clarification' | 'terminal' | string;
   evidenceSource?: string;
   canonicalIntelligenceState?: 'existing' | 'missing';
 };
@@ -81,6 +81,7 @@ export function decisionPackageType(input: Pick<DecisionFlowInput, 'recommendati
   if (input.recommendation?.packageType === 'product-decision') return 'product-decision';
   if (input.recommendation?.packageType === 'validation-experiment') return 'validation-experiment';
   if (input.recommendation?.packageType === 'implementation') return 'implementation';
+  if (input.recommendation?.packageType === 'terminal') return 'investigation';
   const text = `${input.selectedCandidate?.category ?? ''} ${input.selectedCandidate?.title ?? ''} ${input.selectedCandidate?.ownerAction ?? ''} ${input.recommendation?.title ?? ''} ${input.workflow?.type ?? ''}`;
   if (/documentation|docs/i.test(text)) return 'documentation';
   if (/investigat|unknown|risk|explain/i.test(text)) return 'investigation';

@@ -198,7 +198,7 @@ test('decorated Control Plane recommendation is the single source for card previ
   assert.equal(controlPlane.packages.builder, controlPlane.recommendation.implementationPrompt);
 });
 
-test('blocked engineering task returns clarification prompt instead of empty implementation prompt', async () => {
+test('blocked task-clarification candidate emits terminal no-actionable state without execution package', async () => {
   const dir = await writeControlPlaneFixture({ withJudgment: false });
   const engineeringTask = {
     schemaVersion: 1,
@@ -223,9 +223,16 @@ test('blocked engineering task returns clarification prompt instead of empty imp
     selectionExplanation: 'Blocked task selected.',
   }, null, 2));
   const controlPlane = await readControlPlane(dir);
-  assert.equal(controlPlane.recommendation.blockingState.state, 'blocked');
-  assert.match(controlPlane.recommendation.implementationPrompt, /Recommendation requires task clarification/);
-  assert.match(controlPlane.recommendation.implementationPrompt, /Missing deterministic evidence/);
+  assert.equal(controlPlane.recommendation.blockingState.state, 'terminal');
+  assert.equal(controlPlane.recommendation.title, 'No actionable recommendations remain.');
+  assert.equal(controlPlane.recommendation.displayTitle, 'No actionable recommendations remain.');
+  assert.equal(controlPlane.recommendation.packageType, 'terminal');
+  assert.equal(controlPlane.recommendation.implementationPrompt, '');
+  assert.equal(controlPlane.recommendation.prompt, '');
+  assert.equal(controlPlane.packages.builder, '');
+  assert.match(controlPlane.recommendation.terminalState.reasons.join(' '), /Remaining candidates require repository-local clarification/);
+  assert.match(controlPlane.recommendation.terminalState.reasons.join(' '), /All actionable validation recommendations/);
+  assert.match(controlPlane.recommendation.terminalState.reasons.join(' '), /Additional repository changes or backlog refinement/);
 });
 
 test('Ready Repository Judgment uses selected actionable candidate for implementationPrompt', async () => {

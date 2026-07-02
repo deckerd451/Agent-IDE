@@ -457,9 +457,27 @@ function promptFromEngineeringTask(engineeringTask, fallbackTitle = 'Recommendat
   return lines.filter((line, index, arr) => line || arr[index - 1] !== '').join('\n');
 }
 
+
+function noActionableRecommendationsState(engineeringTask, decisionRanking) {
+  const selected = decisionRanking?.candidates?.[0];
+  if (!(engineeringTask?.status === 'blocked' && selected?.packageType === 'task-clarification')) return null;
+  const clarification = engineeringTask.clarification ?? 'Deterministic repository-local evidence is insufficient to compile a concrete engineering task.';
+  return {
+    state: 'terminal',
+    title: 'No actionable recommendations remain.',
+    reason: clarification,
+    reasons: [
+      'Remaining candidates require repository-local clarification.',
+      'All actionable validation recommendations for the current repository intelligence snapshot have already been completed or reached terminal outcomes.',
+      'Additional repository changes or backlog refinement are required before new implementation work can be generated.',
+    ],
+  };
+}
 function implementationPromptForRecommendation(recommendation, decisionRanking, fallbackPrompt = '') {
   const engineeringTask = decisionRanking?.engineeringTask ?? decisionRanking?.candidates?.[0]?.engineeringTask ?? null;
   const selected = decisionRanking?.candidates?.[0];
+  const terminalState = noActionableRecommendationsState(engineeringTask, decisionRanking);
+  if (terminalState) return '';
   if (engineeringTask && engineeringTask.status !== 'preserved') {
     if (selected) {
       const decoratedSelected = {
@@ -498,14 +516,21 @@ function decorateRecommendationForControlPlane(recommendation, decisionRanking, 
   const original = decisionRanking?.originalSelectedRecommendation ?? engineeringTask?.originalRecommendation ?? null;
   const displayTitle = engineeringTask?.title ?? recommendation.title;
   const displaySummary = engineeringTask ? (engineeringTask.rootCause || engineeringTask.implementationTarget || recommendation.whyItMatters) : recommendation.whyItMatters;
+  const terminalState = noActionableRecommendationsState(engineeringTask, decisionRanking);
   const implementationPrompt = implementationPromptForRecommendation(recommendation, decisionRanking, fallbackPrompt);
   recommendation.originalRecommendationTitle = original?.title ?? recommendation.title;
-  recommendation.displayTitle = displayTitle;
-  recommendation.displaySummary = displaySummary;
+  recommendation.displayTitle = terminalState?.title ?? displayTitle;
+  recommendation.displaySummary = terminalState ? terminalState.reasons.join(' ') : displaySummary;
   recommendation.implementationPrompt = implementationPrompt;
   recommendation.prompt = implementationPrompt;
   if (engineeringTask) recommendation.engineeringTask = engineeringTask;
-  if (engineeringTask?.status === 'blocked') {
+  if (terminalState) {
+    recommendation.title = terminalState.title;
+    recommendation.packageType = 'terminal';
+    recommendation.clarification = terminalState.reason;
+    recommendation.terminalState = terminalState;
+    recommendation.blockingState = terminalState;
+  } else if (engineeringTask?.status === 'blocked') {
     recommendation.clarification = engineeringTask.clarification ?? 'Recommendation requires task clarification';
     recommendation.blockingState = { state: 'blocked', reason: recommendation.clarification };
   }
@@ -589,7 +614,7 @@ async function readControlPlane(repositoryPath) {
   recommendation.repositoryIntelligenceSnapshotHash = decisionRanking?.candidates?.find((candidate) => candidate.id === recommendation.id)?.repositoryIntelligenceSnapshotHash ?? decisionRanking?.candidates?.[0]?.repositoryIntelligenceSnapshotHash ?? recommendation.repositoryIntelligenceSnapshotHash;
   recommendation.promptHash = hashPrompt(recommendation.prompt);
   const packages = handoffPackages(docs);
-  packages.builder = recommendation.implementationPrompt;
+  packages.builder = recommendation.terminalState ? '' : recommendation.implementationPrompt;
   return { repositoryFiles, status: snapshot, outcomeEvidence, aiHandoffValidation, decisionRanking, evidenceLineage, repositoryJudgment, repositoryJudgmentReadiness, activeRecommendationSource, legacyRecommendation, productJudgment, judgmentComparison, understanding: understandingSummary(docs), unknowns: unknownSummary(docs), recommendation, diff: savedDiff ?? diffSnapshots(null, snapshot), quality, qualityHistory, verification, explanations, evidence: evidenceItems(docs), packages, timeline };
 }
 

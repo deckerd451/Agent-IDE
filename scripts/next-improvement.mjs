@@ -1001,23 +1001,22 @@ function renderStrategicContext(pi) {
 
 function renderTaskClarificationPackage(selected, ranking) {
   const task = selected.engineeringTask;
-  return `# Recommendation requires task clarification.
+  return `# No actionable recommendations remain.
 
-The selected recommendation was not converted into an implementation prompt because it is not a concrete engineering task.
+This is a terminal repository state, not an implementation package.
+
+## Deterministic Reasons
+- Remaining candidates require repository-local clarification.
+- All actionable validation recommendations for the current repository intelligence snapshot have already been completed or reached terminal outcomes.
+- Additional repository changes or backlog refinement are required before new implementation work can be generated.
 
 ${renderEngineeringTask(task)}
 
-## Selected Issue
+## Highest-Ranked Remaining Candidate
 ${renderSelectedIssue(selected)}
 
-${renderDecisionRanking(ranking)}## Missing Evidence
+${renderDecisionRanking(ranking)}## Blocking Evidence
 ${task?.clarification ?? 'Missing deterministic evidence for a concrete implementation target.'}
-
-## Required Before Implementation
-- Provide a concrete engineering objective.
-- Identify likely files or artifact sources.
-- Provide deterministic evidence and acceptance criteria.
-- Regenerate the next improvement package after clarification.
 `;
 }
 

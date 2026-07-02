@@ -58,7 +58,7 @@ test('readiness signal compiles into concrete task and ranking preserves origina
   assert.equal(ranking.candidates[0].title, ranking.selectedIssue.title);
 });
 
-test('un-compilable vague recommendation is blocked', () => {
+test('un-compilable vague recommendation emits no-actionable terminal artifact', () => {
   const ranking = buildDecisionRanking([issue({
     id: 'vague',
     title: 'Things soon',
@@ -69,7 +69,11 @@ test('un-compilable vague recommendation is blocked', () => {
   assert.equal(ranking.engineeringTask.status, 'blocked');
   assert.equal(ranking.selectedIssue.title, 'Recommendation requires task clarification.');
   const prompt = renderPrompt({ selectedIssue: ranking.candidates[0], decisionRanking: ranking });
-  assert.match(prompt, /Recommendation requires task clarification\./);
+  assert.match(prompt, /^# No actionable recommendations remain\./);
+  assert.match(prompt, /This is a terminal repository state, not an implementation package\./);
+  assert.match(prompt, /Remaining candidates require repository-local clarification/);
+  assert.match(prompt, /All actionable validation recommendations/);
+  assert.match(prompt, /Additional repository changes or backlog refinement/);
   assert.match(prompt, /Missing deterministic evidence/);
 });
 
