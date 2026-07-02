@@ -56,7 +56,7 @@ type ControlPlaneRecommendation = {
   explanation: string;
   whyItMatters: string;
   actionability?: string;
-  packageType?: 'implementation' | 'product-decision' | 'validation-experiment' | 'task-clarification';
+  packageType?: 'implementation' | 'product-decision' | 'validation-experiment' | 'task-clarification' | 'terminal';
   evidenceSource: string;
   prompt: string;
   implementationPrompt?: string;
@@ -646,6 +646,7 @@ function recommendationDisplaySummary(data: ControlPlane, task?: DecisionCandida
 }
 
 function executionPackagesForDecision(data: ControlPlane, documents: Record<string, DocumentState>, decisionFlow: DecisionFlow): ExecutionPackage[] {
+  if (data.recommendation.packageType === 'terminal' || data.recommendation.blockingState?.state === 'terminal') return [];
   const contextPackage = data.packages.context || documents['context-package.md']?.content || '';
   const validationPrompt = validationPromptInstructions;
   return decisionFlow.availableExecutionAgents.map((executionAgent) => createExecutionPackage({
@@ -850,13 +851,16 @@ function RepositoryDecisionActionSurface({ data, decisionFlow, executionPackages
       setIsSaving(false);
     }
   }
-  const isRefreshDecision = decisionFlow.refresh.ready || !workflow;
+  const isTerminalDecision = data.recommendation.packageType === 'terminal' || data.recommendation.blockingState?.state === 'terminal';
+  const isRefreshDecision = decisionFlow.refresh.ready || !workflow || isTerminalDecision;
   const isAwaitingExternalAi = Boolean(copiedAgent) || decisionFlow.currentRequiredOwnerAction === 'Perform external work' || decisionFlow.currentRequiredOwnerAction === 'Record outcome evidence';
-  const actionTitle = isAwaitingExternalAi ? 'Waiting for AI' : isRefreshDecision ? 'Refresh Intelligence' : 'Execute With';
+  const actionTitle = isTerminalDecision ? 'No Actionable Work' : isAwaitingExternalAi ? 'Waiting for AI' : isRefreshDecision ? 'Refresh Intelligence' : 'Execute With';
   const helperText = isAwaitingExternalAi && copiedAgent
     ? `Paste the package into ${copiedAgent}. When finished, record the outcome.`
     : isAwaitingExternalAi
       ? 'When the AI work is finished, record the outcome.'
+      : isTerminalDecision
+        ? 'No execution package was generated because deterministic repository-local evidence is insufficient for safe implementation work.'
       : isRefreshDecision
         ? 'Refresh repository intelligence when you need to regenerate the current decision.'
         : 'Choose where to send this decision.';
@@ -893,7 +897,7 @@ function RepositoryDecisionActionSurface({ data, decisionFlow, executionPackages
 }
 
 function workflowInputForTask(recommendation: ControlPlaneRecommendation, candidate?: DecisionCandidate | null) {
-  const packageType = recommendation.packageType === 'task-clarification' ? 'implementation' : recommendation.packageType;
+  const packageType = recommendation.packageType === 'task-clarification' ? 'implementation' : recommendation.packageType === 'terminal' ? undefined : recommendation.packageType;
   return { packageType, category: candidate?.category, title: candidate?.engineeringTask?.title ?? candidate?.title ?? recommendation.displayTitle, ownerAction: candidate?.ownerAction, recommendationTitle: recommendation.originalRecommendationTitle ?? recommendation.title, canonicalIntelligenceState: (recommendation.id === 'canonical-bootstrap' ? 'missing' : recommendation.packageType === 'product-decision' ? 'existing' : undefined) as 'missing' | 'existing' | undefined };
 }
 
