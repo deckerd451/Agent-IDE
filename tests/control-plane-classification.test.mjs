@@ -21,12 +21,14 @@ assert.equal(summary.find((item) => item.label === 'Product Thesis')?.state, 'Pr
 assert.equal(summary.find((item) => item.label === 'Current Focus')?.state, 'Present');
 assert.equal(summary.find((item) => item.label === 'Strategy')?.state, 'Present');
 assert.equal(summary.find((item) => item.label === 'Architecture')?.state, 'Present');
-assert.equal(summary.find((item) => item.label === 'Validation')?.state, 'Partial');
+assert.equal(summary.find((item) => item.label === 'Validation Artifact')?.state, 'Partial');
 assert.equal(summary.find((item) => item.label === 'Decisions')?.state, 'Present');
 
 const snapshot = summarizeSnapshot(docs, '/tmp/Nearify');
 assert.equal(snapshot.repositoryHandoffReadiness, 'Ready');
 assert.equal(snapshot.recommendedNextStep, 'Run an AI handoff test.');
+assert.equal(snapshot.targetValidation.repositoryType, 'Xcode/iOS');
+assert.equal(snapshot.targetValidation.primaryBuildSystem, 'Xcode');
 
 const recommendation = recommendationDetails(docs);
 assert.equal(recommendation.title, 'Run an AI handoff test.');
@@ -36,5 +38,5 @@ const presentValidationDocs = {
   'validation.md': '# Validation\n\n## Commands Run\n- `npm run build`\n\n## Overall Status\n- Validation passed.\n',
   'repository-health.md': docs['repository-health.md'].replace('- Backlog contains possible noise', '- No repository health risks detected.'),
 };
-assert.equal(understandingSummary(presentValidationDocs).find((item) => item.label === 'Validation')?.state, 'Present');
+assert.equal(understandingSummary(presentValidationDocs).find((item) => item.label === 'Validation Artifact')?.state, 'Present');
 assert.equal(summarizeSnapshot(presentValidationDocs, '/tmp/Agent-IDE').repositoryHandoffReadiness, 'Ready');

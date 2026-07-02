@@ -9,6 +9,7 @@ import { generateProductIntelligence } from './product-intelligence.mjs';
 import { generateExecutionModel } from './execution-model.mjs';
 import { bootstrapCanonicalIntelligence, canonicalStatus } from './canonical-bootstrap.mjs';
 import { persistQuality } from './intelligence-quality.mjs';
+import { detectRepositoryProfile, isNpmValidationCandidate, isXcodeValidationCandidate } from './repository-validation.mjs';
 
 const requiredFiles = ['goals.md','repository-health.md','intelligence-quality.json','intelligence-audit.md','backlog.md','strategy.md','context-package.md','architecture.md','decisions.md','execution-model.md','validation.md','ai-handoff-validation.md','intelligence-verification.md'];
 
@@ -360,12 +361,29 @@ function limitedExpansion(sourceKey, sourceFile, markdown, sectionPatterns = [])
   }).slice(0, 8).map((item, index) => candidateExpansionIssue({ sourceKey, sourceFile, index, text: item.text, section: item.section }));
 }
 
+function repositoryAwareValidationCandidates(validation = '') {
+  const profile = detectRepositoryProfile({ validationMarkdown: validation });
+  const explicitPrimaryBuildSystem = /Primary build system:\s*Xcode/i.test(validation);
+  const candidates = limitedExpansion('validation', '.ai/validation.md', validation, [/failed|missing|gap|validation|known/i]);
+  return candidates
+    .filter((candidate) => {
+      const text = recommendationText(candidate);
+      if (explicitPrimaryBuildSystem && profile.primaryBuildSystem === 'Xcode' && !profile.packageJsonIsPrimary && isNpmValidationCandidate(text) && !isXcodeValidationCandidate(text)) return false;
+      return true;
+    })
+    .map((candidate) => {
+      const text = recommendationText(candidate);
+      if (explicitPrimaryBuildSystem && profile.primaryBuildSystem === 'Xcode' && isXcodeValidationCandidate(text)) return { ...candidate, repositoryProfile: profile, priority: (candidate.priority ?? 0) + 12 };
+      return { ...candidate, repositoryProfile: profile };
+    });
+}
+
 export function expandRecommendationCandidates({ backlog = '', strategy = '', health = '', validation = '', aiHandoffValidation = '', intelligenceVerification = '' } = {}) {
   return [
     ...limitedExpansion('backlog', '.ai/backlog.md', backlog, [/backlog|prioritized|current|manual|future|known|implementation/i]),
     ...limitedExpansion('strategy', '.ai/strategy.md', strategy, [/current product bet|next strategic moves|strategic moves|strategy|bet/i]),
     ...limitedExpansion('repository-health', '.ai/repository-health.md', health, [/weakness|remediation|risk|recommended next step|gap/i]),
-    ...limitedExpansion('validation', '.ai/validation.md', validation, [/failed|missing|gap|validation|known/i]),
+    ...repositoryAwareValidationCandidates(validation),
     ...limitedExpansion('ai-handoff-validation', '.ai/ai-handoff-validation.md', aiHandoffValidation, [/incomplete|partial|gap|missing|handoff/i]),
     ...limitedExpansion('intelligence-verification', '.ai/intelligence-verification.md', intelligenceVerification, [/verification|gap|failed|missing/i]),
   ];
