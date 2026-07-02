@@ -41,6 +41,8 @@ export type RepositoryDecision = Readonly<{
   repositoryName: string;
   repositoryStatus: string;
   selectedDecision: string;
+  selectedDecisionTitle: string;
+  whyNow: string;
   packageType: string;
   confidence: string;
   handoffReadiness: string;
@@ -83,6 +85,18 @@ function formatConfidence(activeRecommendation: any, selectedCandidate: any, qua
   if (confidence) return confidence;
   if (typeof quality?.confidence?.score === 'number') return `${quality.confidence.score}/100`;
   return 'Unknown';
+}
+
+function actionOrientedDecisionTitle(...values: unknown[]) {
+  const text = firstValue(...values);
+  if (!text) return '';
+  if (/lint/i.test(text) || /no\s+npm\s+run\s+lint\s+script\s+was\s+detected|style\/static\s+lint\s+coverage|lint\s+coverage/i.test(text)) {
+    return 'Add deterministic lint/static validation coverage';
+  }
+  if (/no\s+(test|validation)\s+script\s+was\s+detected|test\s+coverage|validation\s+coverage/i.test(text)) {
+    return 'Add deterministic test/validation coverage';
+  }
+  return text;
 }
 
 function formatHandoffReadiness(validation: any, healthMarkdown: string, status: any) {
@@ -143,20 +157,30 @@ export function createRepositoryDecision(input: RepositoryDecisionInput): Reposi
   const executionReadiness = repositoryReadinessFor(input, currentRequiredOwnerAction);
   const repositoryName = firstValue(input.repositoryName, input.status?.repositoryName, 'Connected repository');
   const repositoryStatus = [input.status?.repositoryName, input.status?.overallHealth, input.status?.repositoryHandoffReadiness, input.status?.currentConfidence].filter(Boolean).join(' · ') || 'Repository intelligence not loaded';
-  const selectedDecisionTitle = selectedCandidate?.title ?? recommendation?.displayTitle ?? recommendation?.title ?? 'Refresh repository intelligence';
+  const selectedDecisionTitle = actionOrientedDecisionTitle(
+    recommendation?.displayTitle,
+    selectedCandidate?.ownerAction,
+    selectedCandidate?.actionSummary,
+    selectedCandidate?.title,
+    recommendation?.title,
+    'Refresh repository intelligence',
+  );
   const selectedDecision = selectedDecisionTitle || emptyDecision;
-  const whyThisDecisionExists = selectedCandidate?.reason ?? recommendation?.explanation ?? recommendation?.whyItMatters ?? 'Repository intelligence needs to be generated before a decision can be selected.';
-  const decisionSummary = firstValue(selectedCandidate?.reason, recommendation?.displaySummary, recommendation?.explanation, recommendation?.whyItMatters, whyThisDecisionExists);
+  const whyThisDecisionExists = firstValue(selectedCandidate?.reason, recommendation?.displaySummary, recommendation?.explanation, recommendation?.whyItMatters, 'Repository intelligence needs to be generated before a decision can be selected.');
+  const decisionSummary = firstValue(recommendation?.displaySummary, selectedCandidate?.reason, recommendation?.explanation, recommendation?.whyItMatters, whyThisDecisionExists);
+  const whyNow = decisionSummary;
   const model = {
     available: selectedDecision !== 'Refresh repository intelligence' && selectedDecision !== emptyDecision,
     repositoryName,
     repositoryStatus,
     selectedDecision: selectedDecision === 'Refresh repository intelligence' ? emptyDecision : selectedDecision,
+    selectedDecisionTitle: selectedDecision === 'Refresh repository intelligence' ? emptyDecision : selectedDecision,
     packageType,
     confidence: formatConfidence(recommendation, selectedCandidate, input.quality, input.status),
     handoffReadiness: formatHandoffReadiness(input.aiHandoffValidation, input.healthMarkdown ?? '', input.status),
     executionAgents: Object.freeze([...repositoryDecisionExecutionAgents]),
     executionReady: executionReadiness,
+    whyNow,
     decisionSummary: decisionSummary || 'Repository intelligence needs to be generated before a decision can be selected.',
     recommendedOwnerAction: currentRequiredOwnerAction,
   };
