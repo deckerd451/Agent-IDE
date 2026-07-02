@@ -460,6 +460,58 @@ test('selected issue persists snapshot hashes and recorded unavailable tooling o
   }
 });
 
+
+test('backticked xcodebuild skipped outcome suppresses plain xcodebuild recommendation for same snapshot', () => {
+  const contextPackage = '# Context Package\nXcode app snapshot.\n';
+  const snapshot = stableContextPackageHash(contextPackage);
+  const { candidates } = chooseNextImprovementWithCandidates({
+    ...healthyArgs,
+    contextPackage,
+    validation: '# Validation\n\n## Known Validation Gaps\n- Full simulator/device build: Not run by default; no full xcodebuild.\n',
+    intelligenceVerification: '# Intelligence Verification\n\n## Findings\n- Document the local environment prerequisite for simulator validation.\n',
+    outcomeEntries: [{
+      timestamp: '2026-07-01T00:00:00.000Z',
+      recommendationId: 'validation-full-simulator-device-build-not-run-by-default-no-full',
+      recommendationTitle: 'Full simulator/device build: Not run by default; no full `xcodebuild`',
+      outcome: 'skipped',
+      promptQuality: 'worked',
+      userNote: 'Linux without xcodebuild/xcrun',
+      repositoryIntelligenceSnapshotHash: snapshot,
+    }],
+  });
+
+  assert.equal(
+    candidates.find((candidate) => candidate.title === 'Full simulator/device build: Not run by default; no full xcodebuild'),
+    undefined,
+    'same unavailable-tooling outcome with normalized title must suppress the plain-title recommendation',
+  );
+  assert.ok(candidates[0].advancementSuppressedCandidates.some((candidate) => candidate.title === 'Full simulator/device build: Not run by default; no full xcodebuild'));
+});
+
+test('different validation titles do not suppress each other for same snapshot', () => {
+  const contextPackage = '# Context Package\nXcode app snapshot.\n';
+  const snapshot = stableContextPackageHash(contextPackage);
+  const { candidates } = chooseNextImprovementWithCandidates({
+    ...healthyArgs,
+    contextPackage,
+    validation: '# Validation\n\n## Known Validation Gaps\n- Full simulator/device build: Not run by default; no full xcodebuild.\n- Document the local environment prerequisite for simulator validation.\n',
+    outcomeEntries: [{
+      timestamp: '2026-07-01T00:00:00.000Z',
+      recommendationId: 'validation-document-the-local-environment-prerequisite-for-simulator-validation',
+      recommendationTitle: 'Document the local environment prerequisite for simulator validation',
+      outcome: 'skipped',
+      promptQuality: 'worked',
+      userNote: 'Linux without xcodebuild/xcrun',
+      repositoryIntelligenceSnapshotHash: snapshot,
+    }],
+  });
+
+  assert.ok(
+    candidates.some((candidate) => candidate.title === 'Full simulator/device build: Not run by default; no full xcodebuild'),
+    'different validation titles must not be suppressed by an unrelated unavailable-tooling skip',
+  );
+});
+
 test('skipped Xcode validation is not suppressed after repository intelligence snapshot changes', () => {
   const { candidates } = chooseNextImprovementWithCandidates({
     ...healthyArgs,
