@@ -13,6 +13,7 @@ import { generateJudgmentComparison } from './judgment-comparison.mjs';
 import { explainCompleteness, explainQuality, explainCompletenessSynchronization, explainEvidenceSynthesis, persistIntelligenceExplanations, readIntelligenceExplanations } from './intelligence-explanations.mjs';
 import { fileURLToPath } from 'node:url';
 import { appendOutcome, hashPrompt, readOutcomeEvidence, recommendationIdFor } from './outcomes.mjs';
+import { detectRepositoryProfile } from './repository-validation.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '..');
@@ -244,9 +245,25 @@ function understandingSummary(docs) {
     { label: 'Current Focus', state: intelligenceState(docs['goals.md'] ?? '', 'Current Focus') === 'Present' ? 'Present' : intelligenceState(architecture, 'Current Focus'), source: '.ai/goals.md' },
     { label: 'Strategy', state: qualityState(health, 'Strategy quality score'), source: '.ai/repository-health.md' },
     { label: 'Architecture', state: qualityState(health, 'Core systems'), source: '.ai/architecture.md' },
-    { label: 'Validation', state: validationState(docs), source: '.ai/validation.md' },
+    { label: 'Validation Artifact', state: validationState(docs), source: '.ai/validation.md' },
+    { label: 'Target Validation', state: targetValidationSummary(validation).status, source: '.ai/validation.md' },
     { label: 'Decisions', state: mdSection(decisions, 'Active Decisions') || decisions.trim().length > 20 ? 'Present' : 'Missing', source: '.ai/decisions.md' },
   ];
+}
+
+
+function targetValidationSummary(validation = '') {
+  const profile = detectRepositoryProfile({ validationMarkdown: validation });
+  const summary = mdSection(validation, 'Target Repository Validation Summary');
+  const status = firstLine(summary.match(/Target validation status:\s*(.+)$/im)?.[1] ?? '', '')
+    || firstLine(mdSection(validation, 'Overall Status'), '')
+    || 'Unknown';
+  const gaps = mdSection(validation, 'Known Gaps')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^[-*]\s+/.test(line))
+    .map((line) => line.replace(/^[-*]\s+/, ''));
+  return { repositoryType: profile.repositoryType, primaryBuildSystem: profile.primaryBuildSystem, status, knownGaps: gaps };
 }
 
 function unknownSummary(docs) {
@@ -312,6 +329,7 @@ function summarizeSnapshot(docs, repositoryPath = process.cwd()) {
     strategyConfidence: qualitySignal(health, 'Strategy confidence') || firstLine(mdSection(strategy, 'Strategy Confidence'), 'Unknown'),
     validationConfidence: firstLine(mdSection(validation, 'Confidence'), 'Unknown'),
     recommendedNextStep,
+    targetValidation: targetValidationSummary(validation),
     sections: {
       strategy: ['Product Thesis', 'North Star Metric', 'Strategic Differentiator', 'Current Product Bet', 'Current Experiment', 'What Not To Build', 'Success Definition'].map((h) => `${h}: ${firstLine(mdSection(strategy, h), '')}`).join('\n'),
       architecture: ['Product Thesis', 'Current Focus', 'Core Systems', 'Primary Flows'].map((h) => `${h}: ${firstLine(mdSection(docs['architecture.md'] ?? '', h), '')}`).join('\n'),
