@@ -125,3 +125,46 @@ test('concrete backlog quality filtering item remains selectable', () => {
 
   assert.equal(result.selectedIssue.title, 'Add backlog quality filtering');
 });
+
+const nearifyConcreteBacklog = [
+  '# Backlog',
+  '',
+  '## Prioritized Backlog',
+  '- **Implement Nearify profile universal-link handoff**',
+  '  - Source: Beacon/Views/Components/ContactSaveFlow.swift:69',
+  '  - Reason: Repository comment marked this as Implement https://nearify.org/profile/<id> web route and universal-link handoff to Nearify app.',
+  '  - Suggested Next Step: Inspect the referenced code path, decide whether the comment still applies...',
+].join('\n');
+
+test('Nearify backlog source comment expands into concrete implementation candidate', () => {
+  const candidates = expandRecommendationCandidates({ backlog: nearifyConcreteBacklog });
+  const candidate = candidates.find((item) => item.sourceFile === 'Beacon/Views/Components/ContactSaveFlow.swift');
+
+  assert.ok(candidate, 'expected concrete source comment candidate');
+  assert.equal(candidate.packageType, 'implementation');
+  assert.equal(candidate.actionability, 'code-fixable');
+  assert.equal(candidate.sourceLine, 69);
+  assert.deepEqual(candidate.affectedFiles, ['Beacon/Views/Components/ContactSaveFlow.swift']);
+  assert.match(candidate.source, /Beacon\/Views\/Components\/ContactSaveFlow\.swift:69/);
+  assert.match(candidate.reason, /explicit implementation objective/);
+  assert.match(candidate.recommendedAction, /Implement https:\/\/nearify\.org\/profile\/<id> web route and universal-link handoff to Nearify app/);
+  assert.ok(candidate.details.acceptance.some((item) => /Beacon\/Views\/Components\/ContactSaveFlow\.swift:69/.test(item)));
+});
+
+test('Nearify backlog source comment renders an implementation package with location objective and acceptance criteria', () => {
+  const result = chooseNextImprovementWithCandidates({
+    health,
+    quality: healthyQuality,
+    backlog: nearifyConcreteBacklog,
+    strategy: '# Strategy\n\n## Strategy Confidence\nHigh\n',
+    contextPackage,
+  });
+  const prompt = renderPrompt(result);
+
+  assert.equal(result.selectedIssue.packageType, 'implementation');
+  assert.notEqual(result.selectedIssue.title, 'Recommendation requires task clarification.');
+  assert.match(prompt, /Beacon\/Views\/Components\/ContactSaveFlow\.swift:69/);
+  assert.match(prompt, /Implement https:\/\/nearify\.org\/profile\/<id> web route and universal-link handoff to Nearify app/);
+  assert.match(prompt, /## Affected Files\n- `Beacon\/Views\/Components\/ContactSaveFlow\.swift`/);
+  assert.match(prompt, /## Acceptance Criteria[\s\S]*The generated package names source location Beacon\/Views\/Components\/ContactSaveFlow\.swift:69/);
+});

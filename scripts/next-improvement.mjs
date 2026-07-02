@@ -390,6 +390,89 @@ function candidateExpansionIssue({ sourceKey, sourceFile, index, text, section, 
   return vagueSuggestedNextStep ? { ...issue, priority, vagueBacklogFragment: true, nonActionableReason: 'Missing concrete target, file path, symbol, validation command, or explicit manual field.', packageType: 'task-clarification' } : { ...issue, priority };
 }
 
+
+function parseBacklogLocation(value = '') {
+  const text = String(value).trim().replace(/^`|`$/g, '');
+  const match = text.match(/((?:\.?[\w-]+\/)+(?:[\w.-]+)|[\w.-]+\.(?:mjs|js|ts|tsx|jsx|json|md|yml|yaml|toml|rs|py|go|java|kt|swift|css|html)):(\d+)\b/);
+  if (!match) return null;
+  return { file: match[1], line: Number(match[2]), label: `${match[1]}:${match[2]}` };
+}
+
+function isExplicitImplementationObjective(value = '') {
+  return /\b(?:todo|implement|implementation|add|build|fix|wire|create|update|support|handle|route|handoff|universal-link|deep link|open|validate|test)\b/i.test(String(value));
+}
+
+function concreteBacklogAcceptance(location, objective) {
+  return [
+    `The generated package names source location ${location.label}.`,
+    `The cited source file ${location.file} is inspected at or near line ${location.line}.`,
+    `The implementation objective is addressed or a repository-local investigation records why it is no longer applicable: ${objective}.`,
+    'Validation or follow-up evidence demonstrates the source comment no longer requires vague task clarification.',
+  ];
+}
+
+function concreteBacklogIssueFromBlock({ index, section, title, sourceLine, reasonLine, nextStepLine }) {
+  const location = parseBacklogLocation(sourceLine);
+  const objective = actionFromText((reasonLine || nextStepLine || title || '').replace(/^Reason\s*:\s*/i, '').replace(/^Suggested Next Step\s*:\s*/i, ''));
+  if (!location || !isExplicitImplementationObjective(objective)) return null;
+  const action = `Investigate and implement ${objective} at ${location.label}`;
+  const issue = selectedIssue({
+    id: `backlog-${slugify(`${location.label}-${objective}`)}`,
+    category: '.ai/backlog.md concrete source comment',
+    severity: 'medium',
+    actionability: 'code-fixable',
+    source: `${location.label} via .ai/backlog.md${section ? ` ${section}` : ''}`,
+    title: titleFromCandidateText(objective, 'Investigate Repository Comment'),
+    evidence: `Source: ${location.label}. Objective: ${objective}. Backlog title: ${title || 'Not provided'}.`,
+    reason: `Repository backlog item includes concrete source file ${location.file}, line ${location.line}, and explicit implementation objective: ${objective}.`,
+    recommendedAction: action,
+  });
+  return {
+    ...issue,
+    priority: expansionSourcePriority.backlog - index + 6,
+    affectedFiles: [location.file],
+    sourceFile: location.file,
+    sourceLine: location.line,
+    details: {
+      problem: `A repository comment at ${location.label} identifies implementation work that should be investigated before being treated as vague backlog text.`,
+      requirements: [
+        `Inspect ${location.file} at or near line ${location.line}.`,
+        `Implement or explicitly retire the objective: ${objective}.`,
+        'Keep the change narrowly scoped to the cited source comment and directly related routing/handoff behavior.',
+      ],
+      acceptance: concreteBacklogAcceptance(location, objective),
+    },
+  };
+}
+
+function concreteBacklogBlockCandidates(markdown = '') {
+  const candidates = [];
+  let section = '';
+  let current = null;
+  const flush = () => {
+    if (!current) return;
+    const issue = concreteBacklogIssueFromBlock({ ...current, index: candidates.length });
+    if (issue) candidates.push(issue);
+    current = null;
+  };
+  for (const raw of markdown.split('\n')) {
+    const heading = raw.match(/^(#{1,4})\s+(.+?)\s*$/);
+    if (heading) section = heading[2].trim();
+    const top = raw.match(/^\s*[-*]\s+(?!Source\s*:|Reason\s*:|Suggested Next Step\s*:)(.+?)\s*$/i);
+    if (top) { flush(); current = { section, title: top[1].replace(/^\*\*(.+?)\*\*$/, '$1').trim() }; continue; }
+    if (!current) continue;
+    const child = raw.match(/^\s+(?:[-*]\s+)?(Source|Reason|Suggested Next Step)\s*:\s*(.+?)\s*$/i);
+    if (child) {
+      const key = child[1].toLowerCase();
+      if (key === 'source') current.sourceLine = child[2];
+      else if (key === 'reason') current.reasonLine = child[2];
+      else current.nextStepLine = child[2];
+    }
+  }
+  flush();
+  return candidates;
+}
+
 function linesFromMarkdown(markdown = '') {
   const candidates = [];
   let section = '';
@@ -438,6 +521,7 @@ function repositoryAwareValidationCandidates(validation = '') {
 
 export function expandRecommendationCandidates({ backlog = '', strategy = '', health = '', validation = '', aiHandoffValidation = '', intelligenceVerification = '' } = {}) {
   return [
+    ...concreteBacklogBlockCandidates(backlog),
     ...limitedExpansion('backlog', '.ai/backlog.md', backlog, [/backlog|prioritized|current|manual|future|known|implementation/i]),
     ...limitedExpansion('strategy', '.ai/strategy.md', strategy, [/current product bet|next strategic moves|strategic moves|strategy|bet/i]),
     ...limitedExpansion('repository-health', '.ai/repository-health.md', health, [/weakness|remediation|risk|recommended next step|gap/i]),
